@@ -1,5 +1,7 @@
 # qbox
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 qbox is a command-line toolkit for preparing, running, and post-processing
 Quantum ESPRESSO workflows. It supports common SCF, relaxation, NSCF, band,
 PDOS, phonon, molecular-dynamics, and convergence-scan tasks.
