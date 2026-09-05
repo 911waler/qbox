@@ -1,0 +1,8 @@
+ 非极性材料 Gamma 点声子频率计算流程：
+ * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。
+   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out
+ * 步骤 2：使用 ph.x 计算声子频率。
+   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out
+ * 步骤 3：使用 dynmat.x 施加声学和规则 ASR。
+   运行命令示例：dynmat.x -i dynmat.in > dynmat.out
+

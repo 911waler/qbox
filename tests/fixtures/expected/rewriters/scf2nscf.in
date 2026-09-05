@@ -1,0 +1,20 @@
+&CONTROL
+   calculation     = 'nscf'
+ restart_mode = 'from_scratch',
+/
+&SYSTEM
+ ibrav = 0,
+ nat = 1,
+ ntyp = 1,
+ nbnd = 4,
+   occupations     = 'tetrahedra'
+   nosym           = .true.
+   noinv           = .true.
+/
+&ELECTRONS
+ conv_thr = 1.0D-8,
+ electron_maxstep = 100,
+ diagonalization = 'david',
+/
+K_POINTS automatic
+4 4 4 0 0 0

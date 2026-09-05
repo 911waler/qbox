@@ -1,0 +1,51 @@
+ &CONTROL
+   calculation     = 'bands'
+   restart_mode    = 'from_scratch'
+   outdir          = './tmp'
+   pseudo_dir      = '/mock/SSSP'
+   prefix          = 'water'
+   verbosity       = 'high'
+ /
+ &SYSTEM
+   ibrav           = 0
+   nat             = 3
+   ntyp            = 2
+   ecutwfc         = 35
+   ecutrho         = 400
+   nbnd            = 13
+   occupations     = 'fixed'
+ /
+ &ELECTRONS
+   diagonalization = 'david'
+   diago_david_ndim = 2
+   diago_full_acc  = .true.
+   diago_thr_init  = 1.D-8
+ /
+ CELL_PARAMETERS angstrom
+     10.000000000    0.000000000    0.000000000
+     0.000000000    10.000000000    0.000000000
+     0.000000000    0.000000000    10.000000000
+ 
+ ATOMIC_SPECIES
+   H 	1.008 	H.UPF
+   O 	15.999 	O.UPF
+ 
+ ATOMIC_POSITIONS angstrom
+    O      5.000000000    5.000000000    5.000000000
+    H      5.570000000    5.000000000    5.000000000
+    H      4.810000000    5.540000000    5.000000000
+ 
+
+K_POINTS {crystal_b}
+11
+0.000000 0.000000 0.000000  20    ! GAMMA
+0.000000 0.500000 0.000000  20    ! Z
+0.000000 0.500000 0.500000  20    ! D
+0.000000 0.000000 0.500000  20    ! B
+0.000000 0.000000 0.000000  20    ! GAMMA
+-0.500000 0.000000 0.500000  20    ! A
+-0.500000 0.500000 0.500000  20    ! E
+0.000000 0.500000 0.000000  20    ! Z
+-0.500000 0.500000 0.000000  20    ! C_2
+-0.500000 0.000000 0.000000  20    ! Y_2
+0.000000 0.000000 0.000000  1    ! GAMMA

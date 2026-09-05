@@ -1,0 +1,5 @@
+&PROJWFC
+ prefix = 'sample',
+   filpdos         = 'PDOS/pdos.dat'
+ DeltaE = 0.01,
+/

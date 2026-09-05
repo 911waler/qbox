@@ -1,0 +1,5 @@
+&BANDS
+ prefix = 'sample',
+   filband         = 'BAND/bands.dat'
+ lsym = .true.,
+/

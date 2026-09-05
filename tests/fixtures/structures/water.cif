@@ -1,0 +1,16 @@
+data_water
+_cell_length_a 10.0
+_cell_length_b 10.0
+_cell_length_c 10.0
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 90
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+O1 O 0.500000 0.500000 0.500000
+H1 H 0.557000 0.500000 0.500000
+H2 H 0.481000 0.554000 0.500000

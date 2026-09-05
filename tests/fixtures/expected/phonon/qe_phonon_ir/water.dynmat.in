@@ -1,0 +1,6 @@
+&input
+fildyn='water.dynG',
+filout='water.dynmat.out',
+fileig='water.modes',
+asr='simple'
+/

@@ -1,0 +1,63 @@
+ &CONTROL
+   calculation     = 'md'
+   restart_mode    = 'from_scratch'
+   prefix          = 'water_md'
+   pseudo_dir      = '/mock/SSSP'
+   outdir          = './tmp_md'
+   tprnfor         = .true.
+   tstress         = .false.
+   disk_io         = 'low'
+   nstep           = 20000
+   dt              = 5.167672
+ /
+
+ &SYSTEM
+   ibrav           = 0
+   nat             = 3
+   ntyp            = 2
+   ecutwfc         = 45
+   ecutrho         = 400
+   input_dft       = 'PBE'
+   occupations     = 'smearing'
+   smearing        = 'gaussian'
+   degauss         = 0.02
+ /
+
+ &ELECTRONS
+   conv_thr         = 1.0d-6
+   electron_maxstep = 300
+   mixing_beta      = 0.07
+   mixing_mode      = 'local-TF'
+   mixing_ndim      = 8
+   diagonalization  = 'david'
+   diago_david_ndim = 2
+   startingpot      = 'atomic'
+   startingwfc      = 'atomic'
+ /
+
+ &IONS
+   ion_dynamics     = 'verlet'
+   ion_velocities   = 'from_input'
+   ion_temperature  = 'not_controlled'
+ /
+
+ ATOMIC_SPECIES
+   H 	1.008 	H.UPF
+   O 	15.999 	O.UPF
+
+ CELL_PARAMETERS angstrom
+     10.0000000000    0.0000000000    0.0000000000
+     0.0000000000    10.0000000000    0.0000000000
+     0.0000000000    0.0000000000    10.0000000000
+
+ ATOMIC_POSITIONS angstrom
+    O      5.0000000000    5.0000000000    5.0000000000   0 0 0
+    H      5.5700000000    5.0000000000    5.0000000000   0 0 0
+    H      4.8100000000    5.5400000000    5.0000000000   0 0 0
+
+ ATOMIC_VELOCITIES a.u.
+    O    0.000000000    0.000000000    0.000000000
+    H    0.000000000    0.000000000    0.000000000
+    H    0.000000000    0.000000000    0.000000000
+
+ K_POINTS gamma

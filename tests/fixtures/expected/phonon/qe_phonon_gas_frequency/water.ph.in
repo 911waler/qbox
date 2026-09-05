@@ -1,0 +1,11 @@
+&inputph
+   prefix='water',
+   tr2_ph=1.0d-12,
+   nmix_ph=16,
+   amass(1)=1.008,
+   amass(2)=15.999,
+   outdir='./tmp',
+   fildyn='water.dynG',
+   asr= .true.,
+ /
+0.0 0.0 0.0

@@ -1,0 +1,12 @@
+ 极性材料声子色散计算流程：
+ * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。
+   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out
+ * 步骤 2：使用 ph.x 在均匀 q 点网格上进行声子计算。
+   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out
+ * 步骤 3：使用 q2r.x 计算原子间力常数 IFC。
+   运行命令示例：q2r.x -i xxx.q2r.in > xxx.q2r.out
+ * 步骤 4：使用 matdyn.x 基于 IFC 计算路径 q 点上的声子。
+   运行命令示例：matdyn.x -i xxx.matdyn.in > xxx.matdyn.out
+ * 步骤 5：使用 plotband.x 和 gnuplot 绘制声子色散。
+   运行命令示例：plotband.x < xxx.plotband.in > xxx.plotband.out
+

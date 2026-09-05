@@ -1,0 +1,24 @@
+&CONTROL
+ calculation = 'scf',
+/
+&SYSTEM
+ ibrav = 0,
+ nat = 1,
+ ntyp = 1,
+ nbnd = 4,
+ occupations = 'smearing',
+/
+&ELECTRONS
+ conv_thr = 1.0D-8,
+ electron_maxstep = 100,
+ mixing_mode = 'plain',
+ mixing_beta = 0.7,
+ mixing_ndim = 8,
+ diagonalization = 'david',
+ diago_david_ndim = 4,
+ diago_full_acc = .false.,
+ diago_thr_init = 1.0D-2,
+/
+
+ K_POINTS automatic
+ 4 5 6 0 0 0

@@ -1,0 +1,7 @@
+&input
+   asr='simple',
+   flfrc='water.fc',
+   flfreq='water.freq',
+   q_in_cryst_coord=.true.
+ /
+ Input q-points path, same in bands.

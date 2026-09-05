@@ -1,0 +1,16 @@
+&CONTROL
+ calculation = 'scf',
+/
+&SYSTEM
+ ibrav = 0,
+   ecutwfc         = 55
+   ecutrho         = 550
+   nspin           = 1
+   occupations     = 'smearing'
+   smearing        = 'marzari-vanderbilt'
+   degauss         = 0.015
+/
+&ELECTRONS
+   conv_thr        = 1.D-9
+ mixing_beta = 0.7,
+/

@@ -1,0 +1,13 @@
+&CONTROL
+   pseudo_dir      = '/fixture/pd04'
+ prefix = 'sample',
+/
+ATOMIC_SPECIES
+   H  1.008  H.PD04.PBE.UPF
+   O  15.999  O.PD04.PBE.UPF
+   Si  28.085  Si.PD04.PBE.UPF
+ATOMIC_POSITIONS angstrom
+ H 0.0 0.0 0.0
+ O 0.0 0.0 1.0
+ Si 1.0 1.0 1.0
+K_POINTS gamma

@@ -1,0 +1,18 @@
+&CONTROL
+ calculation = 'scf',
+/
+&SYSTEM
+ ibrav = 0,
+ nat = 1,
+ ntyp = 1,
+ nbnd = 4,
+ occupations = 'smearing',
+/
+&ELECTRONS
+ diagonalization = 'david',
+ diago_david_ndim = 4,
+ diago_full_acc = .false.,
+ diago_thr_init = 1.0D-2,
+/
+K_POINTS automatic
+ 2 2 2 0 0 0

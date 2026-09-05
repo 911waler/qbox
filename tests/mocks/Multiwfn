@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -u
+output=''
+while IFS= read -r line; do case "$line" in *.tmp) output="$line";; esac; done
+[ -n "$output" ] || exit 2
+cp -- "$QBOX_MOCK_QE_TMP" "$output"

@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use qbox, please cite this software."
+title: "qbox"
+version: "0.1.0"
+date-released: 2026-09-02
+type: software
+authors:
+  - name: "waler"
