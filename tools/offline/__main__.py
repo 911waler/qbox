@@ -15,11 +15,27 @@ def _parser() -> argparse.ArgumentParser:
         "validate-manifest", help="validate an offline release manifest"
     )
     validate.add_argument("manifest", type=Path)
+    resolve = commands.add_parser(
+        "resolve", help="resolve candidate offline locks in pinned Rocky 8"
+    )
+    resolve.add_argument(
+        "--policy", type=Path, default=Path("packaging/offline/policy.json")
+    )
+    resolve.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
     return parser
 
 
 def main(argv=None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "resolve":
+        from .resolve import resolve
+
+        try:
+            print(json.dumps(resolve(args.policy, args.cache), indent=2))
+        except (OSError, ValueError, RuntimeError) as error:
+            print(f"qbox offline: {error}", file=sys.stderr)
+            return 1
+        return 0
     if args.command == "validate-manifest":
         try:
             value = json.loads(args.manifest.read_text(encoding="utf-8"))
