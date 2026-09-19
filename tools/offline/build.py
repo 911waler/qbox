@@ -280,7 +280,19 @@ def build(cache: Path, output: Path) -> Path:
                 paths=component['materials']+component.get('sources',[])
                 license_map[identifier]=sorted({'THIRD_PARTY_LICENSES/'+p for p in paths})
                 for path in paths:material_licenses.setdefault(path,set()).add(identifier)
-        for path in sorted(used):
+        supplemental={
+            'THIRD_PARTY_LICENSES/'+path:{
+                'records':[m for m in original['materials'] if m['path']==path],
+                'component_binding':None,
+            }
+            for path in sorted(material_records.keys()-used)
+        }
+        if supplemental:
+            identifier='LicenseRef-qbox-supplemental-audited-material'
+            license_map[identifier]=sorted(supplemental)
+            for name in supplemental:
+                material_licenses[name.removeprefix('THIRD_PARTY_LICENSES/')]= {identifier}
+        for path in sorted(material_records):
             record=material_records[path];provenance=record['source']
             if set(provenance)!={'url','sha256','filename'}:provenance={'commit':commit}
             add('THIRD_PARTY_LICENSES/'+path,_input(cache/'audit',path,record),provenance=provenance,licenses=sorted(material_licenses[path]),expected=record)
@@ -306,7 +318,9 @@ def build(cache: Path, output: Path) -> Path:
                'source_commit':commit,'historical_reports':{n:files['checks/source-audit/'+n+'.json']['sha256'] for n in ('licenses','elf')},
                'qbox':{'path':qbox_path,'sha256':qbox['sha256'],'components':current['components'],'native':[]},
                'payloads':{p:files[p]['sha256'] for p in sorted(files) if p.startswith(('runtime/','wheelhouse/','packages/','THIRD_PARTY_LICENSES/'))},
-               'license_map':license_map,'errors':[]}
+               'license_map':license_map,'supplemental_materials':supplemental,
+               'supplemental_license_reference':'Aggregate reference to complete original audited materials; not a common license or a new license determination.',
+               'errors':[]}
         add('checks/final-payload-audit.json',canonical_json(audit))
         identity={'qbox_version':qbox['version'],'source_commit':commit,'qbox_wheel_sha256':qbox['sha256'],
                   'runtime_sha256':runtime['normalized']['sha256'],'dependencies_lock_sha256':files['requirements.lock']['sha256'],

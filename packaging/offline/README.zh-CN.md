@@ -37,3 +37,7 @@ manifest.json 和 SHA256SUMS 记录实际载荷身份。checks 包含校验程�
 描述符的 licenses / elf 对象各有相对 path、sha256、size；所有材料及审计日志按原报告
 相对路径保存在 audit/ 下。可选 checks 映射也需上述三项，禁止越界路径或符号链接。
 构建不会下载材料；缺少或损坏输入必须先独立修复缓存。不同载荷使用不同输出目录。
+
+完整保留原审计报告的全部材料（含未绑定组件的补充源码）。
+`LicenseRef-qbox-supplemental-audited-material` 仅聚合引用这些完整原始审计材料，
+不表示其适用统一许可，也不代表新的许可判定；原始许可、来源和哈希均保留。

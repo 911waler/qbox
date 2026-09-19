@@ -171,6 +171,22 @@ class BuildTests(unittest.TestCase):
                     else:
                         with self.assertRaises(ValueError):self.build()
 
+    def test_all_audited_materials_are_delivered_even_without_component_reference(self):
+        material=self.cache/'audit/materials/supplemental-source.tar.gz';material.write_bytes(b'complete audited source archive')
+        path=self.cache/'audit/licenses.json';report=json.loads(path.read_text())
+        report['materials'].append(dict(path='materials/'+material.name,sha256=sha256_file(material),size=material.stat().st_size,kind='corresponding-source',source={'filename':material.name,'sha256':sha256_file(material),'url':'https://example.org/'+material.name},source_member=material.name))
+        path.write_bytes(canonical_json(report))
+        descriptor=self.cache/'audit/descriptor.json';value=json.loads(descriptor.read_text())
+        value['licenses'].update(sha256=sha256_file(path),size=path.stat().st_size)
+        descriptor.write_bytes(canonical_json(value))
+        candidate=json.loads(self.build().read_text())
+        with tarfile.open(self.root/'output'/candidate['artifact']) as archive:
+            name='THIRD_PARTY_LICENSES/materials/'+material.name
+            self.assertIn(name,archive.getnames())
+            self.assertEqual(archive.extractfile(name).read(),material.read_bytes())
+            report=json.load(archive.extractfile('checks/final-payload-audit.json'))
+            self.assertIn(name,report['supplemental_materials'])
+
     def test_cache_symlink_is_rejected(self):
         path=self.cache/'candidate-wheelhouse'/self.package['filename']
         actual=self.root/'alias.whl';path.rename(actual);path.symlink_to(actual)
