@@ -90,6 +90,11 @@ def complete_manifest():
             license_ids=["MIT"],
         ),
         payload(
+            "checks/build-requirements.lock",
+            hashlib.sha256(b"build requirements").hexdigest(),
+            license_ids=["MIT"],
+        ),
+        payload(
             "README.zh-CN.md",
             hashlib.sha256(b"readme").hexdigest(),
             license_ids=["MIT"],
@@ -121,11 +126,24 @@ def complete_manifest():
         "source_commit": COMMIT,
         "qbox_wheel_sha256": HEX_B,
         "runtime_sha256": HEX_A,
-        "dependencies_lock_sha256": hashlib.sha256(b"dependencies").hexdigest(),
-        "build_requirements_lock_sha256": hashlib.sha256(b"build").hexdigest(),
+        "dependencies_lock_sha256": next(
+            item["sha256"]
+            for item in project_files
+            if item["path"] == "requirements.lock"
+        ),
+        "build_requirements_lock_sha256": next(
+            item["sha256"]
+            for item in project_files
+            if item["path"] == "checks/build-requirements.lock"
+        ),
         "installer_template_sha256": project_files[0]["sha256"],
         "launcher_template_sha256": project_files[1]["sha256"],
-        "checks": {project_files[2]["path"]: project_files[2]["sha256"]},
+        "checks": {
+            item["path"]: item["sha256"]
+            for item in project_files
+            if item["path"].startswith("checks/")
+            and item["path"] != "checks/qbox-launcher.sh"
+        },
         "licenses": {
             item["path"]: item["sha256"]
             for item in project_files
@@ -329,6 +347,36 @@ class ModelTests(unittest.TestCase):
         manifest["identity"]["runtime_sha256"] = HEX_C
         manifest["release_id"] = release_id(manifest["qbox_version"], manifest["identity"])
         with self.assertRaisesRegex(ValueError, "runtime_sha256"):
+            validate_manifest(manifest)
+
+    def test_manifest_rejects_lock_hash_mismatches_and_missing_build_lock(self):
+        mutations = (
+            ("dependencies_lock_sha256", HEX_C),
+            ("build_requirements_lock_sha256", HEX_C),
+        )
+        for field, digest in mutations:
+            manifest = complete_manifest()
+            manifest["identity"][field] = digest
+            manifest["release_id"] = release_id(
+                manifest["qbox_version"], manifest["identity"]
+            )
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
+                validate_manifest(manifest)
+
+        manifest = complete_manifest()
+        manifest["files"] = [
+            item
+            for item in manifest["files"]
+            if item["path"] != "checks/build-requirements.lock"
+        ]
+        with self.assertRaisesRegex(ValueError, "checks/build-requirements.lock"):
+            validate_manifest(manifest)
+
+    def test_manifest_rejects_qbox_wheel_version_mismatch(self):
+        manifest = complete_manifest()
+        manifest["wheels"][0]["version"] = "9.9.9"
+        manifest["wheels"][0]["requirement"] = "qbox[analysis,structure]==9.9.9"
+        with self.assertRaisesRegex(ValueError, "qbox_version"):
             validate_manifest(manifest)
 
     def test_manifest_requires_bundle_layout_payloads(self):

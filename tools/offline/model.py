@@ -226,10 +226,14 @@ def _validate_identity(
     qbox_wheels = [wheel for wheel in manifest["wheels"] if wheel["name"].lower() == "qbox"]
     if len(qbox_wheels) != 1:
         raise ValueError("wheels must contain exactly one qbox wheel")
+    if qbox_wheels[0]["version"] != manifest["qbox_version"]:
+        raise ValueError("qbox wheel version does not match qbox_version")
     if identity["qbox_wheel_sha256"] != qbox_wheels[0]["sha256"]:
         raise ValueError("identity.qbox_wheel_sha256 does not match qbox wheel")
 
     fixed_files = {
+        "dependencies_lock_sha256": "requirements.lock",
+        "build_requirements_lock_sha256": "checks/build-requirements.lock",
         "installer_template_sha256": "install.sh",
         "launcher_template_sha256": "checks/qbox-launcher.sh",
     }
@@ -304,6 +308,7 @@ def validate_manifest(value: dict) -> None:
     for required_path in (
         "install.sh",
         "requirements.lock",
+        "checks/build-requirements.lock",
         "README.zh-CN.md",
         "LICENSE",
         "checks/qbox-launcher.sh",
