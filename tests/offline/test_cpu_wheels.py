@@ -135,7 +135,7 @@ class CpuWheelTests(unittest.TestCase):
         a={'id':'scientific','proof':{'outputs':[{'name':'numpy'}]},'input_bytes':b'{}'}
         b={'id':'lxml','proof':{'outputs':[{'name':'lxml'}]},'input_bytes':b'{}'}
         packages=[{'name':n,'build_provenance':'proof.json'} for n in ('numpy','lxml')]
-        with patch.object(cpu_wheels,'validate_provenance'):
+        with patch.object(cpu_wheels._contract,'validate_provenance'):
             cpu_wheels.validate_components([a,b],packages)
             for components in ([a,a],[a,{**b,'proof':a['proof']}],[a]):
                 with self.assertRaisesRegex(ValueError,'component|overlap|uncovered'):

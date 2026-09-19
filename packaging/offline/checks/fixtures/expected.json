@@ -1,0 +1,14 @@
+{
+  "elements": ["Si"],
+  "atom_count": 1,
+  "cell_lengths": [5.0, 5.0, 5.0],
+  "volume": 125.0,
+  "absolute_tolerance": 1e-8,
+  "gamma": [0.0, 0.0, 0.0],
+  "spacegroup": 221,
+  "path_segments": [["GAMMA", "X"], ["X", "M"], ["M", "GAMMA"], ["GAMMA", "R"], ["R", "X"], ["R", "M"]],
+  "kpath_rows": 8,
+  "segment_points": 7,
+  "vbm_text": "    0.000000    -2.00000000\n    1.000000    -1.00000000\n",
+  "cbm_text": "    0.000000     1.00000000\n    1.000000     3.00000000\n"
+}
