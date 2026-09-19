@@ -277,7 +277,7 @@ function qe_estimate_atom_count (){
 	scf_file="${calc_prefix}.scf.in"
 
 	if [ -f "$scf_file" ]; then
-		nat=`awk 'BEGIN{IGNORECASE=1} /^[[:space:]]*nat[[:space:]]*=/ {gsub(/,/, "", $3); print $3; exit}' "$scf_file"`
+		nat=`awk 'tolower($0) ~ /^[[:space:]]*nat[[:space:]]*=/ {gsub(/,/, "", $3); print $3; exit}' "$scf_file"`
 		if echo "$nat" | awk '$1 ~ /^[0-9]+$/ && $1 > 0 {exit 0} {exit 1}'; then
 			echo "$nat"
 			return 0

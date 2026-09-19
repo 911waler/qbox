@@ -43,7 +43,7 @@ function qe_unfold_patch_bands_input (){
 }
 
 function qe_unfold_read_nbnd (){
-	awk 'BEGIN{IGNORECASE=1} /^[[:space:]]*nbnd[[:space:]]*=/ {line=$0; sub(/^[^=]*=/,"",line); gsub(/[,[:space:]]/,"",line); print line; exit}' "$1"
+	awk 'tolower($0) ~ /^[[:space:]]*nbnd[[:space:]]*=/ {line=$0; sub(/^[^=]*=/,"",line); gsub(/[,[:space:]]/,"",line); print line; exit}' "$1"
 }
 
 function qe_unfold_validate_pw_pair (){
@@ -319,4 +319,3 @@ function run_qe_unfold_calculation (){
 	echo ' unfold 计算失败或未生成 enk.dat/wnk.dat。'
 	return 1
 }
-

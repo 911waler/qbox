@@ -408,9 +408,21 @@ echo
     qe_write_dynmat_input "${prefix}.dynmat.in" "${prefix}.dynG" "'zero-dim'"
 }
 
+function qe_frequency_is_positive (){
+	printf '%s\n' "$1" | LC_ALL=C awk '
+		NR != 1 {bad=1}
+		NR == 1 {v=$0; sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]+$/, "", v)}
+		END {
+			if (bad || v !~ /^-?([0-9]+([.][0-9]*)?|[.][0-9]+)$/) exit 2
+			if (v !~ /^-/ && v ~ /[1-9]/) exit 0
+			exit 1
+		}'
+}
+
 #-----------Thermodynamic properties of gaseous molecule-----------
 function qe_phonon_gas_thermo (){
-	: > "${prefix}.shm"
+local status last_frequency_line
+local -a gasfreq=()
 echo " 气相分子热力学性质计算流程："
 echo " * 步骤 1：计算气相分子的 Gamma 点振动频率。"
 echo " * 步骤 2：使用 Shermo 计算热力学性质。"
@@ -424,16 +436,38 @@ fi
  
 #read frequency from dynmat.mold
 acc=0
-for ((i=3;i<"$(grep -n 'FR-COORD' dynmat.mold |awk -F \: '{print $1}')";i++))
+last_frequency_line=`grep -n 'FR-COORD' dynmat.mold |awk -F \: '{print $1}'`
+for ((i=3;i<last_frequency_line;i++))
 do
 	val=`sed -n "${i}p" dynmat.mold`
-	if [ "$(echo "$val > 0.0" |bc)" -eq "1" ]; then
-		gasfreq[$acc]="$val"
-		acc=$(($acc+1))
+	if qe_frequency_is_positive "$val"; then
+		status=0
+	else
+		status=$?
 	fi
+	case "$status" in
+		0)
+			gasfreq[$acc]="$val"
+			acc=$(($acc+1))
+			;;
+		1)
+			;;
+		2)
+			case "$val" in
+				*[0-9][eEdD][+-][0-9]*|*[0-9][eEdD][0-9]*)
+					echo " 错误：频率 '$val' 使用了不支持指数记数法；仅支持普通十进制。" >&2
+					;;
+				*)
+					echo " 错误：频率 '$val' 不是支持的普通十进制形式。" >&2
+					;;
+			esac
+			return 2
+			;;
+	esac
 done
- 
+
 #write Shermo input file
+: > "${prefix}.shm"
 echo '*E' >> ${prefix}.shm
 echo "  Input electronic energy in Hartree unit rather than Ry unit." >> ${prefix}.shm
 echo '*wavenum' >> ${prefix}.shm

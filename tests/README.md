@@ -41,6 +41,37 @@ entering the interactive menu. Workflows execute in temporary directories and
 use `QBOX_`-configured command mocks. The suite does not launch real Quantum
 ESPRESSO calculations.
 
+## Portable numeric input boundaries
+
+The gas-phase thermochemistry reader accepts only ordinary decimal frequency
+text: an optional leading `-`, digits with an optional decimal point, or a
+leading decimal point followed by digits. Whitespace around the value is
+ignored. Positive values are copied byte-for-byte to the Shermo `.shm` file;
+zero and negative values are skipped. A leading `+`, exponent notation
+(`e`, `E`, `d`, or `D`), an empty line, and other expressions are rejected
+before an existing `.shm` file is truncated. This deliberately narrow input
+contract avoids implementation-dependent numeric evaluation in system `awk`.
+
+GNU bc 1.07.1 was used once during development to document the behavior being
+replaced. It is not a qbox runtime or test dependency. The exact comparison
+results were:
+
+| Input comparison (`value > 0.0`) | stdout | stderr |
+| --- | --- | --- |
+| `0.125` | `1\n` | empty |
+| `.5` | `1\n` | empty |
+| `+.5` | empty | `(standard_in) 1: syntax error\n` |
+| `-0.25` | `0\n` | empty |
+| `0.0` | `0\n` | empty |
+| `1e-20` | empty | `(standard_in) 1: syntax error\n` |
+| `1E-20` | `0\n` | empty |
+| `1D-20` | `0\n` | empty |
+
+The exponent results show why the former bc behavior was not a reliable
+scientific-notation contract. `test_portable_awk.sh` instead checks the explicit
+ordinary-decimal contract using the real qbox functions, system awk variants,
+and a `bc` failure sentinel.
+
 ## Coverage
 
 The suite checks command-line and menu dispatch, prompts, generated input and

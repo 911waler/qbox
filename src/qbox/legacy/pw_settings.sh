@@ -27,9 +27,8 @@ function pseudo_file_by_lib (){
 function read_upf_cutoffs (){
 	local ppfile="$1"
 	awk '
-		BEGIN{IGNORECASE=1}
 		{
-			line=$0
+			line=tolower($0)
 			gsub(/[dD]/,"e",line)
 			if(line ~ /wfc_cutoff[[:space:]]*=/){
 				tmp=line
@@ -202,6 +201,7 @@ function qe_render_pw_nbnd (){
 	  {print}
 	' "$infile"
 }
+
 
 function qe_set_pw_nbnd_in_file (){
 	local infile="$1" nbnd_value="$2"
@@ -532,4 +532,3 @@ function qe_render_nscf_nbnd_update (){
 	  {print}
 	' "$infile"
 }
-
