@@ -130,7 +130,7 @@ def make_archive(path, entries, format=tarfile.USTAR_FORMAT):
 
 def make_bundle(root, entries=None, format=tarfile.USTAR_FORMAT):
     root.mkdir(exist_ok=True)
-    for folder in ('runtime', 'checks', 'packages', 'wheelhouse', 'licenses'):
+    for folder in ('runtime', 'checks', 'packages', 'wheelhouse', 'THIRD_PARTY_LICENSES'):
         (root/folder).mkdir(exist_ok=True)
     for name in ('install.sh', 'manifest.json', 'requirements.lock', 'README.zh-CN.md', 'LICENSE'):
         (root/name).write_text('fixture\n')
@@ -432,6 +432,35 @@ class AdditionalBoundaryTests(unittest.TestCase):
             (stage/'existing').write_text('keep')
             result = shell('GLOBIGNORE="*"; directory_is_empty "$1"', stage)
             self.assertNotEqual(result.returncode, 0)
+
+
+class ReviewRegressionTests(unittest.TestCase):
+    def test_approved_third_party_license_layout_is_verified(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)/'bundle'
+            make_bundle(root)
+            licenses = root/'THIRD_PARTY_LICENSES'
+            (licenses/'runtime.txt').write_text('Actual third-party license fixture\n')
+            hash_bundle(root)
+            result = shell('verify_bundle_files "$1" && printf "%s" "$QBOX_VERIFIED_BUNDLE"', root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, str(root))
+
+    def test_unreadable_bundle_root_rejects_hidden_extra_and_clears_state(self):
+        if os.geteuid() == 0:
+            self.skipTest('permission test needs ordinary user')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)/'bundle'
+            make_bundle(root)
+            (root/'unlisted-extra').write_text('must not evade inventory')
+            root.chmod(0o300)
+            try:
+                result = shell('QBOX_RUNTIME_SHA256=stale; QBOX_VERIFIED_BUNDLE=stale; verify_bundle_files "$1"; status=$?; printf "%s|%s" "${QBOX_RUNTIME_SHA256-}" "${QBOX_VERIFIED_BUNDLE-}"; exit "$status"', root)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '|')
+                self.assertIn('无法完整枚举', result.stderr)
+            finally:
+                root.chmod(0o700)
 
 
 if __name__ == '__main__':

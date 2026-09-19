@@ -153,13 +153,14 @@ safe_payload_path() {
 bundle_payload_path() {
     safe_payload_path "$1" || return 1
     case "$1" in
-        install.sh|manifest.json|requirements.lock|README.zh-CN.md|LICENSE|runtime/python.tar.gz|checks/*|licenses/*|packages/*|wheelhouse/*) return 0 ;;
+        install.sh|manifest.json|requirements.lock|README.zh-CN.md|LICENSE|runtime/python.tar.gz|checks/*|THIRD_PARTY_LICENSES/*|packages/*|wheelhouse/*) return 0 ;;
         *) return 1 ;;
     esac
 }
 
 verify_bundle_inventory() (
     # Subshell confines glob settings. The associative inventory is inherited.
+    [[ -r "$1" && -x "$1" ]] || { qbox_error '包根目录无法完整枚举'; return 1; }
     unset GLOBIGNORE
     shopt -s globstar dotglob nullglob
     local item name
@@ -171,7 +172,7 @@ verify_bundle_inventory() (
             [[ -r "$item" && -x "$item" ]] || { qbox_error '包内目录无法完整枚举'; return 1; }
             safe_payload_path "$name" || { qbox_error '包内目录路径不安全'; return 1; }
             case "$name" in
-                runtime|checks|licenses|packages|wheelhouse|checks/*|licenses/*|packages/*|wheelhouse/*) ;;
+                runtime|checks|THIRD_PARTY_LICENSES|packages|wheelhouse|checks/*|THIRD_PARTY_LICENSES/*|packages/*|wheelhouse/*) ;;
                 *) qbox_error "包内目录不在白名单：$name"; return 1 ;;
             esac
         elif [[ -f "$item" ]]; then
