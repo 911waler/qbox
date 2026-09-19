@@ -469,14 +469,18 @@ prepare_bin_link() {
     create_owned_directories "$bin_dir" || return 1
     if [[ ! -e "$bin_dir/qbox" && ! -L "$bin_dir/qbox" ]]; then
         # Defer catchable signals until the visible link has its ownership record.
-        # The bounded child commands ignore the same process-group signal, so ln
-        # cannot be interrupted after creating a link but before reporting success.
+        # One child installs ignored dispositions before publishing any link and
+        # keeps them through inode capture. A signal during child startup is safe:
+        # no link exists yet. Do not start another unprotected child after ln.
         local pending_signal=0 link_status=0
         trap '(( pending_signal )) || pending_signal=130' INT
         trap '(( pending_signal )) || pending_signal=143' TERM
-        if ( trap '' INT TERM; ln -sT -- "$prefix/current/bin/qbox" "$bin_dir/qbox" ); then
+        if bin_identity=$(
+            trap '' INT TERM
+            ln -sT -- "$prefix/current/bin/qbox" "$bin_dir/qbox" || exit 1
+            stat -c '%d:%i' -- "$bin_dir/qbox"
+        ); then
             bin_created=1
-            bin_identity=$(trap '' INT TERM; stat -c '%d:%i' -- "$bin_dir/qbox") || link_status=1
         else
             link_status=1
         fi

@@ -435,7 +435,7 @@ verify_release() {
                 if self.bindir.exists(): shutil.rmtree(self.bindir)
                 override=r'''stat() {
                     command stat "$@" || return
-                    if [[ "${@: -1}" == "$bin_dir/qbox" && "$bin_created" == 1 && -z "$bin_identity" ]]; then
+                    if [[ "${@: -1}" == "$bin_dir/qbox" && -L "$bin_dir/qbox" && -z "$bin_identity" ]]; then
                         kill -''' + signal_name + r''' "$transaction_pid"
                     fi
                 }'''
@@ -488,6 +488,74 @@ ln() {
                 retry=self.run_transaction()
                 self.assertEqual(retry.returncode,0,retry.stderr)
                 shutil.rmtree(self.prefix);shutil.rmtree(self.bindir)
+
+    def test_stat_child_startup_boundary_cannot_leave_unowned_command(self):
+        for signal_name,status in [('INT',130),('TERM',143)]:
+            with self.subTest(signal=signal_name):
+                if self.prefix.exists(): shutil.rmtree(self.prefix)
+                if self.bindir.exists(): shutil.rmtree(self.bindir)
+                fired=self.root/'stat-startup-signal'
+                fired.unlink(missing_ok=True)
+                # Exact reviewed boundary: a fresh stat child starts after ln,
+                # before its first ignore installation. Fixed code has no such
+                # child; then the same signal is delivered during protected stat.
+                override=r'''builtin trap ':' INT TERM
+trap() {
+    if [[ "$#" == 3 && -z "$1" && "$2" == INT && "$3" == TERM && "${bin_created:-0}" == 1 && -z "${bin_identity:-}" && "$BASHPID" != "$transaction_pid" ]]; then
+        printf 'unprotected-startup' > "$prefix/../stat-startup-signal"
+        kill -''' + signal_name + r''' -- "-$$"
+    fi
+    builtin trap "$@"
+}
+ln() {
+    command ln "$@" || return
+    if [[ "${@: -1}" == "$bin_dir/qbox" ]]; then
+        printf '%s' "$BASHPID" > "$prefix/../command-link-child"
+    fi
+}
+stat() {
+    if [[ "${@: -1}" == "$bin_dir/qbox" && -z "$bin_identity" && ! -e "$prefix/../stat-startup-signal" ]]; then
+        [[ "$BASHPID" == "$(cat "$prefix/../command-link-child")" ]] || return 78
+        printf 'protected-stat' > "$prefix/../stat-startup-signal"
+        kill -''' + signal_name + r''' -- "-$$"
+    fi
+    command stat "$@"
+}'''
+                args=['/bin/bash','--noprofile','--norc','-c',self.script(extra=override),'test',str(self.bundle),str(self.prefix),str(self.bindir),str(self.log),'']
+                result=subprocess.run(args,env=ENV,text=True,capture_output=True,start_new_session=True,timeout=20)
+                self.assertEqual(result.returncode,status,result.stderr)
+                self.assertFalse((self.bindir/'qbox').is_symlink())
+                self.assertFalse(self.prefix.exists())
+                self.assertEqual(fired.read_text(),'protected-stat')
+                retry=self.run_transaction()
+                self.assertEqual(retry.returncode,0,retry.stderr)
+                shutil.rmtree(self.prefix);shutil.rmtree(self.bindir)
+
+    def test_initial_link_child_startup_signal_creates_no_command(self):
+        for signal_name,status in [('INT',130),('TERM',143)]:
+            with self.subTest(signal=signal_name):
+                if self.prefix.exists(): shutil.rmtree(self.prefix)
+                if self.bindir.exists(): shutil.rmtree(self.bindir)
+                fired=self.root/'initial-child-signal'
+                fired.unlink(missing_ok=True)
+                override=r'''builtin trap ':' INT TERM
+trap() {
+    if [[ "$#" == 3 && -z "$1" && "$2" == INT && "$3" == TERM && "$BASHPID" != "$transaction_pid" && ! -L "$bin_dir/qbox" ]]; then
+        printf 'initial-startup' > "$prefix/../initial-child-signal"
+        kill -''' + signal_name + r''' -- "-$$"
+    fi
+    builtin trap "$@"
+}'''
+                args=['/bin/bash','--noprofile','--norc','-c',self.script(extra=override),'test',str(self.bundle),str(self.prefix),str(self.bindir),str(self.log),'']
+                result=subprocess.run(args,env=ENV,text=True,capture_output=True,start_new_session=True,timeout=20)
+                self.assertEqual(result.returncode,status,result.stderr)
+                self.assertEqual(fired.read_text(),'initial-startup')
+                self.assertFalse((self.bindir/'qbox').is_symlink())
+                self.assertFalse(self.prefix.exists())
+                retry=self.run_transaction()
+                self.assertEqual(retry.returncode,0,retry.stderr)
+                shutil.rmtree(self.prefix);shutil.rmtree(self.bindir)
+
 
 
 if __name__ == '__main__': unittest.main()
