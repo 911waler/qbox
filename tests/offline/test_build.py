@@ -153,6 +153,24 @@ class BuildTests(unittest.TestCase):
         descriptor.write_bytes(canonical_json(value))
         self.assertTrue(self.build().is_file())
 
+    def test_dependency_member_punctuation_preserved_but_traversal_rejected(self):
+        path=self.cache/'candidate-wheelhouse'/self.package['filename']
+        original=path.read_bytes()
+        for member,allowed in [('demo/A#2.json',True),('demo/Li3V2(PO4)3.json',True),('demo/Transparent Busy.ani',True),('../escape',False)]:
+            with self.subTest(member=member):
+                path.write_bytes(original)
+                with zipfile.ZipFile(path,'a') as archive:archive.writestr(member,'data')
+                self.package.update(sha256=sha256_file(path),size=path.stat().st_size)
+                deps=json.loads((self.locks/'dependencies.lock.json').read_text());deps['packages']=[self.package]
+                (self.locks/'dependencies.lock.json').write_bytes(canonical_json(deps))
+                (self.locks/'requirements.lock').write_text(f'demo==1.0 --hash=sha256:{self.package["sha256"]}\n')
+                # Audit binding is independent of ZIP path policy and covered separately.
+                report=json.loads((self.cache/'audit/licenses.json').read_text())
+                with patch.object(builder,'_source_identity',return_value=('a'*40,1577836800)),patch.object(builder,'_audit_inputs',return_value=(json.loads((self.cache/'audit/descriptor.json').read_text()),{'licenses':report,'elf':{'auditwheel':[]}})):
+                    if allowed:self.assertTrue(self.build(member.replace('/','_')).is_file())
+                    else:
+                        with self.assertRaises(ValueError):self.build()
+
     def test_cache_symlink_is_rejected(self):
         path=self.cache/'candidate-wheelhouse'/self.package['filename']
         actual=self.root/'alias.whl';path.rename(actual);path.symlink_to(actual)

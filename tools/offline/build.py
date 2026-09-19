@@ -22,7 +22,7 @@ from packaging.utils import canonicalize_name
 from .model import canonical_json, release_id, safe_payload_path, sha256_file, validate_manifest
 from .resolve import wheel_metadata, requirements_bytes, load_cpu_builds
 from .cpu_wheels import validate_components
-from .audit import validate_license_inventory, wheel_inventory
+from .audit import validate_license_inventory, wheel_inventory, _safe as safe_wheel_member
 
 ROOT = Path(__file__).resolve().parents[2]
 CHECKS = ('verify.py', 'smoke.py', 'manifest.py', 'provenance.py',
@@ -219,7 +219,7 @@ def build(cache: Path, output: Path) -> Path:
             if len(names)!=len(set(names)):
                 raise ValueError('duplicate dependency wheel member')
             for info in archive.infolist():
-                safe_payload_path(info.filename.rstrip('/'))
+                safe_wheel_member(info.filename)
                 if stat.S_ISLNK(info.external_attr>>16):
                     raise ValueError('dependency wheel symlink forbidden')
     output.parent.mkdir(parents=True,exist_ok=True)
