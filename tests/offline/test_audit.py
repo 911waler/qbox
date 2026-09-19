@@ -95,6 +95,64 @@ class AuditTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'duplicate component'):
             validate_license_inventory({'components':[component,component]})
 
+    def test_supplemental_zip_preserves_only_explicit_license_member(self):
+        import hashlib
+        from tools.offline.audit import _supplemental_materials
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);cache=root/'cache';(cache/'sha256').mkdir(parents=True)
+            path=root/'notice.whl'
+            with zipfile.ZipFile(path,'w') as z:
+                z.writestr('pkg.dist-info/LICENSE',b'Complete license body')
+                z.writestr('pkg/code.so',b'not a delivered binary')
+            digest=hashlib.sha256(path.read_bytes()).hexdigest()
+            (cache/'sha256'/digest).write_bytes(path.read_bytes())
+            item={'name':'gcc-notice','version':'8.5','archive_kind':'zip','deliver_archive':False,'license_members':['pkg.dist-info/LICENSE'],'source':{'filename':path.name,'sha256':digest,'url':'https://example.org/notice.whl'}}
+            result=_supplemental_materials(cache,root/'materials',[item])
+            self.assertEqual(list(result),['source-licenses/gcc-notice/pkg.dist-info/LICENSE'])
+            body=next(iter(result.values()))
+            self.assertEqual((root/'materials'/Path(body['path']).name).read_bytes(),b'Complete license body')
+            item['license_members']=['missing']
+            with self.assertRaisesRegex(ValueError,'missing'):
+                _supplemental_materials(cache,root/'materials',[item])
+
+    def test_license_discovery_excludes_ci_workflows(self):
+        from tools.offline.audit import _license_member
+        self.assertFalse(_license_member('scipy/subprojects/cobyqa/.github/workflows/license.yml'))
+        self.assertTrue(_license_member('scipy/subprojects/cobyqa/LICENSE'))
+
+    def test_rejected_wheel_tag_blocks_elf_and_aggregate_reports(self):
+        from contextlib import ExitStack
+        import hashlib
+        from types import SimpleNamespace
+        from tools.offline import audit as module
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);locks=root/'packaging/offline';locks.mkdir(parents=True)
+            cache=root/'cache';(cache/'candidate-wheelhouse').mkdir(parents=True)
+            archive=cache/'python.tar.gz';archive.write_bytes(b'runtime')
+            digest=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+            filename='demo-1.0-cp312-cp312-manylinux_2_35_x86_64.whl'
+            wheel=cache/'candidate-wheelhouse'/filename
+            with zipfile.ZipFile(wheel,'w') as z:z.writestr('demo.so',b'ELF')
+            (locks/'runtime.lock.json').write_text(json.dumps({'normalized':{'sha256':digest(archive)}}))
+            (locks/'dependencies.lock.json').write_text(json.dumps({'packages':[],'qbox_resolution_wheel':{'filename':filename,'sha256':digest(wheel)}}))
+            (locks/'licenses.lock.json').write_text(json.dumps({'runtime_sha256':digest(archive),'runtime':{},'wheels':{filename:{'sha256':digest(wheel)}}}))
+            (locks/'policy.json').write_text(json.dumps({'resolver':{'validation_images':{'quay.io/rockylinux/rockylinux:8':'rocky','public.ecr.aws/ubuntu/ubuntu:20.04':'ubuntu'}}}))
+            inventory={'components':[],'materials':[],'native':['demo.so']}
+            replacements={'LOCKS':locks,'_supplemental_materials':{},'_extract_runtime':None,
+                          '_prepare_auditwheel':['auditwheel'],'_runtime_inventory':inventory,
+                          'wheel_inventory':inventory,'_base_libraries':{},
+                          '_native_report':{'errors':[]},'validate_license_inventory':None}
+            with ExitStack() as stack:
+                stack.enter_context(patch.object(module,'LOCKS',locks))
+                for name,value in replacements.items():
+                    if name!='LOCKS':stack.enter_context(patch.object(module,name,return_value=value))
+                stack.enter_context(patch.object(module.subprocess,'run',return_value=SimpleNamespace(stdout='',stderr='',returncode=0)))
+                result=module.audit(cache,root/'result')
+            self.assertEqual(result['status'],'blocked')
+            elf=json.loads((root/'result/elf.json').read_text())
+            self.assertEqual(elf['status'],'blocked')
+            self.assertEqual(elf['errors'],[filename+': disallowed native wheel tag'])
+
     def test_empty_license_body_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'demo-1.0-py3-none-any.whl'

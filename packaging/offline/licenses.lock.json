@@ -8,6 +8,10 @@
     {
       "name": "notices/REDISTRIBUTION.txt",
       "text": "qbox offline redistribution materials\n\nThe accompanying licenses and corresponding-source archives are part of this distribution. The report maps each component and original filename to its byte-preserved SHA-256 material. Archive filenames are recorded even where the material storage uses content hashes. Standard tar/zip/RPM tools can unpack the source archives.\n\nPython 3.12.14+20260901 includes Berkeley DB 6.0.19. Complete Python, Berkeley DB and linked library source archives, plus the exact python-build-standalone 20260901 build recipes/patches, accompany this distribution. Sources remain under their original freely redistributable licenses. The executable's build recipe is in python-build-standalone's cpython-unix build scripts. Our only runtime modifications replace Tcl/Tk development RPATHs with $ORIGIN and add an unmodified Rocky Linux zlib 1.2.11-26 library, all recorded in native-repair.json.\n\nThe included libgfortran and libquadmath libraries have corresponding distribution SRPMs including their build specifications and patches. AlmaLinux GCC 8.5.0-28.el8_10.alma.1 and CentOS gcc-libraries 8.3.1-2.1.1.el7 / GCC 4.8.5-44.el7 sources are included. Wheel repair changes loader names/RPATH only; exact build-id and code-section matches are recorded in provenance. GPL library source obligations are not waived by the GCC Runtime Library Exception.\n\nlxml 6.1.3 embeds libxml2 2.14.6, libxslt 1.1.43 and libiconv 1.18. Corresponding library sources and the complete lxml source including generated C, buildlibxml.py, and backport patches accompany it. To rebuild/relink modified libraries, use that source's static build with LIBXML2_VERSION=2.14.6 LIBXSLT_VERSION=1.1.43 LIBICONV_VERSION=1.18 ZLIB_VERSION=1.3.2 STATIC_DEPS=true; buildlibxml.py documents local archive directories, patches, and build flags. These materials permit rebuilding the work with modified LGPL library source; no term of this distribution restricts modification or reverse engineering for debugging such modifications.\n\nASE source is supplied alongside its LGPL license. Source for orjson's MPL-covered code is supplied in the same-version sdist, including the vendored Cargo source. certifi's source-form files and certificate data are included in its source archive; the pip-vendored certifi source-form files are already in python/lib/python3.12/site-packages/pip/_vendor/certifi. The Pillow same-version source contains its LGPL FriBiDi shim and LGPL license text accompanies it; any optional external FriBiDi loaded by Pillow is not included in qbox.\n\nThis software is based in part on the work of the Independent JPEG Group. Portions of this software are copyright (C) 1996-2026 The FreeType Project (https://freetype.org). All rights reserved. The complete FreeType FTL text and upstream notices accompany the distribution. Matplotlib/Pillow application code is unmodified.\n\nSome permissive compiled header components do not expose their exact compilation version in upstream wheels. pybind11 is identified by same-version package build declarations; all compared official releases 2.13.2 through 3.1.0 carry byte-identical complete license/copyright text. Its actual compilation version is recorded as unknown; this is a license-body coverage finding, not an assertion of a binary source version.\n"
+    },
+    {
+      "name": "notices/CPU_BUILDS.txt",
+      "text": "These NumPy 2.5.3 and SciPy 1.18.1 wheels were rebuilt by qbox maintainers from their fixed official source distributions. They are not the official PyPI wheel bytes. Their upstream sources are unmodified. NumPy has cpu-baseline=none and the C/C++/Fortran baseline is -march=x86-64 -mtune=generic. Both use complete, statically selected GENERIC OpenBLAS kernels (LP64 for SciPy, ILP64 for NumPy), trading optimized newer-CPU BLAS performance for baseline CPU compatibility. Full BLAS/LAPACK and all four numeric scalar types remain enabled. Dynamic dispatch remains inside NumPy for CPUs supporting its separately built higher-ISA paths.\n\nThe exact official source archives, all license bodies, GCC8.5 runtime corresponding sources, GCC14.2.1 compiler/header corresponding sources and Pythran header sources accompany this distribution under THIRD_PARTY_LICENSES. The original upstream NumPy notice is preserved as a license body only, not as provenance for rebuilt binaries. OpenBLAS code/attributions are preserved in its corresponding source archive.\n\nRebuild inputs and output-byte associations are checks/cpu-build-inputs.lock.json and checks/cpu-build-provenance.json. Compile recipe sources are under checks/cpu-build/compile/ followed by each top-level recipe_files path. Normalization sources are under checks/cpu-build/normalize/ followed by each normalization.recipe_files path. Both recorded Git commits contain the actual executed code. All recipe hashes and the output wheel hashes must be checked against those files; original PyPI wheel URL/hash values must not be assigned to rebuilt bytes. Target users install only bundled hash-locked wheels offline; compiler/toolchain containers remain maintainer-only.\n\nlxml 6.1.3 is also rebuilt for x86-64/SSE2, retaining libxml2 2.14.6, libxslt 1.1.43, libiconv 1.18 and zlib 1.3.2. Its application/native sources are unchanged. The explicit buildlibxml.py maintainer patch pins directory lookup and rejects missing/corrupt offline archives without network fallback; before/after hashes and full patch are delivered. Its independent input lock/provenance are checks/cpu-lxml-build-inputs.lock.json and checks/cpu-lxml-build-provenance.json. Component IDs scientific/lxml distinguish actual independent build histories. Recipe delivery paths are checks/cpu-build/compile/<component>/<repo-path> and checks/cpu-build/normalize/<component>/<repo-path>; these component paths supersede earlier unqualified path examples. All delivered recipe, source, input and wheel hashes must be verified.\n"
     }
   ],
   "provenance_records": {
@@ -562,6 +566,124 @@
       ],
       "original_sha256": "e378371339b1ae7908c2a554d8475d8d95104ef36d269cabed62237ac7678315"
     },
+    "cpu-build/gcc14-source": {
+      "builder_image": "quay.io/pypa/manylinux_2_28_x86_64@sha256:531d7aa844bbb0c131d4ab011d3db741c4abc8d498cd5ccc86121046f62303b4",
+      "data": {
+        "arch": "src",
+        "filename": "gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm",
+        "name": "gcc-toolset-14-gcc",
+        "official_checksum": "0131355464ff7b4958d0d668b3166e05c95c9d0bc4af243ff580a10b78b123eb",
+        "official_checksum_type": "sha256",
+        "primary_sha256": "4ac03cf8d01c408490f9f614e42fbe720043df7823e0c3d54dfd6a326da53a87",
+        "primary_url": "https://repo.almalinux.org/vault/8.10/AppStream/Source/repodata/4ac03cf8d01c408490f9f614e42fbe720043df7823e0c3d54dfd6a326da53a87-primary.xml.gz",
+        "release": "11.el8_10",
+        "repomd_sha256": "1192a782ffef94c4f701711fc3dd34fa301dd3c5fba3867d4bdfc7553dd24c6c",
+        "repository": "https://repo.almalinux.org/vault/8.10/AppStream/Source/",
+        "sha256": "0131355464ff7b4958d0d668b3166e05c95c9d0bc4af243ff580a10b78b123eb",
+        "size": 93036537,
+        "url": "https://repo.almalinux.org/vault/8.10/AppStream/Source/Packages/gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm",
+        "version": "14.2.1"
+      },
+      "signature_verification": "/data/gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm:\n    Header V4 RSA/SHA256 Signature, key ID ced7258b: OK\n    Header SHA256 digest: OK\n    Header SHA1 digest: OK\n    Payload SHA256 digest: OK\n    V4 RSA/SHA256 Signature, key ID ced7258b: OK\n    MD5 digest: OK\n"
+    },
+    "cpu-build/native-runtime-comparison": [
+      {
+        "member": "scipy.libs/libgfortran-83c28eba.so.5.0.0",
+        "native": {
+          "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+          "sections": {
+            ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+            ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+            ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+          },
+          "sha256": "db32e5acd682110c9645b51a8f1d9314fafa5c65bbb94c3bb1eade6fee5eb5e1"
+        },
+        "original": {
+          "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+          "sections": {
+            ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+            ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+            ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+          },
+          "sha256": "83c28ebaf89c4072df0a9577a507212d5b8eca64fb4f3e462e0f8deb8de6dc23"
+        },
+        "source_binary": "libgfortran.so.5.0.0",
+        "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+        "wheel": "scipy-1.18.1-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      {
+        "member": "scipy.libs/libquadmath-2284e583.so.0.0.0",
+        "native": {
+          "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+          "sections": {
+            ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+            ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+            ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+          },
+          "sha256": "75edaf2301b169a92aee0edffeca7c6fcbd554d4f5f3cbd4acda908300316198"
+        },
+        "original": {
+          "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+          "sections": {
+            ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+            ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+            ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+          },
+          "sha256": "2284e5833f5ea62b141499d32373fc207878c1778fe004b4867bc41d75086be2"
+        },
+        "source_binary": "libquadmath.so.0.0.0",
+        "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+        "wheel": "scipy-1.18.1-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      {
+        "member": "numpy.libs/libgfortran-83c28eba.so.5.0.0",
+        "native": {
+          "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+          "sections": {
+            ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+            ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+            ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+          },
+          "sha256": "db32e5acd682110c9645b51a8f1d9314fafa5c65bbb94c3bb1eade6fee5eb5e1"
+        },
+        "original": {
+          "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+          "sections": {
+            ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+            ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+            ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+          },
+          "sha256": "83c28ebaf89c4072df0a9577a507212d5b8eca64fb4f3e462e0f8deb8de6dc23"
+        },
+        "source_binary": "libgfortran.so.5.0.0",
+        "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+        "wheel": "numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      {
+        "member": "numpy.libs/libquadmath-2284e583.so.0.0.0",
+        "native": {
+          "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+          "sections": {
+            ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+            ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+            ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+          },
+          "sha256": "75edaf2301b169a92aee0edffeca7c6fcbd554d4f5f3cbd4acda908300316198"
+        },
+        "original": {
+          "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+          "sections": {
+            ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+            ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+            ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+          },
+          "sha256": "2284e5833f5ea62b141499d32373fc207878c1778fe004b4867bc41d75086be2"
+        },
+        "source_binary": "libquadmath.so.0.0.0",
+        "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+        "wheel": "numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+      }
+    ],
     "rust-upstream-release-recipe": {
       "license_archive": {
         "checksum_sha256": "692f9aac8d65bf43adc89cd530ae6d55eb8e2b6ca3b25ca34479ce7c873e3f93",
@@ -1994,6 +2116,70 @@
         "url": "https://codeload.github.com/zlib-ng/zlib-ng/tar.gz/refs/tags/2.3.3"
       },
       "version": "2.3.3"
+    },
+    {
+      "name": "openblas-qbox-generic",
+      "source": {
+        "filename": "OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7.tar.gz",
+        "sha256": "ddecf3872f66f556aed35dabe9e04e663f014b05052b989288f28fc9a883afe0",
+        "url": "https://codeload.github.com/OpenMathLib/OpenBLAS/tar.gz/446c436e10450c348169808f1a6b3fae0925c9f7"
+      },
+      "version": "0.3.34.dev+446c436e10450c348169808f1a6b3fae0925c9f7"
+    },
+    {
+      "name": "pythran",
+      "source": {
+        "filename": "pythran-0.19.0.tar.gz",
+        "sha256": "18a096daa8b4bbe3ace06ce5d7325be5ff57aec4cf67b91834cf1b757b3e5392",
+        "url": "https://files.pythonhosted.org/packages/bb/a3/03098a8a5d2c9f801c227cf941d85976934f5f47307ef3d819734370acdc/pythran-0.19.0.tar.gz"
+      },
+      "version": "0.19.0"
+    },
+    {
+      "archive_kind": "file",
+      "kind": "license-body",
+      "name": "xsimd",
+      "source": {
+        "filename": "xsimd-14.1.0-LICENSE",
+        "sha256": "501352acba62cc54e8e3d293754d606f919c9b425b962193c211f9fa29cd9940",
+        "url": "https://raw.githubusercontent.com/xtensor-stack/xsimd/14.1.0/LICENSE"
+      },
+      "version": "14.1.0"
+    },
+    {
+      "archive_kind": "file",
+      "kind": "license-body",
+      "name": "boost-pythran",
+      "source": {
+        "filename": "boost-1.72.0-LICENSE_1_0.txt",
+        "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+        "url": "https://raw.githubusercontent.com/boostorg/boost/boost-1.72.0/LICENSE_1_0.txt"
+      },
+      "version": "1.72.0"
+    },
+    {
+      "archive_kind": "file",
+      "name": "gcc-toolset-14",
+      "source": {
+        "filename": "gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm",
+        "sha256": "0131355464ff7b4958d0d668b3166e05c95c9d0bc4af243ff580a10b78b123eb",
+        "url": "https://repo.almalinux.org/vault/8.10/AppStream/Source/Packages/gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm"
+      },
+      "version": "14.2.1-11.el8_10"
+    },
+    {
+      "archive_kind": "zip",
+      "deliver_archive": false,
+      "license_members": [
+        "numpy-2.5.3.dist-info/licenses/LICENSE.txt"
+      ],
+      "name": "gcc-runtime-license-body",
+      "source": {
+        "filename": "numpy-2.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3",
+        "url": "https://files.pythonhosted.org/packages/65/af/aa78d1a88805456e212b65461354cd943197fb9acecc4c90fd12295123a3/numpy-2.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      "version": "8.5.0"
     }
   ],
   "wheels": {
@@ -2204,7 +2390,7 @@
       },
       "sha256": "34633ecf50d16187ab8e5528b7a2530f2feb4e23f300db4672538b51cfc5cd38"
     },
-    "lxml-6.1.3-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl": {
+    "lxml-6.1.3-1qboxcpu-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl": {
       "embedded": [
         {
           "id": "zlib",
@@ -2290,6 +2476,20 @@
             "notices/REDISTRIBUTION.txt"
           ],
           "version": "1.1.43"
+        },
+        {
+          "id": "gcc14-compiler-support",
+          "licenses": [
+            "GPL-3.0-or-later WITH GCC-exception-3.1"
+          ],
+          "materials": [
+            "source-licenses/gcc-runtime-license-body/numpy-2.5.3.dist-info/licenses/LICENSE.txt"
+          ],
+          "provenance": "fixed GCC14 baseline compiler; exact corresponding source and exception text included",
+          "sources": [
+            "sources/gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm"
+          ],
+          "version": "14.2.1-11.el8_10"
         }
       ],
       "native": [],
@@ -2303,10 +2503,11 @@
           "lxml-6.1.3.dist-info/licenses/LICENSES.txt"
         ],
         "sources": [
-          "sources/lxml-6.1.3.tar.gz"
+          "sources/lxml-6.1.3.tar.gz",
+          "notices/CPU_BUILDS.txt"
         ]
       },
-      "sha256": "909f4e927bb051f7740d6367285fc60cdcfdaf0258c2dba4ff5ba7eadadc250c"
+      "sha256": "d272418a534ef3ec53ebfbd2ecee045fc3719f68240e6896660665bcc9731e59"
     },
     "matplotlib-3.11.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
       "embedded": [
@@ -2598,7 +2799,7 @@
       },
       "sha256": "d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"
     },
-    "numpy-2.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
       "embedded": [
         {
           "id": "OpenBLAS-LAPACK",
@@ -2607,26 +2808,13 @@
             "BSD-3-Clause-Open-MPI"
           ],
           "materials": [
-            "numpy/_core/include/numpy/random/LICENSE.txt",
-            "numpy/ma/LICENSE",
-            "numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/GotoBLAS_00License.txt",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LAPACKE/LICENSE"
+          ],
+          "sources": [
+            "sources/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7.tar.gz"
           ]
         },
         {
@@ -2862,66 +3050,33 @@
           "sources": [
             "sources/numpy-2.5.3.tar.gz"
           ]
-        }
-      ],
-      "native": [
-        {
-          "licenses": [
-            "BSD-3-Clause AND BSD-3-Clause-Open-MPI"
-          ],
-          "materials": [
-            "numpy/_core/include/numpy/random/LICENSE.txt",
-            "numpy/ma/LICENSE",
-            "numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
-          ],
-          "pattern": "numpy.libs/libscipy_openblas*.so*"
         },
         {
-          "binary_sha256": "a6a368328d02a5d8a149746f13f6268f8cc9192df5c18777b25c3c9b5ef52160",
+          "id": "gcc14-compiler-runtime-headers",
           "licenses": [
             "GPL-3.0-or-later WITH GCC-exception-3.1"
           ],
           "materials": [
-            "numpy/_core/include/numpy/random/LICENSE.txt",
-            "numpy/ma/LICENSE",
-            "numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+            "source-licenses/gcc-runtime-license-body/numpy-2.5.3.dist-info/licenses/LICENSE.txt"
           ],
-          "pattern": "numpy.libs/libgfortran-83c28eba-468e71e5.so.5.0.0",
-          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "provenance": "pinned builder GCC14.2.1 C++ headers/static support; exact signed matching source RPM included",
+          "sources": [
+            "sources/gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm"
+          ],
+          "version": "14.2.1-11.el8_10"
+        }
+      ],
+      "native": [
+        {
+          "binary_sha256": "d06e88dcb39248adf44b9ab845fe98df055498523801c83254e88ab61f0de46e",
+          "licenses": [
+            "GPL-3.0-or-later WITH GCC-exception-3.1"
+          ],
+          "materials": [
+            "source-licenses/gcc-runtime-license-body/numpy-2.5.3.dist-info/licenses/LICENSE.txt"
+          ],
+          "pattern": "numpy.libs/libgfortran-83c28eba.so.5.0.0",
+          "provenance": "pinned manylinux builder AlmaLinux8.5 runtime; exact sections matched in cpu-build/native-runtime-comparison",
           "sources": [
             "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
             "notices/REDISTRIBUTION.txt"
@@ -2929,39 +3084,40 @@
           "version": "8.5.0-28.el8_10.alma.1"
         },
         {
-          "binary_sha256": "6bc3069003caec1f075be3c51ae8355332f081fa9465910c4b5724e7fe7d8ad4",
+          "binary_sha256": "570b1bc35e2f2e178f5233a8c9dddca076ecb47c5c65fa09f8bd3951989cb481",
           "licenses": [
             "LGPL-2.1-or-later"
           ],
           "materials": [
-            "numpy/_core/include/numpy/random/LICENSE.txt",
-            "numpy/ma/LICENSE",
-            "numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
-            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
-            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+            "source-licenses/gcc-runtime-license-body/numpy-2.5.3.dist-info/licenses/LICENSE.txt"
           ],
-          "pattern": "numpy.libs/libquadmath-2284e583-a9307bba.so.0.0.0",
-          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "pattern": "numpy.libs/libquadmath-2284e583.so.0.0.0",
+          "provenance": "pinned manylinux builder AlmaLinux8.5 runtime; exact sections matched in cpu-build/native-runtime-comparison",
           "sources": [
             "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
             "notices/REDISTRIBUTION.txt"
           ],
           "version": "8.5.0-28.el8_10.alma.1"
+        },
+        {
+          "binary_sha256": "7ac1ec2e7454ad3e33f2e82dfc59ae62b15a64f157a4935c82887b662754658f",
+          "licenses": [
+            "BSD-3-Clause",
+            "BSD-3-Clause-Open-MPI"
+          ],
+          "materials": [
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/GotoBLAS_00License.txt",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LAPACKE/LICENSE"
+          ],
+          "pattern": "numpy.libs/libscipy_openblas64_-b4366c50.so",
+          "provenance": "compiled from fixed official source; full GENERIC kernels; CPU build provenance binds recipe and image",
+          "sources": [
+            "sources/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7.tar.gz",
+            "notices/CPU_BUILDS.txt"
+          ],
+          "version": "0.3.34.dev+446c436e10450c348169808f1a6b3fae0925c9f7"
         }
       ],
       "native_review_complete": true,
@@ -2992,10 +3148,11 @@
           "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
         ],
         "sources": [
-          "sources/numpy-2.5.3.tar.gz"
+          "sources/numpy-2.5.3.tar.gz",
+          "notices/CPU_BUILDS.txt"
         ]
       },
-      "sha256": "b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3"
+      "sha256": "611f6c30db55b2291da74fab0718eb55a634c6b13848710ab884e6162fb5d406"
     },
     "orjson-3.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": {
       "embedded": [
@@ -3903,7 +4060,7 @@
       },
       "sha256": "27592957fedf6e0b62f281e96effd28043345e0e66001f97683aa9a40c667c93"
     },
-    "scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "scipy-1.18.1-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
       "embedded": [
         {
           "id": "OpenBLAS-LAPACK",
@@ -3912,11 +4069,13 @@
             "BSD-3-Clause-Open-MPI"
           ],
           "materials": [
-            "scipy/_lib/_uarray/LICENSE",
-            "scipy/fft/_duccfft/LICENSE.md",
-            "scipy/integrate/LICENSE_DOP",
-            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
-            "scipy-1.18.1.dist-info/LICENSE.txt"
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/GotoBLAS_00License.txt",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LAPACKE/LICENSE"
+          ],
+          "sources": [
+            "sources/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7.tar.gz"
           ]
         },
         {
@@ -3929,10 +4088,13 @@
             "actual compilation version not exposed by upstream wheel"
           ],
           "materials": [
-            "source-licenses/pybind11-*/*/LICENSE"
+            "source-licenses/pybind11-3.0.4/*/LICENSE"
           ],
-          "provenance": "same-version sdist build requirement; 11 releases 2.13.2..3.1.0 have identical full body 83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
-          "version": "unknown"
+          "provenance": "exact hash-locked build header package",
+          "sources": [
+            "sources/pybind11-3.0.4.tar.gz"
+          ],
+          "version": "3.0.4"
         },
         {
           "id": "source-component/scipy-1.18.1/scipy/_build_utils/tempita",
@@ -4188,19 +4350,6 @@
           ]
         },
         {
-          "id": "source-component/scipy-1.18.1/subprojects/cobyqa/.github/workflows",
-          "kind": "source-declared-component",
-          "licenses": [
-            "LicenseRef-c2d1d24d227e34d6"
-          ],
-          "materials": [
-            "source-licenses/scipy/scipy-1.18.1/subprojects/cobyqa/.github/workflows/license.yml"
-          ],
-          "sources": [
-            "sources/scipy-1.18.1.tar.gz"
-          ]
-        },
-        {
           "id": "source-component/scipy-1.18.1/subprojects/cobyqa",
           "kind": "source-declared-component",
           "licenses": [
@@ -4333,56 +4482,72 @@
           "sources": [
             "sources/scipy-1.18.1.tar.gz"
           ]
+        },
+        {
+          "id": "gcc14-compiler-runtime-headers",
+          "licenses": [
+            "GPL-3.0-or-later WITH GCC-exception-3.1"
+          ],
+          "materials": [
+            "source-licenses/gcc-runtime-license-body/numpy-2.5.3.dist-info/licenses/LICENSE.txt"
+          ],
+          "provenance": "pinned builder GCC14.2.1 C++ headers/static support; exact signed matching source RPM included",
+          "sources": [
+            "sources/gcc-toolset-14-gcc-14.2.1-11.el8_10.src.rpm"
+          ],
+          "version": "14.2.1-11.el8_10"
+        },
+        {
+          "id": "pythran",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "materials": [
+            "source-licenses/pythran/pythran-0.19.0/LICENSE"
+          ],
+          "sources": [
+            "sources/pythran-0.19.0.tar.gz"
+          ],
+          "version": "0.19.0"
+        },
+        {
+          "id": "pythran-boost",
+          "licenses": [
+            "BSL-1.0"
+          ],
+          "materials": [
+            "sources/boost-1.72.0-LICENSE_1_0.txt"
+          ],
+          "sources": [
+            "sources/pythran-0.19.0.tar.gz"
+          ],
+          "version": "1.72.0"
+        },
+        {
+          "id": "pythran-xsimd",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "materials": [
+            "sources/xsimd-14.1.0-LICENSE"
+          ],
+          "sources": [
+            "sources/pythran-0.19.0.tar.gz"
+          ],
+          "version": "14.1.0"
         }
       ],
       "native": [
         {
-          "licenses": [
-            "BSD-3-Clause AND BSD-3-Clause-Open-MPI"
-          ],
-          "materials": [
-            "scipy/_lib/_uarray/LICENSE",
-            "scipy/fft/_duccfft/LICENSE.md",
-            "scipy/integrate/LICENSE_DOP",
-            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
-            "scipy-1.18.1.dist-info/LICENSE.txt"
-          ],
-          "pattern": "scipy.libs/libscipy_openblas*.so*"
-        },
-        {
-          "binary_sha256": "c6090048eccc763522c12ef016f81da6b627cb3a044f55cf0479a839c41c0980",
+          "binary_sha256": "d06e88dcb39248adf44b9ab845fe98df055498523801c83254e88ab61f0de46e",
           "licenses": [
             "GPL-3.0-or-later WITH GCC-exception-3.1"
           ],
           "materials": [
-            "scipy/_lib/_uarray/LICENSE",
-            "scipy/fft/_duccfft/LICENSE.md",
-            "scipy/integrate/LICENSE_DOP",
-            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
-            "scipy-1.18.1.dist-info/LICENSE.txt"
-          ],
-          "pattern": "scipy.libs/libgfortran-040039e1-0352e75f.so.5.0.0",
-          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
-          "sources": [
-            "sources/gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
-            "notices/REDISTRIBUTION.txt"
-          ],
-          "version": "8.3.1-2.1.1.el7"
-        },
-        {
-          "binary_sha256": "468e71e59e1d784821a76702e5ecd1e0dbcfc024499f74a552d1bea4b26f27ad",
-          "licenses": [
-            "GPL-3.0-or-later WITH GCC-exception-3.1"
-          ],
-          "materials": [
-            "scipy/_lib/_uarray/LICENSE",
-            "scipy/fft/_duccfft/LICENSE.md",
-            "scipy/integrate/LICENSE_DOP",
-            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
-            "scipy-1.18.1.dist-info/LICENSE.txt"
+            "source-licenses/gcc-runtime-license-body/numpy-2.5.3.dist-info/licenses/LICENSE.txt"
           ],
           "pattern": "scipy.libs/libgfortran-83c28eba.so.5.0.0",
-          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "provenance": "pinned manylinux builder AlmaLinux8.5 runtime; exact sections matched in cpu-build/native-runtime-comparison",
           "sources": [
             "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
             "notices/REDISTRIBUTION.txt"
@@ -4390,19 +4555,15 @@
           "version": "8.5.0-28.el8_10.alma.1"
         },
         {
-          "binary_sha256": "a9307bbaa353623fa014e8b682d50c4629f5e5c7d61daa9a8652f7d165cd421a",
+          "binary_sha256": "570b1bc35e2f2e178f5233a8c9dddca076ecb47c5c65fa09f8bd3951989cb481",
           "licenses": [
             "LGPL-2.1-or-later"
           ],
           "materials": [
-            "scipy/_lib/_uarray/LICENSE",
-            "scipy/fft/_duccfft/LICENSE.md",
-            "scipy/integrate/LICENSE_DOP",
-            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
-            "scipy-1.18.1.dist-info/LICENSE.txt"
+            "source-licenses/gcc-runtime-license-body/numpy-2.5.3.dist-info/licenses/LICENSE.txt"
           ],
           "pattern": "scipy.libs/libquadmath-2284e583.so.0.0.0",
-          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "provenance": "pinned manylinux builder AlmaLinux8.5 runtime; exact sections matched in cpu-build/native-runtime-comparison",
           "sources": [
             "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
             "notices/REDISTRIBUTION.txt"
@@ -4410,24 +4571,24 @@
           "version": "8.5.0-28.el8_10.alma.1"
         },
         {
-          "binary_sha256": "6ed5137f412781ad7863439fb543613f620b43c32b63292a0029246162f5bbc6",
+          "binary_sha256": "14f3ba20a3999f056f55a44612783514014d59322519781766fd087c293853a7",
           "licenses": [
-            "LGPL-2.1-or-later"
+            "BSD-3-Clause",
+            "BSD-3-Clause-Open-MPI"
           ],
           "materials": [
-            "scipy/_lib/_uarray/LICENSE",
-            "scipy/fft/_duccfft/LICENSE.md",
-            "scipy/integrate/LICENSE_DOP",
-            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
-            "scipy-1.18.1.dist-info/LICENSE.txt"
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/GotoBLAS_00License.txt",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LICENSE",
+            "source-licenses/openblas-qbox-generic/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7/lapack-netlib/LAPACKE/LICENSE"
           ],
-          "pattern": "scipy.libs/libquadmath-96973f99-934c22de.so.0.0.0",
-          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "pattern": "scipy.libs/libscipy_openblas-6553db93.so",
+          "provenance": "compiled from fixed official source; full GENERIC kernels; CPU build provenance binds recipe and image",
           "sources": [
-            "sources/gcc-4.8.5-44.el7.src.rpm",
-            "notices/REDISTRIBUTION.txt"
+            "sources/OpenBLAS-446c436e10450c348169808f1a6b3fae0925c9f7.tar.gz",
+            "notices/CPU_BUILDS.txt"
           ],
-          "version": "4.8.5-44.el7"
+          "version": "0.3.34.dev+446c436e10450c348169808f1a6b3fae0925c9f7"
         }
       ],
       "native_review_complete": true,
@@ -4443,10 +4604,11 @@
           "scipy-1.18.1.dist-info/LICENSE.txt"
         ],
         "sources": [
-          "sources/scipy-1.18.1.tar.gz"
+          "sources/scipy-1.18.1.tar.gz",
+          "notices/CPU_BUILDS.txt"
         ]
       },
-      "sha256": "f55fa87b6c612ecd6b058f167c53231b1d14e412efe361d3d6e38b3631c73218"
+      "sha256": "dfb57b8560788468ab3c7c6a7558a19a1453ae55d92edba78ec15cd4c5a05794"
     },
     "seekpath-2.2.1-py3-none-any.whl": {
       "embedded": [],

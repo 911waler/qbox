@@ -99,6 +99,18 @@
         },
         "size": 565972
       }
-    }
+    },
+    "cpu_build": [
+      {
+        "id": "scientific",
+        "inputs": "cpu-build-inputs.lock.json",
+        "provenance": "cpu-build-provenance.json"
+      },
+      {
+        "id": "lxml",
+        "inputs": "cpu-lxml-build-inputs.lock.json",
+        "provenance": "cpu-lxml-build-provenance.json"
+      }
+    ]
   }
 }

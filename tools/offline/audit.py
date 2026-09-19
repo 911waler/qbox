@@ -177,7 +177,7 @@ def validate_license_inventory(report: dict) -> None:
 
 def _license_member(name: str) -> bool:
     base = PurePosixPath(name).name.lower()
-    return not name.endswith(('/', '.py', '.pyc')) and (any(word in base for word in ('license','licence','copying','notice','copyright')) or base == 'authors')
+    return '.github/workflows/' not in name and not name.endswith(('/', '.py', '.pyc')) and (any(word in base for word in ('license','licence','copying','notice','copyright')) or base == 'authors')
 
 
 def _material(data: bytes, output: Path, source: dict, member: str) -> dict | None:
@@ -355,6 +355,17 @@ def _supplemental_materials(cache: Path, output: Path, sources: list) -> dict:
             materials[key]['version']=item['version']
             if item.get('archive_kind')=='file' and item.get('kind')=='license-body':
                 materials['source-licenses/'+item['name']+'/'+source['filename']]=materials[key]
+        if item.get('archive_kind') == 'zip':
+            with zipfile.ZipFile(archive) as wheel:
+                if len(wheel.namelist()) != len(set(wheel.namelist())):
+                    raise ValueError('duplicate ZIP license source members')
+                for member in item['license_members']:
+                    _safe(member)
+                    if member not in wheel.namelist():
+                        raise ValueError('missing ZIP license member: '+member)
+                    material=_material(wheel.read(member),output,source,member)
+                    if material:
+                        materials['source-licenses/'+item['name']+'/'+member]=material
         if item.get('archive_kind','tar') == 'tar':
             with tarfile.open(archive) as tar:
                 for member in tar:
@@ -459,8 +470,17 @@ def audit(cache: Path, output: Path) -> dict:
     lock_digest=_sha(lock_bytes)
     policy=json.loads((LOCKS/'policy.json').read_text())
     errors=[]
+    wheel_errors=[]
     inventory={'components':[], 'materials':[], 'provenance':{}}
     inventory['provenance']=lock.get('provenance_records',{})
+    if "cpu_build" in dependencies:
+        from .cpu_wheels import validate_components, select_wheels
+        from .resolve import load_cpu_builds
+        components = load_cpu_builds(dependencies['cpu_build'], LOCKS)
+        validate_components(components, dependencies['packages'])
+        for component in components:
+            select_wheels(component['proof'], cache)
+        inventory['cpu_build_provenance'] = {item['id']:item['proof'] for item in components}
     supplemental=_supplemental_materials(cache,output/'materials',lock.get('sources',[]))
     for notice in lock.get('notices',[]):
         data=notice['text'].encode('utf-8')
@@ -499,7 +519,7 @@ def audit(cache: Path, output: Path) -> dict:
             if report['native']:
                 from .resolve import allowed_wheel, target_tags
                 if not allowed_wheel(filename,target_tags()):
-                    errors.append(filename+': disallowed native wheel tag')
+                    wheel_errors.append(filename+': disallowed native wheel tag')
                 repository=LOCKS.parent.parent
                 relative=path.relative_to(repository).as_posix()
                 completed=subprocess.run(auditwheel_command+['/work/'+relative],capture_output=True,text=True,env={**os.environ,'LC_ALL':'C'})
@@ -514,6 +534,7 @@ def audit(cache: Path, output: Path) -> dict:
         baseline={key:_base_libraries(cache,targets[tag],key) for key,tag in
                   [('rocky8','quay.io/rockylinux/rockylinux:8'),('ubuntu20','public.ecr.aws/ubuntu/ubuntu:20.04')]}
         elf_report=_native_report(tree,baseline)
+        elf_report['errors'].extend(wheel_errors)
         elf_report['auditwheel']=auditwheel_logs
     try:
         validate_license_inventory(inventory)

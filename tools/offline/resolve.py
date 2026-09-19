@@ -467,6 +467,27 @@ def prepare_native_repairs(settings, cache, root, image):
     return normalized, repair
 
 
+def load_cpu_builds(bindings, directory):
+    """Read immutable per-component histories and verify any recorded lock hashes."""
+    from .cpu_wheels import validate_components
+    if not isinstance(bindings, list) or not bindings:
+        raise ValueError("CPU builds require a nonempty component list")
+    result = []
+    for binding in bindings:
+        for key in ('inputs', 'provenance'):
+            if Path(binding[key]).name != binding[key]:
+                raise ValueError("unsafe CPU component lock path")
+        proof_path = directory / binding['provenance']
+        inputs_path = directory / binding['inputs']
+        hashes = {'provenance_sha256':sha256_file(proof_path), 'inputs_sha256':sha256_file(inputs_path)}
+        if any(key in binding and binding[key] != value for key,value in hashes.items()):
+            raise ValueError("CPU build provenance/input lock hash mismatch")
+        result.append({'id':binding['id'], 'proof':json.loads(proof_path.read_text()),
+                       'input_bytes':inputs_path.read_bytes(), 'binding':{**binding, **hashes}})
+    validate_components(result, [p for item in result for p in item['proof']['outputs']])
+    return result
+
+
 def resolve(policy: Path, cache: Path) -> dict:
     """Acquire and resolve in digest-pinned Rocky 8; emit candidates and offline proof.
 
@@ -482,6 +503,12 @@ def resolve(policy: Path, cache: Path) -> dict:
     config = json.loads(policy.read_text())
     settings = config["resolver"]
     image = settings["build_image"]
+    cpu_components = []
+    if "cpu_build" in settings:
+        from .cpu_wheels import select_wheels, validate_components
+        cpu_components = load_cpu_builds(settings['cpu_build'], policy.parent)
+        for component in cpu_components:
+            select_wheels(component['proof'], cache)  # Fail before resolution/network.
     metadata = cache / "metadata"
     upstream, provenance = discover_runtime(settings, metadata)
     archive = cache_asset(
@@ -706,11 +733,23 @@ def resolve(policy: Path, cache: Path) -> dict:
         network=True,
         log="application-download.log",
     )
+    if cpu_components:
+        from .cpu_wheels import apply_selection
+        for component in cpu_components:
+            apply_selection(wheelhouse, component["proof"], cache)
     packages = wheel_closure(sorted(wheelhouse.glob("*.whl")), [root_req], environment)
     if len(packages) != len(list(wheelhouse.glob("*.whl"))):
         raise ValueError("unreachable wheel in resolved wheelhouse")
     application = [p for p in packages if p["name"] != "qbox"]
-    record_sources(application, wheelhouse)
+    custom = {p["name"]: p for component in cpu_components for p in component["proof"]["outputs"]}
+    record_sources([p for p in application if p["name"] not in custom], wheelhouse)
+    for package in application:
+        if package["name"] in custom:
+            original = custom[package["name"]]
+            package["source"] = original["source"]
+            package["build_provenance"] = original["build_provenance"]
+    if cpu_components:
+        validate_components(cpu_components, application)
     all_lock = requirements_bytes(packages).replace(
         f'qbox=={qbox["version"]}'.encode(), root_req.encode()
     )
@@ -812,6 +851,8 @@ def resolve(policy: Path, cache: Path) -> dict:
             },
         },
     }
+    if cpu_components:
+        deps["cpu_build"] = [component["binding"] for component in cpu_components]
     image_lock = {
         "schema_version": 1,
         "build": image,
