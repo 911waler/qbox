@@ -134,7 +134,7 @@ def build_wheels(lock_path, cache, output, *, fetch=False):
     recipe = json.loads(lock_path.read_text())
     validate_recipe(recipe)
     recipe_path = root/recipe['recipe']
-    code_paths = [Path(__file__).relative_to(root).as_posix(), recipe['recipe']]
+    code_paths = [Path(__file__).relative_to(root).as_posix(), recipe['recipe'], *recipe.get('helpers', {})]
     # A real committed recipe precedes artifact construction; the input lock has
     # its own SHA, so no circular commit/output hash is introduced.
     subprocess.run(['git','diff','--exit-code','HEAD','--',*code_paths],cwd=root,check=True,capture_output=True)
@@ -161,6 +161,10 @@ def build_wheels(lock_path, cache, output, *, fetch=False):
                 shutil.copyfile(assets[item['source']['sha256']],work/'build-wheelhouse'/item['filename'])
             (work/'build-requirements.lock').write_bytes(requirements_bytes(recipe['build_packages']))
             shutil.copyfile(recipe_path,work/'recipe.sh')
+            for relative, target_name in recipe.get('helpers', {}).items():
+                if Path(target_name).name != target_name:
+                    raise ValueError('unsafe recipe helper name')
+                shutil.copyfile(root/relative,work/target_name)
             command=['docker','run','--rm','--network','none','--user',f'{os.getuid()}:{os.getgid()}', '-v',f'{work}:/build']
             for key,value in sorted(recipe['environment'].items()):
                 command+=['-e',f'{key}={value}']
@@ -213,7 +217,8 @@ def validate_provenance(proof, input_lock_bytes, packages):
         raise ValueError('CPU build isolation/reproducibility mismatch')
     inputs={s['name']:s['source'] for s in recipe['sources']}
     outputs={p['name']:p for p in proof['outputs']}
-    if len(outputs)!=len(proof['outputs']) or set(outputs)!=set(inputs):
+    expected=set(recipe.get('wheel_names',inputs))
+    if len(outputs)!=len(proof['outputs']) or set(outputs)!=expected:
         raise ValueError('CPU build output/source inventory mismatch')
     actual={p['name']:p for p in packages}
     for name,item in outputs.items():
