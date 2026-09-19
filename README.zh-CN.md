@@ -4,31 +4,34 @@
 
 qbox 是一个用于准备、运行和后处理 Quantum ESPRESSO 工作流的命令行工具包，支持常见的 SCF、结构弛豫、NSCF、能带、PDOS、声子、分子动力学和收敛性扫描任务。
 
-## 环境要求
+## 正式离线安装
 
-- Bash 4 或更高版本
-- 用于执行计算工作流的 Quantum ESPRESSO
-- Python 3.10 或更高版本（入口也需要 Python）；分析功能另需科学计算依赖
-- 需要 Multiwfn 的分析工作流需安装 Multiwfn
-
-## 安装
-
-可在完整源码目录中直接运行 `./qbox`，也可安装到独立 Python 环境：
+正式用户交付形式是完整的 `qbox-0.1.0-linux-x86_64-offline.tar.gz` 及 SHA256 文件。
+包内包含独立 CPython 3.12 和所有科学 Python 运行依赖。要求 x86_64 Linux、
+glibc 2.28+、Bash 4.4+、GNU coreutils、grep、sed、系统 awk、tar、gzip。
+无需系统 Python、编译器、sudo 或网络；QE、MPI、Multiwfn、unfold.x 和赝势需自行提供。
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install '.[analysis,structure]'
+sha256sum -c qbox-0.1.0-linux-x86_64-offline.tar.gz.sha256
+mkdir unpacked
+tar -xzf qbox-0.1.0-linux-x86_64-offline.tar.gz -C unpacked
+bash unpacked/install.sh
+export PATH="$HOME/.local/bin:$PATH"
 qbox --help
 ```
 
-`pip install .` 仅安装轻量入口，不安装科学计算依赖。`analysis` 扩展包含 NumPy、
-Matplotlib、SciPy、seekpath；`structure` 扩展包含 pymatgen、ASE。QE、MPI、Multiwfn
-及赝势仍需单独配置。请使用自己管理的 Python 环境，不要直接修改共享系统环境。
+自定义空格路径、只读安装、自检、遗留锁、手工回退及卸载详见
+[随包指南](packaging/offline/README.zh-CN.md)。平台支持仅以
+[实际验收记录](docs/releases/offline-validation.md)为准。
+基础 CPU 兼容采用 GENERIC BLAS，性能可能低于本机优化环境。
 
-离线分发可用 `python -m pip wheel --no-deps . -w dist` 构建 wheel，再在目标环境中
-安装该本地文件。wheel 包含 Python 模块、Bash 工作流资源、兼容入口及 MIT 许可证；
-依赖需预先安装或另行提供。模块化后，仅复制根目录的 `qbox` 文件不再构成完整安装。
+## 源码与 wheel 开发模式
+
+完整源码或普通 wheel 使用开发者自行管理的 Python 3.10+ 环境；可用
+`python -m pip wheel --no-deps . -w dist` 构建本地 wheel，依赖另行准备。
+analysis / structure extras 选择科学依赖；单个 wheel 不是完整离线包。
+源码/wheel 模式保留 QBOX_PYTHON / QBOX_SHARED_ROOT 契约；离线模式固定使用
+私有解释器并拒绝冲突 QBOX_PYTHON。不要将私有 Python/库路径全局加入环境变量。
 
 ## 配置
 

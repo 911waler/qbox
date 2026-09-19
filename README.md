@@ -6,35 +6,39 @@ qbox is a command-line toolkit for preparing, running, and post-processing
 Quantum ESPRESSO workflows. It supports common SCF, relaxation, NSCF, band,
 PDOS, phonon, molecular-dynamics, and convergence-scan tasks.
 
-## Requirements
+## Offline installation (normal users)
 
-- Bash 4 or newer
-- Quantum ESPRESSO for calculation workflows
-- Python 3.10 or newer for the entry point; scientific Python packages for analysis
-- Multiwfn for workflows that use Multiwfn analysis
-
-## Installation
-
-Run `./qbox` directly from a complete checkout, or install the package into a
-Python environment:
+The supported delivery format is the complete `qbox-0.1.0-linux-x86_64-offline.tar.gz`
+with its SHA256 file. It includes a private CPython 3.12 and all scientific Python
+runtime dependencies. Requires x86_64 Linux, glibc 2.28+, Bash 4.4+, GNU coreutils,
+grep, sed, system awk, tar and gzip. No system Python, compiler, sudo or network is
+needed. QE, MPI, Multiwfn, unfold.x and pseudopotentials remain external.
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install '.[analysis,structure]'
+sha256sum -c qbox-0.1.0-linux-x86_64-offline.tar.gz.sha256
+mkdir unpacked
+tar -xzf qbox-0.1.0-linux-x86_64-offline.tar.gz -C unpacked
+bash unpacked/install.sh
+export PATH="$HOME/.local/bin:$PATH"
 qbox --help
 ```
 
-`pip install .` installs the lightweight entry point without scientific extras.
-The `analysis` extra provides NumPy, Matplotlib, SciPy and seekpath; `structure`
-provides pymatgen and ASE. QE, MPI, Multiwfn and pseudopotentials remain external.
-Use a Python environment you control; do not install into a shared system Python.
+See the [bundled guide](packaging/offline/README.zh-CN.md) for custom paths,
+read-only installations, self-checks, owned-lock recovery, rollback and removal.
+See [actual validation](docs/releases/offline-validation.md) before making a
+platform compatibility claim. GENERIC BLAS favors baseline CPU compatibility and
+can be slower than a CPU-optimized scientific environment.
 
-For offline distribution, build a wheel with `python -m pip wheel --no-deps . -w dist`
-and install that local wheel in the target environment. The wheel includes the
-Python modules, Bash workflow resources, compatibility launchers and MIT license;
-dependencies must already be available or installed separately. Copying only the
-root `qbox` script no longer constitutes a complete installation.
+## Source and wheel development
+
+A complete source checkout or ordinary wheel uses a Python 3.10+ environment
+managed by the developer. Build a wheel with `python -m pip wheel --no-deps . -w dist`
+and install the local wheel with its separately supplied dependencies. The
+`analysis` and `structure` extras select the scientific dependencies. A wheel alone
+is not the complete offline distribution. Source/wheel mode preserves
+`QBOX_PYTHON` and `QBOX_SHARED_ROOT`; offline mode rejects a conflicting
+`QBOX_PYTHON` and uses its private runtime. Do not add private Python/library paths
+to global PATH or LD_LIBRARY_PATH.
 
 ## Configuration
 

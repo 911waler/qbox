@@ -1,1 +1,20 @@
-{"build":"quay.io/rockylinux/rockylinux@sha256:e8a49c5403b687db05d4d67333fa45808fbe74f36e683cec7abb1f7d0f2338c6","schema_version":1,"validation":{"public.ecr.aws/ubuntu/ubuntu:20.04":"public.ecr.aws/ubuntu/ubuntu@sha256:7e9558e1203a9a2b0967554abf9ebdc5552f29013b01f6e7271bf2d776d51234","public.ecr.aws/ubuntu/ubuntu:22.04":"public.ecr.aws/ubuntu/ubuntu@sha256:8ccaf730badfcec4ba7b5f0ba82419984c224d184deb0e6d994a0f3a19f609e2","public.ecr.aws/ubuntu/ubuntu:24.04":"public.ecr.aws/ubuntu/ubuntu@sha256:22a8228e1e48cbe7e0e0f2056e752ffb8a35950cda150a4e5e16417200bec648","quay.io/rockylinux/rockylinux:8":"quay.io/rockylinux/rockylinux@sha256:e8a49c5403b687db05d4d67333fa45808fbe74f36e683cec7abb1f7d0f2338c6","quay.io/rockylinux/rockylinux:9":"quay.io/rockylinux/rockylinux@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f"}}
+{
+  "build": "quay.io/rockylinux/rockylinux@sha256:e8a49c5403b687db05d4d67333fa45808fbe74f36e683cec7abb1f7d0f2338c6",
+  "schema_version": 1,
+  "validation": {
+    "public.ecr.aws/ubuntu/ubuntu:20.04": "public.ecr.aws/ubuntu/ubuntu@sha256:7e9558e1203a9a2b0967554abf9ebdc5552f29013b01f6e7271bf2d776d51234",
+    "public.ecr.aws/ubuntu/ubuntu:22.04": "public.ecr.aws/ubuntu/ubuntu@sha256:8ccaf730badfcec4ba7b5f0ba82419984c224d184deb0e6d994a0f3a19f609e2",
+    "public.ecr.aws/ubuntu/ubuntu:24.04": "public.ecr.aws/ubuntu/ubuntu@sha256:22a8228e1e48cbe7e0e0f2056e752ffb8a35950cda150a4e5e16417200bec648",
+    "quay.io/rockylinux/rockylinux:8": "quay.io/rockylinux/rockylinux@sha256:e8a49c5403b687db05d4d67333fa45808fbe74f36e683cec7abb1f7d0f2338c6",
+    "quay.io/rockylinux/rockylinux:9": "quay.io/rockylinux/rockylinux@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f"
+  },
+  "validation_recipe": {
+    "additional_packages": [],
+    "kind": "unmodified upstream images",
+    "network": "none during acceptance",
+    "package_inventory": "collected by dpkg-query -W or rpm -qa in each actual run",
+    "pull": "never during acceptance",
+    "rocky_awk": "default gawk",
+    "ubuntu_awk": "mawk"
+  }
+}

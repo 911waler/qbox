@@ -144,3 +144,20 @@ For focused development, `QBOX_E2E_CASES` may name comma-separated `TargetTests`
 methods (for example `test_06_corrupt_bundle_failures_preserve_old`). Such evidence
 records `complete_suite: false` and must not be used as full acceptance. The
 normal command above runs all groups, and skips make the target return nonzero.
+
+## Final offline acceptance
+
+`python -m unittest discover -s tests/offline -p test_matrix.py -v` tests the
+fail-closed gate. `python -m tools.offline matrix --candidate CANDIDATE --engine
+docker --output NEW_DIRECTORY` verifies the archive and runs the complete reviewed
+Task10 target harness concurrently in five pinned images. Each uses an ordinary
+UID, no network, read-only rootfs and an independent executable tmpfs. The target
+extracts the actual archive before installation.
+
+The candidate-unset end-to-end skip in ordinary test discovery is not release
+evidence. Final acceptance records every offline test actually run and uses the
+five full matrix runs for the real end-to-end coverage, avoiding a sixth duplicate
+long run. A separate Ubuntu20 strict TCG VM must install the final archive, run
+full smoke, reject SSE3 HADDPS with SIGILL, and exercise a real noexec mount.
+All-ELF loader resolution and original regressions remain mandatory supplements.
+See docs/releases/offline-build.md for the evidence contract and commands.

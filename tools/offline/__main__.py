@@ -38,11 +38,30 @@ def _parser() -> argparse.ArgumentParser:
     finalize.add_argument("provenance", type=Path)
     finalize.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
     finalize.add_argument("--output", type=Path, required=True)
+    for name in ("matrix", "gate"):
+        command = commands.add_parser(name, help="offline release " + name)
+        command.add_argument("--candidate", type=Path, required=True)
+        if name == "matrix":
+            command.add_argument("--engine", default="docker")
+            command.add_argument("--output", type=Path, required=True)
+        else:
+            command.add_argument("--evidence", type=Path, required=True)
     return parser
 
 
 def main(argv=None) -> int:
     args = _parser().parse_args(argv)
+    if args.command in ("matrix", "gate"):
+        from .matrix import matrix, gate
+        try:
+            if args.command == "matrix":
+                matrix(args.candidate, args.engine, args.output)
+            else:
+                gate(args.candidate, args.evidence)
+        except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
+            print(f"qbox offline: {error}", file=sys.stderr)
+            return 1
+        return 0
     if args.command == "build":
         from .build import build
         try:

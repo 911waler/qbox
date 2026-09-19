@@ -63,3 +63,26 @@ unfolding 分别位于同名领域文件。
 `tests/run.sh` 运行 Bash 行为测试及 `tests/python` 中的 unittest。旧的单文件源码
 检查已改为模块级检查或直接行为验证；保留生成文件、任务映射、错误路径和清理测试。
 另需构建 wheel，在源码目录之外安装并验证入口、资源、结构转换和独立有效质量脚本。
+
+## Offline ownership and execution
+
+The tar.gz delivery adds a private CPython/runtime and locked wheels without
+changing source/wheel interpreter discovery. Offline launchers derive and validate
+their owned release marker; a conflicting QBOX_PYTHON fails instead of selecting
+a host interpreter. The private `_QBOX_OFFLINE_ROOT` marker is an implementation
+detail, not a user override or trust boundary against the same OS user. Internal
+Python subprocesses use isolated mode; external tools retain the caller environment
+without private Python or native-library paths.
+
+An exact UID/prefix root marker establishes the install root. An owned mkdir lock
+serializes installation; staged and final release inventories and smoke checks
+precede the same-directory atomic current symlink replacement. That replacement
+is the commit point: pre-commit failures retain old current, post-commit catchable
+signals retain the verified new release. SIGKILL/power loss may leave an owned lock
+for manual inspection. Rollback verifies the retained release under that lock;
+uninstall must check exact command-link ownership and root markers.
+
+Release acceptance binds the actual archive, manifest and source commit to five
+immutable target images and a strict baseline-CPU VM. Container kernels are shared
+with the host. Supplemental diagnostics are maintainer-only, and a static ELF scan
+or CPUID report cannot substitute for execution. Evidence stays outside the tar.gz.
