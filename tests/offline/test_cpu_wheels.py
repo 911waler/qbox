@@ -61,6 +61,17 @@ class CpuWheelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'native'):
             cpu_wheels.validate_recipe(recipe)
 
+    def test_global_build_flags_cannot_raise_baseline_or_omit_fortran(self):
+        flags='-O2 -march=x86-64 -mtune=generic'
+        recipe={'image':'image@sha256:'+'a'*64,'environment':{k:flags for k in ('CFLAGS','CXXFLAGS','FFLAGS')},'sources':[],'build_packages':[]}
+        cpu_wheels.validate_recipe(recipe)
+        recipe['environment']['FFLAGS']=flags+' -mavx2'
+        with self.assertRaisesRegex(ValueError,'baseline'):
+            cpu_wheels.validate_recipe(recipe)
+        del recipe['environment']['FFLAGS']
+        with self.assertRaisesRegex(ValueError,'baseline'):
+            cpu_wheels.validate_recipe(recipe)
+
     def test_normalization_sets_build_tag_and_preserves_payload(self):
         p=self.wheel(self.root/'original')
         out=cpu_wheels.normalize_wheel(p,self.root/'out')
@@ -77,6 +88,8 @@ class CpuWheelTests(unittest.TestCase):
         raw=json.dumps(recipe).encode()
         package={'name':'numpy','filename':'numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_28_x86_64.whl','sha256':'c'*64,'source':source}
         proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'tools/offline/recipes/numpy-baseline.sh':'e'*64},'patches':[], 'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package], 'network':'none','repeat_builds':2}
+        proof['compilation_outputs']=[package]
+        proof['normalization']={'code_commit':'d'*40,'recipe_files':{'normalize.py':'e'*64},'image':recipe['image'],'outputs':[package],'network':'none','independent_runs':2,'inputs':[{'run':n,'wheels':{package['filename']:package['sha256']}} for n in (1,2)]}
         cpu_wheels.validate_provenance(proof,raw,[package])
         changed={**package,'sha256':'f'*64}
         with self.assertRaisesRegex(ValueError,'output'):
@@ -84,12 +97,27 @@ class CpuWheelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'input'):
             cpu_wheels.validate_provenance(proof,raw+b' ',[package])
 
+    def test_normalization_provenance_must_bind_final_output(self):
+        source={'url':'https://example.org/numpy.tar.gz','filename':'numpy.tar.gz','sha256':'a'*64}
+        recipe={'image':'image@sha256:'+'b'*64,'sources':[{'name':'numpy','source':source}]}
+        raw=json.dumps(recipe).encode()
+        package={'name':'numpy','filename':'numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_28_x86_64.whl','sha256':'c'*64,'source':source}
+        proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'recipe.sh':'e'*64},'patches':[],'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package],'network':'none','repeat_builds':2,'normalization':{'code_commit':'d'*40,'recipe_files':{'normalize.py':'e'*64},'image':recipe['image'],'outputs':[{**package,'sha256':'f'*64}]}}
+        with self.assertRaisesRegex(ValueError,'normalization'):
+            cpu_wheels.validate_provenance(proof,raw,[package])
+
     def test_selection_replaces_only_the_built_distribution(self):
         original=self.wheel(self.root/'candidate')
+        old=original.with_name(original.name.replace('-1qboxcpu',''))
+        original.rename(old)
+        other=self.root/'candidate'/'other-1.0-py3-none-any.whl'
+        with zipfile.ZipFile(other,'w') as z:
+            z.writestr('other-1.0.dist-info/METADATA','Name: other\nVersion: 1.0\n')
         cached=self.wheel(self.root/'cache'/'cpu-wheelhouse')
         proof={'outputs':[{'name':'numpy','version':'2.5.3','filename':cached.name,'sha256':hashlib.sha256(cached.read_bytes()).hexdigest()}]}
         cpu_wheels.apply_selection(self.root/'candidate',proof,self.root/'cache')
-        self.assertEqual(list((self.root/'candidate').glob('*.whl')),[original])
+        self.assertFalse(old.exists())
+        self.assertEqual({p.name for p in (self.root/'candidate').glob('*.whl')},{cached.name,other.name})
 
     def test_reproducibility_compares_actual_bytes(self):
         a=self.wheel(self.root/'a');b=self.wheel(self.root/'b')

@@ -3,39 +3,13 @@
 Custom output sources point to the upstream sdist, never the original PyPI wheel.
 The separate build provenance binds recipe, source, toolchain and output bytes.
 """
-import base64
-import csv
 import hashlib
-import io
 from pathlib import Path
 import re
-import zipfile
 
 from .model import sha256_file
 from .resolve import wheel_metadata
-
-
-def validate_record(path):
-    """Require a complete SHA256 RECORD, including sizes and no extra ZIP members."""
-    with zipfile.ZipFile(path) as wheel:
-        members = wheel.namelist()
-        records = [n for n in members if n.count('/') == 1 and n.endswith('.dist-info/RECORD')]
-        if len(records) != 1 or len(set(members)) != len(members):
-            raise ValueError('invalid wheel RECORD or duplicate ZIP members')
-        rows = list(csv.reader(io.StringIO(wheel.read(records[0]).decode())))
-        if any(len(r) != 3 for r in rows) or len({r[0] for r in rows}) != len(rows):
-            raise ValueError('invalid RECORD rows')
-        if {r[0] for r in rows} != {n for n in members if not n.endswith('/')}:
-            raise ValueError('RECORD does not cover exact wheel members')
-        for name, digest, size in rows:
-            if name == records[0]:
-                if digest or size:
-                    raise ValueError('RECORD must not hash itself')
-                continue
-            data = wheel.read(name)
-            expected = 'sha256=' + base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b'=').decode()
-            if digest != expected or size != str(len(data)):
-                raise ValueError('RECORD content mismatch: ' + name)
+from .recipes.wheel_normalize import normalize_wheel, validate_record
 
 
 def select_wheels(lock, cache):
@@ -67,6 +41,12 @@ def validate_recipe(recipe):
     for key, value in environment.items():
         if key.startswith(('LD_', 'PIP_')) or '-march=native' in value or '-mtune=native' in value or '-xHost' in value:
             raise ValueError('native or inherited toolchain flags forbidden')
+    import shlex
+    allowed_machine_flags = {'-march=x86-64', '-mtune=generic', '-msse', '-msse2', '-m64'}
+    for name in ('CFLAGS', 'CXXFLAGS', 'FFLAGS'):
+        flags = shlex.split(environment.get(name, ''))
+        if '-march=x86-64' not in flags or any(f.startswith('-m') and f not in allowed_machine_flags for f in flags):
+            raise ValueError('explicit x86-64 baseline required for C/C++/Fortran global flags')
     for group in ('sources', 'build_packages'):
         for item in recipe[group]:
             source = item['source']
@@ -80,38 +60,6 @@ def compare_builds(first, second):
     if not a or a != b:
         raise ValueError('CPU wheel builds are not byte reproducible')
     return a
-
-
-def normalize_wheel(path, output):
-    """Canonical wheel ZIP/RECORD and visible build tag; payload bytes are preserved."""
-    from packaging.utils import parse_wheel_filename
-    path, output = Path(path), Path(output)
-    validate_record(path)
-    name, version, _, tags = parse_wheel_filename(path.name)
-    parts = path.name[:-4].split('-')
-    filename = '-'.join([parts[0], parts[1], '1qboxcpu', *parts[-3:]]) + '.whl'
-    with zipfile.ZipFile(path) as wheel:
-        files = {n: wheel.read(n) for n in wheel.namelist() if not n.endswith('/')}
-    record = next(n for n in files if n.count('/') == 1 and n.endswith('.dist-info/RECORD'))
-    metadata = record.rsplit('/', 1)[0] + '/WHEEL'
-    lines = [line for line in files[metadata].decode().splitlines() if not line.startswith('Build:')]
-    files[metadata] = ('\n'.join(lines).rstrip() + '\nBuild: 1qboxcpu\n').encode()
-    del files[record]
-    rows = [[n, 'sha256='+base64.urlsafe_b64encode(hashlib.sha256(d).digest()).rstrip(b'=').decode(), str(len(d))] for n,d in sorted(files.items())]
-    rows.append([record,'',''])
-    stream = io.StringIO(); csv.writer(stream,lineterminator='\n').writerows(rows)
-    files[record] = stream.getvalue().encode()
-    output.mkdir(parents=True, exist_ok=True)
-    dest = output/filename
-    with zipfile.ZipFile(dest,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as wheel:
-        for member, data in sorted(files.items()):
-            info=zipfile.ZipInfo(member,(2025,9,1,0,0,0))
-            info.create_system=3
-            info.external_attr=0o100644 << 16
-            info.compress_type=zipfile.ZIP_DEFLATED
-            wheel.writestr(info,data,compresslevel=9)
-    validate_record(dest)
-    return dest
 
 
 def build_wheels(lock_path, cache, output, *, fetch=False):
@@ -189,13 +137,7 @@ def build_wheels(lock_path, cache, output, *, fetch=False):
                 'environment':recipe['environment'],'build_options':recipe['build_options'],
                 'network':'none','repeat_builds':2,'outputs':records,'logs':logs}
     (output/'cpu-build-provenance.json').write_bytes(canonical_json(provenance))
-    target=cache/'cpu-wheelhouse';target.mkdir(exist_ok=True)
-    for path in runs[0]:
-        dest=target/path.name
-        if dest.exists() and sha256_file(dest)!=sha256_file(path):
-            raise ValueError('existing CPU wheel differs; review and preserve it before promotion')
-        shutil.copyfile(path,dest)
-    return provenance
+    return finalize_wheels(output/'cpu-build-provenance.json', cache, output/'final')
 
 
 def validate_provenance(proof, input_lock_bytes, packages):
@@ -220,6 +162,19 @@ def validate_provenance(proof, input_lock_bytes, packages):
     expected=set(recipe.get('wheel_names',inputs))
     if len(outputs)!=len(proof['outputs']) or set(outputs)!=expected:
         raise ValueError('CPU build output/source inventory mismatch')
+    normalization = proof.get('normalization')
+    if normalization is None:
+        raise ValueError('CPU normalization provenance required')
+    if normalization is not None:
+        normalized = {p['filename']:p['sha256'] for p in normalization['outputs']}
+        expected_outputs = {p['filename']:p['sha256'] for p in proof['outputs']}
+        if normalized != expected_outputs or normalization['image'] != proof['image']:
+            raise ValueError('CPU normalization does not bind final outputs/image')
+        if not re.fullmatch('[0-9a-f]{40}',normalization['code_commit']) or not normalization['recipe_files'] or any(not re.fullmatch('[0-9a-f]{64}', value) for value in normalization['recipe_files'].values()):
+            raise ValueError('CPU normalization code identity missing')
+        compiled = {p['filename']:p['sha256'] for p in proof['compilation_outputs']}
+        if normalization['network'] != 'none' or normalization['independent_runs'] != 2 or normalization['inputs'] != [{'run':n, 'wheels':compiled} for n in (1,2)]:
+            raise ValueError('CPU normalization input/isolation mismatch')
     actual={p['name']:p for p in packages}
     for name,item in outputs.items():
         if name not in actual or any(actual[name][k]!=item[k] for k in ('filename','sha256','source')):
@@ -238,3 +193,64 @@ def apply_selection(wheelhouse, proof, cache):
             path.unlink()
     for path in replacements:
         shutil.copyfile(path,Path(wheelhouse)/path.name)
+
+
+def finalize_wheels(provenance_path, cache, output):
+    """Canonicalize both compiled runs inside the pinned image, without rebuilding.
+
+    Separate stage commits preserve truthful provenance when completed compiles are
+    reused. The final wheel output no longer depends on host zipfile/zlib versions.
+    """
+    import json
+    import os
+    import shutil
+    import subprocess
+    from .model import canonical_json
+
+    provenance_path, cache, output = Path(provenance_path).resolve(), Path(cache).resolve(), Path(output).resolve()
+    proof = json.loads(provenance_path.read_text())
+    root = Path(__file__).resolve().parents[2]
+    paths = ['tools/offline/cpu_wheels.py', 'tools/offline/recipes/wheel_normalize.py']
+    subprocess.run(['git','diff','--exit-code','HEAD','--',*paths],cwd=root,check=True,capture_output=True)
+    commit = subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
+    image = proof['image']
+    if not re.fullmatch(r'[^\s]+@sha256:[0-9a-f]{64}', image):
+        raise ValueError('normalization image requires immutable digest')
+    output.mkdir(parents=True,exist_ok=True)
+    runs=[]; inputs=[]
+    expected={p['filename']:p['sha256'] for p in proof['outputs']}
+    for number in (1,2):
+        incoming=provenance_path.parent/f'run-{number}'
+        actual={p.name:sha256_file(p) for p in incoming.glob('*.whl')}
+        if actual!=expected:
+            raise ValueError('normalization input differs from independently compiled wheel records')
+        outgoing=output/f'run-{number}';outgoing.mkdir()
+        command=['docker','run','--rm','--network','none','--user',f'{os.getuid()}:{os.getgid()}',
+                 '-v',f'{incoming}:/input:ro','-v',f'{outgoing}:/output',
+                 '-v',f'{root/paths[1]}:/normalize.py:ro',image,
+                 '/opt/python/cp312-cp312/bin/python','-I','-B','/normalize.py','/input','/output']
+        subprocess.run(command,check=True,capture_output=True)
+        runs.append(sorted(outgoing.glob('*.whl')))
+        inputs.append({'run':number,'wheels':actual})
+    compare_builds(*runs)
+    records=[]
+    for path in runs[0]:
+        old=next(p for p in proof['outputs'] if p['name']==wheel_metadata(path)['name'])
+        records.append({**old,**wheel_metadata(path)})
+    proof['compilation_outputs']=proof['outputs']
+    proof['outputs']=records
+    proof['normalization']={'code_commit':commit,'recipe_files':{p:sha256_file(root/p) for p in paths},
+                            'image':image,'network':'none','independent_runs':2,'inputs':inputs,
+                            'outputs':[{k:p[k] for k in ('name','filename','sha256')} for p in records]}
+    (output/'cpu-build-provenance.json').write_bytes(canonical_json(proof))
+    target=cache/'cpu-wheelhouse';target.mkdir(exist_ok=True)
+    for path in runs[0]:
+        dest=target/path.name
+        if dest.exists() and sha256_file(dest)!=sha256_file(path):
+            raise ValueError('preserve differing cached CPU wheel before final promotion')
+        shutil.copyfile(path,dest)
+        content=cache/'sha256'/sha256_file(path)
+        if content.exists() and sha256_file(content)!=sha256_file(path):
+            raise ValueError('corrupt content-addressed CPU wheel cache')
+        shutil.copyfile(path,content)
+    return proof

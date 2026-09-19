@@ -31,11 +31,23 @@ def _parser() -> argparse.ArgumentParser:
     cpu.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
     cpu.add_argument("--output", type=Path, default=Path("build/offline/cpu-build"))
     cpu.add_argument("--fetch", action="store_true", help="acquire missing fixed-hash build inputs")
+    finalize = commands.add_parser("cpu-finalize", help="pin final normalization of completed independent scientific builds")
+    finalize.add_argument("provenance", type=Path)
+    finalize.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
+    finalize.add_argument("--output", type=Path, required=True)
     return parser
 
 
 def main(argv=None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "cpu-finalize":
+        from .cpu_wheels import finalize_wheels
+        try:
+            print(json.dumps(finalize_wheels(args.provenance, args.cache, args.output), indent=2))
+        except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+            print(f"qbox offline: {error}", file=sys.stderr)
+            return 1
+        return 0
     if args.command == "cpu-build":
         from .cpu_wheels import build_wheels
         try:
