@@ -48,27 +48,31 @@ qbox_prepare_mplconfigdir() {
     local candidate temp_root
     if [ -n "${MPLCONFIGDIR:-}" ]; then
         candidate="$MPLCONFIGDIR"
-        if mkdir -p -- "$candidate" 2>/dev/null && [ -d "$candidate" ] && [ -w "$candidate" ]; then
+        if mkdir -p -- "$candidate" 2>/dev/null && [ -d "$candidate" ] &&
+           [ -w "$candidate" ] && [ -x "$candidate" ]; then
             export MPLCONFIGDIR="$candidate"
             return 0
         fi
     fi
     if [[ "${XDG_CACHE_HOME:-}" = /* ]]; then
         candidate="$XDG_CACHE_HOME/qbox/matplotlib"
-        if mkdir -p -- "$candidate" 2>/dev/null && [ -d "$candidate" ] && [ -w "$candidate" ]; then
+        if mkdir -p -- "$candidate" 2>/dev/null && [ -d "$candidate" ] &&
+           [ -w "$candidate" ] && [ -x "$candidate" ]; then
             export MPLCONFIGDIR="$candidate"
             return 0
         fi
     fi
     if [[ "${HOME:-}" = /* ]]; then
         candidate="$HOME/.cache/qbox/matplotlib"
-        if mkdir -p -- "$candidate" 2>/dev/null && [ -d "$candidate" ] && [ -w "$candidate" ]; then
+        if mkdir -p -- "$candidate" 2>/dev/null && [ -d "$candidate" ] &&
+           [ -w "$candidate" ] && [ -x "$candidate" ]; then
             export MPLCONFIGDIR="$candidate"
             return 0
         fi
     fi
     temp_root="${TMPDIR:-/tmp}"
-    if [[ "$temp_root" != /* ]] || [ ! -d "$temp_root" ] || [ ! -w "$temp_root" ]; then
+    if [[ "$temp_root" != /* ]] || [ ! -d "$temp_root" ] ||
+       [ ! -w "$temp_root" ] || [ ! -x "$temp_root" ]; then
         echo '错误：无法找到可写的绝对临时目录来创建 MPLCONFIGDIR。' >&2
         return 1
     fi
@@ -76,7 +80,7 @@ qbox_prepare_mplconfigdir() {
         echo '错误：无法创建独占的 MPLCONFIGDIR 临时目录。' >&2
         return 1
     }
-    if [ -d "$candidate" ] && [ -w "$candidate" ]; then
+    if [ -d "$candidate" ] && [ -w "$candidate" ] && [ -x "$candidate" ]; then
         MPLCONFIGDIR="$candidate"
         export MPLCONFIGDIR
         return 0

@@ -154,6 +154,22 @@ class EntrypointTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, str(fallback / "qbox/matplotlib"))
 
+    def test_offline_unsearchable_mpl_cache_falls_back_to_writable_xdg(self):
+        with tempfile.TemporaryDirectory(prefix="qbox unsearchable mpl ") as directory:
+            self.make_offline_python(directory)
+            unsearchable = Path(directory) / "write only cache"
+            unsearchable.mkdir()
+            unsearchable.chmod(0o200)
+            fallback = Path(directory) / "xdg cache"
+            self.env["MPLCONFIGDIR"] = str(unsearchable)
+            self.env["XDG_CACHE_HOME"] = str(fallback)
+            try:
+                result = self.run_shell('printf "%s" "$MPLCONFIGDIR"')
+            finally:
+                unsearchable.chmod(0o700)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, str(fallback / "qbox/matplotlib"))
+
     def test_forced_task_keeps_numeric_filename_and_handler_status(self):
         result = self.run_shell('run_qe_scf_calculation() { return 91; }; '
                                 'ppin() { printf "input=%s" "$fname1"; return 17; }; '
