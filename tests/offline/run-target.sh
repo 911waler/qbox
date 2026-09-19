@@ -419,28 +419,89 @@ fi
         finally:self.assertEqual(self.finish_barrier(state),0)
         self.preserved(full=True)
     def test_10_process_group_interruptions(self):
-        # Exercise the actual candidate/upgrade at bootstrap, installed-wheel,
-        # prepared, final, command publication and both atomic switch boundaries.
+        # Publication boundaries must create a new owned final tree: reusing the
+        # active release cannot detect cleanup deleting a just-published upgrade.
         records=[]
+        new=prefix/'releases'/self.newmanifest['release_id']
+        new_link='releases/'+new.name
         for phase in ['runtime','metadata','prepared','final','bin','before-current','after-current']:
             for sig in [signal.SIGINT,signal.SIGTERM]:
                 label=f'{phase}-{sig.name}'
                 with self.subTest(phase=phase,signal=sig.name):
-                    selected=self.upgrade if phase in ['metadata','prepared','final'] else bundle
+                    publication=phase in ['before-current','after-current']
+                    selected=self.upgrade if phase in ['metadata','prepared','final'] or publication else bundle
                     trialbin=sandbox/('commands-'+label) if phase=='bin' else bindir
+                    self.assertEqual(os.readlink(prefix/'current'),self.old_link)
+                    self.assertFalse(new.exists(), 'each interruption must start without the upgrade tree')
                     state=self.barrier(label,phase,tree=selected,binpath=trialbin)
-                    if phase=='prepared':
-                        stage=next(prefix.glob('.stage.*'))
-                        report=json.loads((stage/'metadata/smoke.json').read_text())
-                        write(evidence/(label+'-prepared-smoke.json'),json.dumps(report))
-                        self.assertTrue(all(c['status']=='passed' for c in report['checks']))
-                        self.assertTrue(any(str(stage) in p for p in report['checks'][0]['detail']['sys_path']))
-                    code=self.finish_barrier(state,sig)
-                    self.assertEqual(code,128+sig)
+                    observation={'phase':phase,'signal':sig.name,
+                                 'selected_release_id':self.newmanifest['release_id'] if selected==self.upgrade else manifest['release_id'],
+                                 'upgrade_existed_at_start':False}
+                    try:
+                        try:
+                            if phase=='prepared':
+                                stage=next(prefix.glob('.stage.*'))
+                                report=json.loads((stage/'metadata/smoke.json').read_text())
+                                write(evidence/(label+'-prepared-smoke.json'),json.dumps(report))
+                                self.assertTrue(all(c['status']=='passed' for c in report['checks']))
+                                self.assertTrue(any(str(stage) in p for p in report['checks'][0]['detail']['sys_path']))
+                            if publication:
+                                self.assertNotEqual(new.name,release.name)
+                                self.assertTrue(new.is_dir())
+                                marker=json.loads((new/'metadata/installed.json').read_text())
+                                self.assertEqual(marker['state'],'verified')
+                                self.assertEqual(marker['release_id'],new.name)
+                                self.assertEqual(marker['manifest_sha256'],sha(self.upgrade/'manifest.json'))
+                                self.assertEqual(sha(new/'metadata/manifest.json'),sha(self.upgrade/'manifest.json'))
+                                expected=new_link if phase=='after-current' else self.old_link
+                                self.assertEqual(os.readlink(prefix/'current'),expected)
+                                new_inventory=inventory(new)
+                                observation.update(current_before_signal=expected,
+                                                   upgrade_verified_before_signal=True,
+                                                   upgrade_inventory_sha256=hashlib.sha256(json.dumps(new_inventory,sort_keys=True).encode()).hexdigest())
+                        finally:
+                            code=self.finish_barrier(state,sig)
+                        observation.update(exit=code,current=os.readlink(prefix/'current'),
+                                           upgrade_exists_after_signal=new.exists())
+                        write(evidence/(label+'-observation.json'),json.dumps(observation,indent=2))
+                        self.assertEqual(code,128+sig)
+                        if phase=='after-current':
+                            self.assertEqual(os.readlink(prefix/'current'),new_link)
+                            self.assertEqual(inventory(new),new_inventory)
+                            self.assertEqual(json.loads((new/'metadata/installed.json').read_text())['state'],'verified')
+                            self.assertEqual(sha(new/'metadata/manifest.json'),sha(self.upgrade/'manifest.json'))
+                            entry=self.record(label+'-public-entry',run([bindir/'qbox','--version']))
+                            self.ok(entry);self.assertEqual(entry.stdout,self.version)
+                            self.assertEqual((bindir/'qbox').resolve(),new/'bin/qbox')
+                            self.assertEqual(inventory(release),self.old_inventory)
+                            self.assertEqual(sha(self.sentinel),self.sentinel_sha)
+                            self.assertFalse((prefix/'.install-lock').exists())
+                            self.assertEqual(list(prefix.glob('.stage.*')),[])
+                            shutil.copyfile(new/'metadata/installed.json',evidence/(label+'-installed.json'))
+                            observation.update(upgrade_inventory_unchanged=True,public_entry_exit=entry.returncode,
+                                               verified_manifest_sha256=sha(new/'metadata/manifest.json'))
+                        else:
+                            self.preserved(full=True)
+                            self.assertFalse(new.exists())
+                        if phase=='bin':self.assertFalse((trialbin/'qbox').is_symlink())
+                        observation.update(old_release_unchanged=True,lock_and_stage_removed=True)
+                        records.append(observation)
+                        write(evidence/'interruption-results.json',json.dumps(records,indent=2))
+                    finally:
+                        if phase=='after-current':
+                            # Record the preserved published tree above before test
+                            # teardown. Restore old, then remove only our fixture so
+                            # the next signal owns a freshly installed upgrade too.
+                            lock=prefix/'.install-lock';lock.mkdir()
+                            try:
+                                write(lock/'owner','manual rollback: interruption test-fixture\n')
+                                temporary=prefix/'.interruption-rollback';temporary.symlink_to(self.old_link)
+                                os.replace(temporary,prefix/'current')
+                            finally:shutil.rmtree(lock)
+                            if new.exists():shutil.rmtree(new)
                     self.preserved(full=True)
-                    self.assertFalse((prefix/'releases'/self.newmanifest['release_id']).exists())
-                    if phase=='bin':self.assertFalse((trialbin/'qbox').is_symlink())
-                    records.append({'phase':phase,'signal':sig.name,'exit':code,'current':os.readlink(prefix/'current'),'old_release_unchanged':True,'lock_and_stage_removed':True})
+                    observation.update(restored_current=os.readlink(prefix/'current'),
+                                       upgrade_absent_after_test_teardown=not new.exists())
                     write(evidence/'interruption-results.json',json.dumps(records,indent=2))
         # A clean same-payload retry proves cleanup did not poison installation.
         self.ok(self.installer('after-signals-retry'))
