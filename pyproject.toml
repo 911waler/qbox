@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qbox"
+dynamic = ["version"]
+description = "Modular Quantum ESPRESSO workflow utilities"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [{name = "waler"}]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+
+# The entry point and task catalog require only the Python standard library.
+# QE/MPI executables, Multiwfn and pseudopotentials are installed separately.
+[project.optional-dependencies]
+analysis = ["numpy", "matplotlib", "scipy", "seekpath"]
+structure = ["pymatgen", "ase"]
+
+[project.scripts]
+qbox = "qbox.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "qbox.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["qbox*"]
+
+[tool.setuptools.package-data]
+qbox = ["legacy/*.sh", "bin/*"]

@@ -175,8 +175,8 @@ test_magnetic_comparison_and_lsda_behavior_are_source_locked() {
 test_element_range_and_ambient_atmindex_are_source_locked() {
     local body source
     body="$(declare -f qe_write_pw_structure)"
-    source="$(sed -n '/^function qe_write_pw_structure /,/^function qe_write_pw_kpoints /p' "$PROJECT_ROOT/qbox")"
-    assert_contains "$source" 'for ((j=1;j<=86;j++))' \
+    source="$(declare -f qe_write_pw_structure)"
+    assert_contains "$source" 'for ((j=1; j<=86; j++))' \
         'PW element lookup range changed' || return 1
     assert_contains "$source" 'if [ "${atmtype[$i]}" == "${atm[$j]}" ]; then' \
         'PW element lookup no longer matches symbols' || return 1

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Package-local entry used by legacy workflows and the source-tree launcher.
+_qbox_package="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export PYTHONPATH="$(dirname "$_qbox_package")${PYTHONPATH:+:$PYTHONPATH}"
+_qbox_python="${QBOX_PYTHON:-}"
+if [ -z "$_qbox_python" ] && [ -n "${QBOX_SHARED_ROOT:-}" ]; then
+    _qbox_python="$QBOX_SHARED_ROOT/python/bin/python3"
+fi
+_qbox_python="${_qbox_python:-$(command -v python3 2>/dev/null || true)}"
+if [ -z "$_qbox_python" ] || [ ! -x "$_qbox_python" ]; then
+    printf 'qbox: Python executable unavailable; set QBOX_PYTHON: %s\n' "$_qbox_python" >&2
+    exit 1
+fi
+export QBOX_PYTHON="$_qbox_python"
+exec "$_qbox_python" -m qbox "$@"

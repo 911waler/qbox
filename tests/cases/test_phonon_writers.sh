@@ -110,9 +110,9 @@ test_ph_input_writer_formats_option_values() {
 
 test_phonon_mass_lookup_source_contract() {
     local source body
-    source="$(sed -n '/^function qe_write_ph_masses /,/^function qe_write_ph_input /p' "$PROJECT_ROOT/qbox")"
+    source="$(declare -f qe_write_ph_masses)"
     body="$(declare -f qe_write_ph_masses)"
-    assert_contains "$source" 'for ((j=1;j<=86;j++))' \
+    assert_contains "$source" 'for ((j=1; j<=86; j++))' \
         'phonon mass lookup range changed from H-Rn coverage' || return 1
     assert_contains "$source" 'if [ "${atmtype[$i]}" == "${atm[$j]}" ]; then' \
         'phonon mass lookup no longer matches symbols' || return 1
@@ -154,15 +154,12 @@ test_phonon_mass_lookup_edges_and_ambient_state() {
 }
 
 test_phonon_dispersion_has_one_shared_body() {
-    local count source
-    count="$(grep -c 'nq1=4,' "$PROJECT_ROOT/qbox")"
-    assert_eq 1 "$count" 'dispersion nq1 body was duplicated' || return 1
-    source="$(sed -n '/^function qe_phonon_nonpolar_dispersion /,/^function qe_phonon_nonpolar_raman /p' "$PROJECT_ROOT/qbox")"
-    assert_contains "$source" 'qe_generate_phonon_dispersion_inputs' \
-        'nonpolar dispersion does not call the shared generator' || return 1
-    source="$(sed -n '/^function qe_phonon_polar_dispersion /,/^function qe_phonon_polar_raman /p' "$PROJECT_ROOT/qbox")"
-    assert_contains "$source" 'qe_generate_phonon_dispersion_inputs' \
-        'polar dispersion does not call the shared generator' || return 1
+    local calls=0
+    qe_generate_phonon_dispersion_inputs() { calls=$((calls + 1)); }
+    qe_phonon_nonpolar_dispersion || return 1
+    assert_eq 1 "$calls" 'nonpolar dispersion must call the shared generator once' || return 1
+    qe_phonon_polar_dispersion || return 1
+    assert_eq 2 "$calls" 'polar dispersion must call the shared generator once'
 }
 
 test_phonon_builders_do_not_duplicate_common_writers() {

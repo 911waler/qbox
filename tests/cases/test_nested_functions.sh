@@ -91,7 +91,7 @@ test_new_helpers_are_top_level() {
 }
 
 test_legacy_function_declarations_are_removed() {
-    local function_name source_file="${QBOX_SOURCE_FILE:-$PROJECT_ROOT/qbox}"
+    local function_name source_file
     for function_name in "${legacy_helper_names[@]}"; do
         local declaration_pattern
         if [ "$function_name" = "qe_builtin_clean_pdos_next_steps" ]; then
@@ -99,10 +99,12 @@ test_legacy_function_declarations_are_removed() {
         else
             declaration_pattern="^[[:space:]]*(function[[:space:]]+)?${function_name}[[:space:]]*\\(\\)[[:space:]]*\\{"
         fi
-        if grep -Eq "$declaration_pattern" "$source_file"; then
-            fail "legacy function declaration remains in source: $function_name"
-            return 1
-        fi
+        while IFS= read -r source_file; do
+            if grep -Eq "$declaration_pattern" "$source_file"; then
+                fail "legacy function declaration remains in $source_file: $function_name"
+                return 1
+            fi
+        done < <(qbox_shell_source_files)
     done
 }
 
@@ -189,17 +191,8 @@ test_all_lexical_functions_load_after_source() {
     sandbox="$(new_sandbox)" || return 1
     lexical="$sandbox/lexical"
     loaded="$sandbox/loaded"
-    {
-        sed -nE 's/^[[:space:]]*function[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*(\(\))?[[:space:]]*\{.*/\1/p' "$PROJECT_ROOT/qbox"
-        sed -nE 's/^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\(\)[[:space:]]*\{.*/\1/p' "$PROJECT_ROOT/qbox"
-    } | sort >"$lexical" || return 1
-    env -i \
-        PATH="$PATH" \
-        TMPDIR="${TMPDIR:-/tmp}" \
-        QBOX_SCRIPT="$PROJECT_ROOT/qbox" \
-        bash --noprofile --norc -c \
-        'QBOX_TEST_MODE=1 source "$QBOX_SCRIPT"; compgen -A function | sort' \
-        >"$loaded" || return 1
+    qbox_lexical_functions >"$lexical" || return 1
+    qbox_loaded_functions >"$loaded" || return 1
     if [ -n "$(uniq -d "$lexical")" ]; then
         fail 'lexical function extraction contains duplicate names'
         return 1

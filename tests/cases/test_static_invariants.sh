@@ -38,28 +38,22 @@ PROMOTED_HELPERS=(
 )
 
 extract_lexical_functions() {
-    {
-        sed -nE 's/^[[:space:]]*function[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*(\(\))?[[:space:]]*\{.*/\1/p' "$PROJECT_ROOT/qbox"
-        sed -nE 's/^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\(\)[[:space:]]*\{.*/\1/p' "$PROJECT_ROOT/qbox"
-    } | sort
+    qbox_lexical_functions
 }
 
 extract_loaded_functions() {
-    env -i \
-        PATH="$PATH" \
-        HOME="${HOME:-/tmp}" \
-        TMPDIR="${TMPDIR:-/tmp}" \
-        QBOX_SCRIPT="$PROJECT_ROOT/qbox" \
-        bash --noprofile --norc -c \
-        'QBOX_TEST_MODE=1 source "$QBOX_SCRIPT"; compgen -A function | sort'
+    qbox_loaded_functions
 }
 
 test_syntax_and_removed_patterns() {
-    bash -n "$PROJECT_ROOT/qbox" || return 1
-    if rg -n 'QEversion|fname1%%[.]\*|rm -f[[:space:]]+\$\{prefix\}_tmp\*' "$PROJECT_ROOT/qbox"; then
-        fail 'removed legacy expression is present'
-        return 1
-    fi
+    local source_file
+    while IFS= read -r source_file; do
+        bash -n "$source_file" || return 1
+        if rg -n 'QEversion|fname1%%[.]\*|rm -f[[:space:]]+\$\{prefix\}_tmp\*' "$source_file"; then
+            fail "removed legacy expression is present: $source_file"
+            return 1
+        fi
+    done < <(qbox_shell_source_files)
 }
 
 test_function_registry_invariants() {
@@ -88,34 +82,37 @@ test_function_registry_invariants() {
 }
 
 test_dispatch_and_main_loop_have_one_authority() {
-    local source_file="$PROJECT_ROOT/qbox" body
-    assert_eq 1 "$(rg -c '^function qe_action_handler[[:space:]]*\(\)' "$source_file")" \
-        'qe_action_handler must have exactly one definition' || return 1
-    assert_eq 1 "$(rg -c '^[[:space:]]*main_menu[[:space:]]*$' "$source_file")" \
-        'main_menu must have exactly one bare call' || return 1
-    assert_eq 1 "$(rg -c '^[[:space:]]*rmainfunc[[:space:]]*$' "$source_file")" \
-        'rmainfunc must have exactly one bare call' || return 1
-
-    body="$(sed -n '/^function qe_main_loop[[:space:]]*()/,/^}/p' "$source_file")"
-    assert_contains "$body" $'\t\tmain_menu' 'qe_main_loop no longer owns the main_menu call' || return 1
-    assert_contains "$body" $'\t\trmainfunc' 'qe_main_loop no longer owns the rmainfunc call'
+    source_qbox || return 1
+    local calls='' loop_count=0 status
+    main_menu() { calls+="menu "; }
+    rmainfunc() {
+        calls+="dispatch ";
+        loop_count=$((loop_count + 1))
+        if [ "$loop_count" -eq 1 ]; then QE_RETURN_TO_MAIN=1; else return 7; fi
+    }
+    qe_main_loop
+    status=$?
+    assert_eq 'menu dispatch menu dispatch ' "$calls" \
+        'main loop must show one menu before each dispatch' || return 1
+    assert_eq 7 "$status" 'main loop must propagate the final task status'
 }
 
 test_deferred_writer_guards_have_expected_structure() {
+    source_qbox || return 1
     local source
-    source="$(sed -n '/^function qe_write_pw_system /,/^function qe_write_pw_electrons /p' "$PROJECT_ROOT/qbox")"
-    assert_contains "$source" 'for ((i=1;i<="${#atmtype[@]}";i++))' \
+    source="$(declare -f qe_write_pw_system)"
+    assert_contains "$source" 'for ((i=1; i<="${#atmtype[@]}"; i++))' \
         'PW system magnetic scan is missing' || return 1
     assert_eq 1 "$(printf '%s\n' "$source" | rg -F -c '[[ "${magarr[$i]}" > "0" ]]')" \
         'PW system magnetic guard count is incorrect' || return 1
     assert_contains "$source" '[[ "${magarr[$i]}" > "0" ]]' \
         'PW system magnetic guard is missing' || return 1
-    source="$(sed -n '/^function qe_write_pw_structure /,/^function qe_write_pw_kpoints /p' "$PROJECT_ROOT/qbox")"
-    assert_contains "$source" 'for ((i=1;i<=$ntyp;i++))' \
+    source="$(declare -f qe_write_pw_structure)"
+    assert_contains "$source" 'for ((i=1; i<=$ntyp; i++))' \
         'PW structure species scan is missing' || return 1
-    assert_eq 1 "$(printf '%s\n' "$source" | rg -F -c 'for ((j=1;j<=86;j++))')" \
+    assert_eq 1 "$(printf '%s\n' "$source" | rg -F -c 'for ((j=1; j<=86; j++))')" \
         'PW structure element lookup loop count is incorrect' || return 1
-    assert_contains "$source" 'for ((j=1;j<=86;j++))' \
+    assert_contains "$source" 'for ((j=1; j<=86; j++))' \
         'PW structure element lookup guard is missing' || return 1
     assert_contains "$source" 'if [ "${atmtype[$i]}" == "${atm[$j]}" ]; then' \
         'PW structure symbol match is missing' || return 1

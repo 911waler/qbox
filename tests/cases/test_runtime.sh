@@ -576,15 +576,14 @@ test_input_generation_does_not_require_pw_executable() {
 }
 
 test_runtime_call_sites_use_central_loader() {
-    local source sumdos_source function_name body private_root private_oneapi_setup
-    source="$(cat "$PROJECT_ROOT/qbox")"
-    assert_not_contains "$source" 'qe_load_runtime_environment_for' \
-        'former runtime loader call remains in source' || return 1
-    if grep -Eq '^[[:space:]]+qe_load_runtime_environment([[:space:]]|$)' "$PROJECT_ROOT/qbox"; then
-        fail 'legacy runtime wrapper is still called directly'
-        return 1
-    fi
-    sumdos_source="$(sed -n '/^function qe_builtin_sumdos /,/^# <<< END BUILTIN: sumdos.sh/p' "$PROJECT_ROOT/qbox")"
+    local source_file sumdos_source function_name body private_root private_oneapi_setup
+    while IFS= read -r source_file; do
+        if rg -n 'qe_load_runtime_environment_for|^[[:space:]]+qe_load_runtime_environment([[:space:];]|$)' "$source_file"; then
+            fail "legacy runtime wrapper remains in $source_file"
+            return 1
+        fi
+    done < <(qbox_shell_source_files)
+    sumdos_source="$(declare -f qe_builtin_sumdos)"
     assert_contains "$sumdos_source" 'qe_ensure_runtime_for sumpdos.x' \
         'sumdos does not call central runtime loader' || return 1
     private_root="$(printf '/o%s' pt)"

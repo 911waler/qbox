@@ -270,11 +270,10 @@ test_cleanup_trap_removes_exact_directory() {
 }
 
 test_conver_preserves_user_energy_file() {
-    local parent output sentinel mock_python status
+    local parent output sentinel status
     parent="$(new_sandbox)" || return 1
     output="$parent/sample.out"
     sentinel="$parent/sample_ener-user.dat"
-    mock_python="$parent/mock-python"
     cat >"$output" <<'EOF'
 !    total energy              =   -100.0000 Ry
 !    total energy              =    -99.9000 Ry
@@ -284,25 +283,14 @@ test_conver_preserves_user_energy_file() {
 !    total energy              =    -99.5000 Ry
 EOF
     printf 'user-owned convergence data\n' >"$sentinel"
-    cat >"$mock_python" <<'EOF'
-#!/usr/bin/env bash
-if [ "${1-}" = '-c' ]; then
-    exit 0
-fi
-printf 'png\n' >"$4.png"
-printf 'svg\n' >"$4.svg"
-EOF
-    chmod +x "$mock_python"
-
     (
         cd "$parent" || exit 1
         fname1="$output"
         prefix='sample'
-        QBOX_PYTHON="$mock_python"
         conver
     ) >"$parent/conver.out" 2>&1
     status=$?
-    assert_eq 0 "$status" 'conver failed with mock plotting environment' || return 1
+    assert_eq 0 "$status" 'conver failed with the configured plotting environment' || return 1
     assert_eq 'user-owned convergence data' "$(cat "$sentinel")" 'conver changed the user energy sentinel' || return 1
     [ -s "$parent/sample_energy_convergence.png" ] || { fail 'conver did not create the PNG'; return 1; }
     [ -s "$parent/sample_energy_convergence.svg" ] || { fail 'conver did not create the SVG'; return 1; }

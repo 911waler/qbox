@@ -87,6 +87,42 @@ assert_or_update_golden() {
 }
 new_sandbox() { mktemp -d "$TEST_TMP_ROOT/case.XXXXXX"; }
 source_qbox() { QBOX_TEST_MODE=1 source "$PROJECT_ROOT/qbox"; }
+
+# Audit the files that are actually shipped, not a reconstructed monolithic
+# script. Keep the launcher in scope so accidental duplicate wrappers are caught.
+qbox_shell_source_files() {
+    printf '%s\n' "$PROJECT_ROOT/qbox" "$PROJECT_ROOT/src/qbox/bin/qbox"
+    rg --files "$PROJECT_ROOT/src/qbox/legacy" -g '*.sh' | LC_ALL=C sort
+}
+
+qbox_runtime_source_files() {
+    printf '%s\n' "$PROJECT_ROOT/qbox" "$PROJECT_ROOT/qbox-dopant-pdos.py"
+    rg --files "$PROJECT_ROOT/src/qbox" -g '*.sh' -g '*.py' -g qbox | LC_ALL=C sort
+}
+
+qbox_lexical_functions() {
+    local source_file
+    while IFS= read -r source_file; do
+        sed -nE \
+            -e 's/^[[:space:]]*function[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*(\(\))?[[:space:]]*\{.*/\1/p' \
+            -e 's/^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\(\)[[:space:]]*\{.*/\1/p' \
+            "$source_file"
+    done < <(qbox_shell_source_files) | LC_ALL=C sort
+}
+
+qbox_loaded_functions() {
+    env -i PATH="$PATH" HOME="${HOME:-/tmp}" TMPDIR="${TMPDIR:-/tmp}" \
+        QBOX_PYTHON="$QBOX_PYTHON" QBOX_SCRIPT="$PROJECT_ROOT/qbox" \
+        bash --noprofile --norc -c \
+        'QBOX_TEST_MODE=1 source "$QBOX_SCRIPT" || exit; compgen -A function | LC_ALL=C sort'
+}
+
+copy_qbox_runtime() {
+    local destination="$1"
+    mkdir -p "$destination/src" || return 1
+    cp -- "$PROJECT_ROOT/qbox" "$PROJECT_ROOT/qbox-dopant-pdos.py" "$destination/" || return 1
+    cp -R -- "$PROJECT_ROOT/src/qbox" "$destination/src/"
+}
 run_test() {
     local name="$1"; shift
     if ( "$@" ); then printf 'PASS: %s\n' "$name"; else TEST_FAILURES=$((TEST_FAILURES + 1)); fi

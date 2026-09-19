@@ -59,7 +59,7 @@ test_explicit_dependency_paths_override_shared_root() (
 
 test_public_names_are_present() {
     local public_file
-    for public_file in qbox qbox-dopant-pdos.py README.md LICENSE CITATION.cff; do
+    for public_file in qbox qbox-dopant-pdos.py README.md LICENSE CITATION.cff pyproject.toml src/qbox/__main__.py src/qbox/registry.py src/qbox/legacy/load.sh; do
         [ -e "$PROJECT_ROOT/$public_file" ] || fail "missing public file: $public_file"
     done
 }
@@ -158,30 +158,49 @@ test_public_source_email_audit_detects_ordinary_email() {
 
 test_public_source_has_no_private_absolute_paths() {
     local output
+    local -a runtime_sources
+    mapfile -t runtime_sources < <(qbox_runtime_source_files)
     output="$(rg -n \
         '/home/[[:alnum:]_.-]+|/(opt|srv)/[[:alnum:]_.-]+|[[:alnum:]_.%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}' \
-        "$PROJECT_ROOT/qbox" "$PROJECT_ROOT/qbox-dopant-pdos.py" 2>/dev/null || true)"
+        "${runtime_sources[@]}" 2>/dev/null || true)"
     [ -z "$output" ] || { printf '%s\n' "$output" >&2; fail 'public runtime files contain a private absolute path or email'; }
 }
 
 test_public_source_has_no_legacy_namespace() {
     local old_name old_lower old_env old_abbrev output
+    local -a runtime_sources
+    mapfile -t runtime_sources < <(qbox_runtime_source_files)
     old_name="$(printf 'QE%s' 'toolkit')"
     old_lower="$(printf 'q%s' 'etoolkit')"
     old_env="$(printf 'QE%s' '_TOOLKIT')"
     old_abbrev="$(printf 'Q%s' 'ETK')"
     output="$(rg -n -F -e "$old_name" -e "$old_lower" -e "$old_env" -e "$old_abbrev" \
-        "$PROJECT_ROOT/qbox" "$PROJECT_ROOT/qbox-dopant-pdos.py" 2>/dev/null || true)"
+        "${runtime_sources[@]}" 2>/dev/null || true)"
     [ -z "$output" ] || { printf '%s\n' "$output" >&2; fail 'legacy project namespace remains in public runtime files'; }
 }
 
-test_missing_dopant_helper_diagnostic_is_path_neutral() (
+test_missing_package_has_actionable_failure() (
     local sandbox install output status
     sandbox="$(new_sandbox)" || return 1
     install="$sandbox/install-root"
     mkdir -p "$install"
     cp -- "$PROJECT_ROOT/qbox" "$install/qbox"
     chmod +x "$install/qbox"
+
+    output="$(cd "$sandbox" && "$install/qbox" --version 2>&1)"
+    status=$?
+    [ "$status" -ne 0 ] || { fail 'launcher without its package must fail'; return 1; }
+    assert_contains "$output" 'package resources not found' \
+        'incomplete installation must explain that the package resources are missing' || return 1
+    assert_not_contains "$output" 'Traceback' 'incomplete installation must not emit a Python traceback'
+)
+
+test_missing_dopant_helper_diagnostic_is_path_neutral() (
+    local sandbox install output status
+    sandbox="$(new_sandbox)" || return 1
+    install="$sandbox/install-root"
+    copy_qbox_runtime "$install" || return 1
+    rm -- "$install/src/qbox/bin/qbox-dopant-pdos.py" || return 1
 
     output="$(
         cd "$sandbox" || exit 1
@@ -201,9 +220,8 @@ test_missing_dopant_helper_diagnostic_is_path_neutral() (
 
 test_dopant_command_summary_is_path_neutral() {
     local source
-    source="$(sed -n \
-        '/^function analyze_qe_dopant_pdos /,/^function qe_embedded_plot_ldos /p' \
-        "$PROJECT_ROOT/qbox")"
+    source_qbox || return 1
+    source="$(declare -f analyze_qe_dopant_pdos)"
     assert_not_contains "$source" '${QBOX_PYTHON} ${analysis_script}' \
         'dopant command summary must not expose the Python/helper paths'
     assert_not_contains "$source" '未找到掺杂 PDOS 分析脚本 $analysis_script' \
@@ -267,7 +285,6 @@ test_dopant_report_uses_neutral_basenames() (
 
 test_qbox_unfold_generated_metadata_uses_neutral_identifiers() (
     local sandbox report output report_text geometry_output geometry_result geometry_metadata
-    local geometry_source geometry_input legacy_metadata_form
     sandbox="$(new_sandbox)" || return 1
 
     write_cif() {
@@ -320,21 +337,6 @@ test_qbox_unfold_generated_metadata_uses_neutral_identifiers() (
         'unfold geometry metadata must not expose a scan path' || return 1
     assert_not_contains "$geometry_metadata" "$sandbox" \
         'unfold geometry metadata must not expose the sandbox absolute path' || return 1
-
-    geometry_source="$(sed -n \
-        '/^function qe_unfold_prepare_geometry /,/^function qe_unfold_patch_bands_input /p' \
-        "$PROJECT_ROOT/qbox")"
-    assert_contains "$geometry_source" '"primitive_cif": pathlib.Path(primitive_path).name' \
-        'geometry metadata must serialize the primitive basename in source' || return 1
-    assert_contains "$geometry_source" '"pristine_supercell_cif": pathlib.Path(supercell_path).name' \
-        'geometry metadata must serialize the pristine basename in source' || return 1
-    assert_contains "$geometry_source" '"defect_supercell_cif": pathlib.Path(defect_path).name' \
-        'geometry metadata must serialize the defect basename in source' || return 1
-    for geometry_input in primitive_path supercell_path defect_path; do
-        legacy_metadata_form="str(pathlib.Path(${geometry_input}).resolve())"
-        assert_not_contains "$geometry_source" "$legacy_metadata_form" \
-            "geometry metadata must not serialize ${geometry_input} as a resolved path" || return 1
-    done
 
     output="$(qe_unfold_discover_structures "$sandbox" "$report")" || {
         printf '%s\n' "$output" >&2
@@ -441,6 +443,7 @@ run_test 'test runtime rejects unrelated Python and cleans failures' test_test_r
 run_test 'public source email audit detects ordinary emails' test_public_source_email_audit_detects_ordinary_email
 run_test 'public runtime files have no private paths or emails' test_public_source_has_no_private_absolute_paths
 run_test 'public runtime files have no legacy namespace' test_public_source_has_no_legacy_namespace
+run_test 'missing package resources give actionable failure' test_missing_package_has_actionable_failure
 run_test 'missing dopant helper diagnostics are path-neutral' test_missing_dopant_helper_diagnostic_is_path_neutral
 run_test 'dopant command summaries are path-neutral' test_dopant_command_summary_is_path_neutral
 run_test 'dopant report uses neutral basenames' test_dopant_report_uses_neutral_basenames

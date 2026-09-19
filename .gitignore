@@ -5,3 +5,7 @@ __pycache__/
 .qbox-*/
 .*.qbox.*
 *.log
+.venv/
+build/
+dist/
+*.egg-info/

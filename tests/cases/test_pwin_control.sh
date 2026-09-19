@@ -51,15 +51,14 @@ test_pwin_supported_choice_sets() {
 test_pwin_case_loop_has_no_unreachable_labels() {
     local dead_labels awk_status
     dead_labels="$(awk '
-        /^while \[\[ "\$pwin_arg" != "14" \]\]; do$/ {inside=1; next}
-        inside && /^done$/ {exit}
+        /^[[:space:]]*while \[\[ "\$pwin_arg" != "14" \]\]; do$/ {inside=1; next}
         inside {
             if ($0 ~ /^[[:space:]]*case[[:space:]].*[[:space:]]in[[:space:]]*$/) {
                 case_depth++
                 found_case=1
                 next
             }
-            if ($0 ~ /^[[:space:]]*esac[[:space:]]*$/) {
+            if ($0 ~ /^[[:space:]]*esac;?[[:space:]]*$/) {
                 case_depth--
                 if (case_depth == 0) exit
                 next
@@ -67,7 +66,7 @@ test_pwin_case_loop_has_no_unreachable_labels() {
             if (case_depth == 1 && $0 ~ /^[[:space:]]*"?[24567]"?[[:space:]]*\)[[:space:]]*$/) print
         }
         END {if (!found_case) exit 2}
-    ' "$PROJECT_ROOT/qbox")"
+    ' < <(declare -f pwin))"
     awk_status=$?
     assert_eq 0 "$awk_status" 'could not locate pwin case loop' || return 1
     [ -z "$dead_labels" ] || { fail 'unreachable pwin case label remains'; return 1; }
