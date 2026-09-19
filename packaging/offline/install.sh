@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Source-safe bootstrap primitives. Transactional installation is added by Task 8.
+# Source-safe offline bootstrap and guarded release transaction.
+_QBOX_INSTALLER_SOURCE=${BASH_SOURCE[0]}
 
 qbox_error() { printf 'qbox：%s\n' "$*" >&2; return 1; }
 
@@ -139,6 +140,7 @@ preflight_paths() {
     fi
     if [[ -e "$QBOX_PREFIX" || -L "$QBOX_PREFIX" ]]; then
         [[ -d "$QBOX_PREFIX" && ! -L "$QBOX_PREFIX" && -O "$QBOX_PREFIX" ]] || { qbox_error '安装根目录必须是当前用户拥有的目录'; return 1; }
+        [[ ! -e "$QBOX_PREFIX/.install-lock" && ! -L "$QBOX_PREFIX/.install-lock" ]] || { qbox_error '安装进行中或遗留锁；请人工核验 .install-lock 后再试'; return 1; }
         directory_is_empty "$QBOX_PREFIX" || validate_root_marker "$QBOX_PREFIX" || { qbox_error '安装根目录包含非 qbox 内容或无效根标记'; return 1; }
     fi
     writable_path_ancestor "$QBOX_PREFIX" && writable_path_ancestor "$QBOX_BIN_DIR"
@@ -281,10 +283,322 @@ extract_runtime() (
     "$stage/python/bin/python3" -I -B -c 'import os, sys; v = os.confstr("CS_GNU_LIBC_VERSION"); assert v and v.startswith("glibc "); assert tuple(map(int, v.split()[1].split("."))) >= (2, 28); assert sys.version_info[:2] == (3, 12)' || { qbox_error '包内 Python/glibc 复核失败'; return 1; }
 )
 
-main() {
-    parse_options "$@" && preflight_platform && preflight_paths || return 1
-    qbox_error '事务安装入口尚未接入，未执行安装'
+# Mutation primitives run only within main's subshell. No traps or shell options
+# are installed when this file is sourced.
+create_owned_directories() {
+    local path="$1" parent identity
+    if [[ -e "$path" || -L "$path" ]]; then
+        [[ -d "$path" && ! -L "$path" ]] || return 1
+        return 0
+    fi
+    parent="${path%/*}"; [[ -n "$parent" ]] || parent=/
+    create_owned_directories "$parent" || return 1
+    if ! mkdir -- "$path" 2>/dev/null; then
+        [[ -d "$path" && ! -L "$path" && "$(readlink -m -- "$path")" == "$path" ]]
+        return $?
+    fi
+    identity=$(stat -c '%d:%i' -- "$path") || return 1
+    created_directories+=("$path")
+    created_identities+=("$identity")
+    if (( lock_owned )); then
+        printf '%s\t%s\n' "$identity" "$path" >> "$lock/created-directories" || return 1
+    fi
 }
+
+lock_is_ours() {
+    [[ "$lock_owned" == 1 && -d "$lock" && ! -L "$lock" && -O "$lock" ]] || return 1
+    [[ "$(readlink -m -- "$lock")" == "$lock" && "$(stat -c '%d:%i' -- "$lock")" == "$lock_identity" ]] || return 1
+    [[ -f "$lock/owner" && ! -L "$lock/owner" ]] || return 1
+    [[ "$(cat -- "$lock/owner")" == "$token $transaction_pid" ]]
+}
+
+root_empty_except_lock() (
+    unset GLOBIGNORE
+    shopt -s dotglob nullglob
+    local items=("$prefix"/*)
+    (( ${#items[@]} == 1 )) && [[ "${items[0]}" == "$lock" ]]
+)
+
+acquire_install_lock() {
+    create_owned_directories "$prefix" || { qbox_error '无法创建安装目录'; return 1; }
+    lock="$prefix/.install-lock"
+    mkdir -- "$lock" 2>/dev/null || { qbox_error '安装进行中或遗留锁；请人工核验 .install-lock 后再试'; return 1; }
+    lock_owned=1
+    lock_identity=$(stat -c '%d:%i' -- "$lock") || return 1
+    printf '%s %s\n' "$token" "$transaction_pid" > "$lock/owner" || return 1
+    local index
+    for index in "${!created_directories[@]}"; do
+        printf '%s\t%s\n' "${created_identities[index]}" "${created_directories[index]}" >> "$lock/created-directories" || return 1
+    done
+    if ! validate_root_marker "$prefix"; then
+        root_empty_except_lock || { qbox_error '锁内复核：根目录归属无效'; return 1; }
+        ( set -o noclobber; printf 'schema_version=1\nuid=%s\nprefix=%s\n' "$EUID" "$prefix" > "$prefix/.qbox-root" ) || return 1
+        root_created=1
+    fi
+    validate_root_marker "$prefix" || return 1
+    [[ "$(readlink -m -- "$prefix")" == "$prefix" && "$(readlink -m -- "$bin_dir")" == "$bin_dir" ]] || return 1
+    if [[ -e "$prefix/releases" || -L "$prefix/releases" ]]; then
+        [[ -d "$prefix/releases" && ! -L "$prefix/releases" && -O "$prefix/releases" ]] || { qbox_error 'releases 目录归属无效'; return 1; }
+    else
+        create_owned_directories "$prefix/releases" || return 1
+    fi
+}
+
+current_target() {
+    local target
+    if [[ ! -e "$prefix/current" && ! -L "$prefix/current" ]]; then return 0; fi
+    [[ -L "$prefix/current" ]] || { qbox_error 'current 必须是受管理的版本链接'; return 1; }
+    target=$(readlink -- "$prefix/current") || return 1
+    [[ "$target" =~ ^releases/[A-Za-z0-9][A-Za-z0-9._+-]*$ ]] || { qbox_error 'current 指向非受管理位置'; return 1; }
+    [[ -d "$prefix/$target" && ! -L "$prefix/$target" && -O "$prefix/$target" ]] || { qbox_error 'current 版本目录无效'; return 1; }
+    printf '%s' "$target"
+}
+
+check_bin_target() {
+    local entry="$bin_dir/qbox"
+    if [[ -e "$entry" || -L "$entry" ]]; then
+        [[ -L "$entry" && "$(readlink -- "$entry")" == "$prefix/current/bin/qbox" && -n "$old_current" ]] || { qbox_error '命令 qbox 已存在且不属于此有效安装；请使用其他 --bin-dir'; return 1; }
+    fi
+}
+
+record_stage() {
+    stage_identity=$(stat -c '%d:%i' -- "$stage") || return 1
+    printf '%s\n%s\n%s\n' "$token" "$stage" "$stage_identity" > "$lock/stage" || return 1
+}
+
+read_bundle_identity() {
+    local identity
+    identity=$("$stage/python/bin/python3" -I -B - "$bundle" <<'PY'
+import hashlib, importlib.util, json, pathlib, sys
+bundle=pathlib.Path(sys.argv[1])
+spec=importlib.util.spec_from_file_location('qbox_manifest',bundle/'checks/manifest.py')
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+data=(bundle/'manifest.json').read_bytes(); manifest=json.loads(data)
+module.validate_manifest(manifest)
+print(manifest['release_id']); print(hashlib.sha256(data).hexdigest())
+PY
+    ) || { qbox_error 'manifest 身份校验失败'; return 1; }
+    release_id="${identity%%$'\n'*}"; manifest_sha256="${identity#*$'\n'}"
+    [[ "$release_id" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ && "$manifest_sha256" =~ ^[a-f0-9]{64}$ ]] || return 1
+}
+
+install_wheels() (
+    local variable
+    while IFS= read -r variable; do unset "$variable"; done < <(compgen -v PIP_)
+    export PIP_CONFIG_FILE=/dev/null
+    "$stage/python/bin/python3" -I -B -m pip --isolated --disable-pip-version-check \
+        install --no-index --only-binary=:all: --require-hashes \
+        --no-cache-dir --no-compile --ignore-installed \
+        --find-links "$bundle/packages" --find-links "$bundle/wheelhouse" \
+        -r "$bundle/requirements.lock"
+)
+
+install_metadata() {
+    mkdir -- "$stage/bin" "$stage/metadata" || return 1
+    cp -- "$bundle/checks/qbox-launcher.sh" "$stage/bin/qbox" || return 1
+    chmod 755 -- "$stage/bin/qbox" || return 1
+    cp -- "$bundle/manifest.json" "$bundle/requirements.lock" "$bundle/LICENSE" "$stage/metadata/" || return 1
+    cp -R -- "$bundle/checks" "$bundle/THIRD_PARTY_LICENSES" "$stage/metadata/" || return 1
+    "$stage/python/bin/python3" -I -B - "$stage" <<'PY'
+import csv, importlib.metadata, pathlib, stat, sys
+root=pathlib.Path(sys.argv[1]); site=root/'python/lib/python3.12/site-packages'
+dists=[d for d in importlib.metadata.distributions(path=[str(site)]) if d.metadata['Name'].lower()=='qbox']
+if len(dists)!=1: raise ValueError('expected exactly one installed qbox distribution')
+dist=dists[0]; script=root/'python/bin/qbox'
+record=next(site/path for path in dist.files if str(path).endswith('.dist-info/RECORD'))
+rows=list(csv.reader(record.open(newline='')))
+# Remove just the generated entry point, never the package's recursive bin/qbox.
+removed=[row for row in rows if row[0]=='../../../bin/qbox']
+if len(removed)!=1 or script.is_symlink() or not script.is_file():
+    raise ValueError('missing/ambiguous pip generated qbox entry')
+script.unlink()
+with record.open('w',newline='') as stream:
+    csv.writer(stream).writerows(row for row in rows if row[0]!='../../../bin/qbox')
+for path in (site/'qbox').rglob('*.py'):
+    if path.is_symlink() or not path.is_file(): raise ValueError('unsafe helper')
+    path.chmod(stat.S_IMODE(path.stat().st_mode) & ~0o333)
+PY
+}
+
+write_installed_marker() {
+    local root="$1" state="$2" digest="$3"
+    "$root/python/bin/python3" -I -B - "$root" "$state" "$digest" "$release_id" "$manifest_sha256" <<'PY'
+import json, os, pathlib, sys
+root=pathlib.Path(sys.argv[1]); state,digest,rid,manifest_sha=sys.argv[2:]
+path=root/'metadata/installed.json'; temporary=root/'metadata/.installed-new'
+marker={'schema_version':1,'product':'qbox','release_id':rid,'manifest_sha256':manifest_sha,'state':state,'inventory_sha256':digest}
+with temporary.open('x') as stream: json.dump(marker,stream,sort_keys=True);stream.write('\n')
+os.replace(temporary,path)
+PY
+}
+
+verify_release() (
+    local root="$1" phase="$2" work report
+    local -a bundle_args=()
+    export QBOX_PYTHON="$root/python/bin/python3" _QBOX_OFFLINE_ROOT="$root"
+    unset QBOX_TEST_MODE DISPLAY
+    # Keep generated reports/cache/work outside the immutable release. Reuse is
+    # read-only: a corrupt release must never be repaired or rewritten.
+    work=$(mktemp -d -- "$lock/check.XXXXXXXX") || return 1
+    trap 'rm -rf -- "$work"' EXIT
+    export MPLCONFIGDIR="$work/matplotlib" XDG_CACHE_HOME="$work/cache"
+    "$root/bin/qbox" --help > "$work/help" || { qbox_error '入口 --help 检查失败'; return 1; }
+    "$root/bin/qbox" --version > "$work/version" || { qbox_error '入口 --version 检查失败'; return 1; }
+    "$root/bin/qbox" --list > "$work/list" || { qbox_error '入口 --list 检查失败'; return 1; }
+    "$root/python/bin/python3" -I -B "$root/metadata/checks/smoke.py" --release "$root" --work "$work/smoke" > "$work/smoke.json" || { cat -- "$work/smoke.json" >&2; qbox_error '科学功能自检失败'; return 1; }
+    [[ "$phase" != prepared ]] || bundle_args=(--bundle "$bundle")
+    "$root/python/bin/python3" -I -B "$root/metadata/checks/verify.py" --release "$root" --manifest "$root/metadata/manifest.json" --phase "$phase" "${bundle_args[@]}" > "$work/verify.json" || { cat -- "$work/verify.json" >&2; qbox_error '完整版本校验失败；请恢复原始版本或另选安装前缀'; return 1; }
+    if [[ "$phase" != reuse ]]; then
+        for report in "$root/metadata/verification-$phase.json" "$root/metadata/smoke.json"; do
+            [[ ! -L "$report" && ( ! -e "$report" || -f "$report" ) ]] || return 1
+        done
+        cp -- "$work/verify.json" "$root/metadata/verification-$phase.json" || return 1
+        cp -- "$work/smoke.json" "$root/metadata/smoke.json" || return 1
+    fi
+)
+
+move_release() {
+    [[ ! -e "$final" && ! -L "$final" ]] || { qbox_error '目标版本已存在，拒绝覆盖'; return 1; }
+    # -n never replaces a concurrently created destination; verify it really moved.
+    mv -Tn -- "$stage" "$final" || return 1
+    [[ ! -e "$stage" && ! -L "$stage" && ! -L "$final" && "$(stat -c '%d:%i' -- "$final")" == "$stage_identity" ]] || return 1
+}
+
+prepare_bin_link() {
+    check_bin_target || return 1
+    create_owned_directories "$bin_dir" || return 1
+    if [[ ! -e "$bin_dir/qbox" && ! -L "$bin_dir/qbox" ]]; then
+        ln -s -- "$prefix/current/bin/qbox" "$bin_dir/qbox" || { qbox_error '命令目录被其他安装占用'; return 1; }
+        bin_created=1
+        bin_identity=$(stat -c '%d:%i' -- "$bin_dir/qbox") || return 1
+    fi
+}
+
+publish_release() {
+    local current
+    lock_is_ours && validate_root_marker "$prefix" || return 1
+    current=$(current_target) || return 1
+    [[ "$current" == "$old_current" ]] || { qbox_error 'current 在事务期间发生变化，拒绝切换'; return 1; }
+    [[ -L "$bin_dir/qbox" && "$(readlink -- "$bin_dir/qbox")" == "$prefix/current/bin/qbox" ]] || return 1
+    current_temp="$prefix/.current.$token"
+    [[ ! -e "$current_temp" && ! -L "$current_temp" ]] || return 1
+    ln -s -- "releases/$release_id" "$current_temp" || return 1
+    current_identity=$(stat -c '%d:%i' -- "$current_temp") || return 1
+    mv -Tf -- "$current_temp" "$prefix/current" || return 1
+    committed=1
+}
+
+owned_release_directory() {
+    local candidate="$1" recorded resolved_current
+    [[ -n "$stage_identity" && -d "$candidate" && ! -L "$candidate" && -O "$candidate" ]] || return 1
+    [[ "$(readlink -m -- "$candidate")" == "$candidate" && "$(stat -c '%d:%i' -- "$candidate")" == "$stage_identity" ]] || return 1
+    [[ -f "$lock/stage" && ! -L "$lock/stage" ]] || return 1
+    recorded=$(printf '%s\n%s\n%s' "$token" "$stage" "$stage_identity")
+    [[ "$(cat -- "$lock/stage")" == "$recorded" ]] || return 1
+    if [[ "$candidate" == "$final" ]]; then
+        [[ -f "$lock/final" && ! -L "$lock/final" && "$(cat -- "$lock/final")" == "$token $final" ]] || return 1
+    else
+        [[ "$candidate" == "$stage" ]] || return 1
+    fi
+    # Resolve current conservatively even when someone has changed its text.
+    resolved_current=$(readlink -m -- "$prefix/current") || return 1
+    ! path_within "$resolved_current" "$candidate"
+}
+
+cleanup_transaction() {
+    local index path identity
+    if lock_is_ours; then
+        # A signal may arrive after rename completed but before the assignment.
+        if [[ -n "$current_identity" && -L "$prefix/current" && "$(stat -c '%d:%i' -- "$prefix/current")" == "$current_identity" && "$(readlink -- "$prefix/current")" == "releases/$release_id" ]]; then
+            committed=1
+        fi
+        if (( ! committed )); then
+            if (( bin_created )) && [[ -L "$bin_dir/qbox" && "$(stat -c '%d:%i' -- "$bin_dir/qbox")" == "$bin_identity" && "$(readlink -- "$bin_dir/qbox")" == "$prefix/current/bin/qbox" ]]; then
+                rm -- "$bin_dir/qbox" || :
+            fi
+            if [[ -n "$current_temp" && -L "$current_temp" && "$(stat -c '%d:%i' -- "$current_temp")" == "$current_identity" && "$(readlink -- "$current_temp")" == "releases/$release_id" ]]; then rm -- "$current_temp" || :; fi
+            if owned_release_directory "$stage"; then rm -rf -- "$stage" || :; fi
+            if [[ -n "$final" ]] && owned_release_directory "$final"; then rm -rf -- "$final" || :; fi
+        else
+            # A reuse transaction still has its own disposable extracted stage.
+            if owned_release_directory "$stage"; then rm -rf -- "$stage" || :; fi
+        fi
+        rm -rf -- "$lock" || :
+    fi
+    # Only empty, same-inode directories created by this transaction are removed.
+    if (( ! committed )); then
+        for (( index=${#created_directories[@]}-1; index>=0; index-- )); do
+            path="${created_directories[index]}"; identity="${created_identities[index]}"
+            [[ -d "$path" && ! -L "$path" && "$(readlink -m -- "$path")" == "$path" && "$(stat -c '%d:%i' -- "$path")" == "$identity" ]] || continue
+            if [[ "$path" == "$prefix" && "$root_created" == 1 ]] && validate_root_marker "$prefix"; then
+                # Do not discard the root marker when a user added other content.
+                if ( unset GLOBIGNORE; shopt -s dotglob nullglob; items=("$prefix"/*); (( ${#items[@]} == 1 )) && [[ "${items[0]}" == "$prefix/.qbox-root" ]] ); then
+                    rm -- "$prefix/.qbox-root" || :
+                fi
+            fi
+            rmdir -- "$path" 2>/dev/null || :
+        done
+    fi
+    return 0
+}
+
+main() (
+    # A subshell confines transaction variables, traps, and restrictive umask.
+    umask 022
+    local prefix bin_dir bundle stage='' final='' release_id='' manifest_sha256=''
+    local lock='' lock_owned=0 lock_identity='' token transaction_pid="$BASHPID"
+    local root_created=0 stage_identity='' committed=0 bin_created=0 bin_identity='' current_temp='' current_identity='' old_current=''
+    local digest result
+    local -a created_directories=() created_identities=()
+    token="$transaction_pid.$RANDOM.$RANDOM"
+    trap 'result=$?; trap - EXIT INT TERM; cleanup_transaction; exit "$result"' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    parse_options "$@" || return 1
+    preflight_platform || return 1
+    preflight_paths || return 1
+    prefix="$QBOX_PREFIX"; bin_dir="$QBOX_BIN_DIR"
+    bundle=$(readlink -f -- "$_QBOX_INSTALLER_SOURCE") || return 1
+    bundle="${bundle%/*}"
+    verify_bundle_files "$bundle" || return 1
+    acquire_install_lock || return 1
+    old_current=$(current_target) || return 1
+    check_bin_target || return 1
+    stage=$(mktemp -d -- "$prefix/.stage.XXXXXXXX") || return 1
+    record_stage || return 1
+    extract_runtime "$bundle/runtime/python.tar.gz" "$stage" || return 1
+    printf '%s\n%s\n' "$token" "$stage" > "$stage/.qbox-transaction" || return 1
+    read_bundle_identity || return 1
+    final="$prefix/releases/$release_id"
+    if [[ -n "$old_current" ]]; then
+        verify_release "$prefix/$old_current" reuse || return 1
+    fi
+    if [[ -e "$final" || -L "$final" ]]; then
+        [[ -d "$final" && ! -L "$final" && -O "$final" ]] || { qbox_error '已有同名版本归属无效，拒绝覆盖'; return 1; }
+        # Same release identity must also mean the exact delivered manifest bytes.
+        [[ -f "$final/metadata/manifest.json" && ! -L "$final/metadata/manifest.json" ]] || return 1
+        digest=$(sha256sum < "$final/metadata/manifest.json") || return 1
+        [[ "${digest%% *}" == "$manifest_sha256" ]] || { qbox_error '同名版本 manifest 不一致，拒绝修补'; return 1; }
+        if [[ "$prefix/$old_current" != "$final" ]]; then verify_release "$final" reuse || return 1; fi
+    else
+        install_wheels || { qbox_error '离线 wheel 安装失败'; return 1; }
+        install_metadata || return 1
+        write_installed_marker "$stage" prepared "$(printf '%064d' 0)" || return 1
+        rm -- "$stage/.qbox-transaction" || return 1
+        verify_release "$stage" prepared || return 1
+        digest=$(sha256sum < "$stage/metadata/installed-files.json") || return 1
+        write_installed_marker "$stage" prepared "${digest%% *}" || return 1
+        printf '%s %s\n' "$token" "$final" > "$lock/final" || return 1
+        move_release || return 1
+        verify_release "$final" final || return 1
+        write_installed_marker "$final" verified "${digest%% *}" || return 1
+    fi
+    prepare_bin_link || return 1
+    publish_release || return 1
+    # No required operation after the commit may relabel a successful install.
+    printf 'qbox 安装完成：%s\n命令入口：%s/qbox\n' "$final" "$bin_dir" || :
+    return 0
+)
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     main "$@"
