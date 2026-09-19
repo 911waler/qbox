@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 import re
 import subprocess
 import sys
@@ -199,15 +200,17 @@ def main(argv=None) -> None:
     if args.dry_run:
         return
 
-    cmd = [
-        sys.executable,
+    cmd = [sys.executable]
+    if os.environ.get("_QBOX_OFFLINE_ROOT"):
+        cmd.extend(["-I", "-B"])
+    cmd.extend([
         args.vasp_script,
         "-b",
         str(converted_band),
         "-l",
         str(converted_labels),
         *passthrough,
-    ]
+    ])
     print("[RUN] " + " ".join(cmd))
     raise SystemExit(subprocess.call(cmd))
 

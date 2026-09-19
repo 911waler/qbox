@@ -1,5 +1,7 @@
 """Explicit task selection never consumes numeric filenames as legacy IDs."""
 
+import contextlib
+import io
 import os
 from pathlib import Path
 import shutil
@@ -7,9 +9,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "src"))
 PW_FIXTURE = ROOT / "tests/fixtures/expected/pw/water.scf.in"
 CIF_FIXTURE = ROOT / "tests/fixtures/structures/water.cif"
 VASP_FIXTURE = """water
@@ -140,6 +144,45 @@ class ExplicitPathTests(unittest.TestCase):
                 selected = (self.directory / "selected.args").read_text().splitlines()
                 self.assertEqual(selected, ["water.cif", second])
                 self.assertIn("_cell_length_a", (self.directory / "water.cif").read_text())
+
+    def effective_mass_command(self, offline):
+        from qbox.postprocess import effective_mass_qe
+
+        (self.directory / "CBM.dat").write_text("0.0 1.0\n1.0 2.0\n")
+        (self.directory / "bands.in").write_text(
+            "K_POINTS crystal_b\n2\n0 0 0 20 ! G\n0.5 0 0 20 ! X\n"
+        )
+        (self.directory / "bands.out").write_text(
+            "x coordinate 0.0\nx coordinate 1.0\n"
+        )
+        script = self.directory / "fit script.py"
+        original_cwd = Path.cwd()
+        environment = {"_QBOX_OFFLINE_ROOT": "/offline/release"} if offline else {}
+        try:
+            os.chdir(self.directory)
+            with contextlib.redirect_stdout(io.StringIO()), \
+                    patch.dict(os.environ, environment, clear=True), \
+                    patch("qbox.postprocess.effective_mass_qe.subprocess.call", return_value=0) as call:
+                with self.assertRaisesRegex(SystemExit, "0"):
+                    effective_mass_qe.main([
+                        "--band", "CBM.dat", "--band-input", "bands.in",
+                        "--bands-output", "bands.out", "--alat-angstrom", "2.0",
+                        "--vasp-script", str(script), "--window", "0.12",
+                    ])
+        finally:
+            os.chdir(original_cwd)
+        return call.call_args.args[0]
+
+    def test_effective_mass_secondary_python_is_isolated_offline(self):
+        command = self.effective_mass_command(offline=True)
+        self.assertEqual(command[:4], [sys.executable, "-I", "-B", str(self.directory / "fit script.py")])
+        self.assertEqual(command[-2:], ["--window", "0.12"])
+
+    def test_effective_mass_secondary_python_keeps_ordinary_install_contract(self):
+        command = self.effective_mass_command(offline=False)
+        self.assertEqual(command[:2], [sys.executable, str(self.directory / "fit script.py")])
+        self.assertNotIn("-I", command)
+        self.assertNotIn("-B", command)
 
 
 if __name__ == "__main__":

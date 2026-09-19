@@ -49,6 +49,111 @@ class EntrypointTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "qbox 0.1.0")
 
+    def make_offline_python(self, directory):
+        release = Path(directory) / "release"
+        python = release / "python/bin/python3"
+        python.parent.mkdir(parents=True)
+        python.write_text(
+            "#!/bin/sh\nprintf '<%s>\\n' \"$@\"\n",
+            encoding="utf-8",
+        )
+        python.chmod(0o755)
+        self.env["_QBOX_OFFLINE_ROOT"] = str(release.resolve())
+        self.env["QBOX_PYTHON"] = str(python)
+        return release, python
+
+    def test_offline_internal_python_uses_isolated_no_bytecode_flags(self):
+        with tempfile.TemporaryDirectory(prefix="qbox internal python ") as directory:
+            self.make_offline_python(directory)
+            self.env["PYTHONPATH"] = "/external/python-libs"
+            result = self.run_shell(
+                'qbox_python -m qbox.registry "argument with spaces"'
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.splitlines(),
+            ["<-I>", "<-B>", "<-m>", "<qbox.registry>", "<argument with spaces>"],
+        )
+
+    def test_offline_load_keeps_pythonpath_and_does_not_export_empty_shared_root(self):
+        with tempfile.TemporaryDirectory(prefix="qbox offline load ") as directory:
+            self.make_offline_python(directory)
+            self.env["PYTHONPATH"] = "/external/python-libs"
+            self.env.pop("QBOX_SHARED_ROOT", None)
+            result = self.run_shell(
+                'printf "%s|%s" "$PYTHONPATH" "${QBOX_SHARED_ROOT+set}"; '
+                'case ":$PATH:" in *":$QBOX_PACKAGE_DIR/bin:"*) exit 91;; esac'
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "/external/python-libs|")
+
+    def test_offline_internal_python_rejects_package_external_interpreter(self):
+        with tempfile.TemporaryDirectory(prefix="qbox wrong python ") as directory:
+            release = Path(directory) / "release"
+            (release / "python/bin").mkdir(parents=True)
+            self.env["_QBOX_OFFLINE_ROOT"] = str(release.resolve())
+            self.env["QBOX_PYTHON"] = sys.executable
+            result = self.run_shell("qbox_python --version")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("QBOX_PYTHON", result.stderr)
+
+    def test_offline_shared_root_only_supplies_external_multiwfn_default(self):
+        with tempfile.TemporaryDirectory(prefix="qbox shared root ") as directory:
+            release, python = self.make_offline_python(directory)
+            shared = Path(directory) / "shared root"
+            multiwfn = shared / "multiwfn"
+            multiwfn.mkdir(parents=True)
+            self.env["QBOX_SHARED_ROOT"] = str(shared)
+            result = self.run_shell(
+                'printf "%s|%s|%s" "$QBOX_PYTHON" "$QBOX_MULTIWFN_HOME" "$PATH"'
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        configured_python, configured_multiwfn, path = result.stdout.split("|", 2)
+        self.assertEqual(configured_python, str(python))
+        self.assertEqual(configured_multiwfn, str(multiwfn))
+        self.assertEqual(path.split(os.pathsep)[0], str(multiwfn))
+        self.assertNotIn(str(PACKAGE / "bin"), path.split(os.pathsep))
+        self.assertEqual(self.env["_QBOX_OFFLINE_ROOT"], str(release.resolve()))
+
+    def test_offline_recursive_launcher_reuses_isolated_bundled_python(self):
+        with tempfile.TemporaryDirectory(prefix="qbox recursive ") as directory:
+            _, python = self.make_offline_python(directory)
+            self.env["PYTHONPATH"] = "/external/python-libs"
+            result = subprocess.run(
+                ["bash", str(PACKAGE / "bin/qbox"), "argument with spaces"],
+                env=self.env, text=True, capture_output=True, check=False,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.splitlines(),
+            ["<-I>", "<-B>", "<-m>", "<qbox>", "<argument with spaces>"],
+        )
+        self.assertEqual(self.env["QBOX_PYTHON"], str(python))
+
+    def test_offline_mpl_cache_uses_writable_xdg_location(self):
+        with tempfile.TemporaryDirectory(prefix="qbox mpl cache ") as directory:
+            self.make_offline_python(directory)
+            cache = Path(directory) / "cache root"
+            self.env.pop("MPLCONFIGDIR", None)
+            self.env["XDG_CACHE_HOME"] = str(cache)
+            result = self.run_shell(
+                'test -d "$MPLCONFIGDIR" && test -w "$MPLCONFIGDIR" && printf "%s" "$MPLCONFIGDIR"'
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, str(cache / "qbox/matplotlib"))
+
+    def test_offline_invalid_mpl_cache_falls_back_to_writable_xdg(self):
+        with tempfile.TemporaryDirectory(prefix="qbox bad mpl ") as directory:
+            self.make_offline_python(directory)
+            occupied = Path(directory) / "not a directory"
+            occupied.write_text("occupied")
+            fallback = Path(directory) / "xdg cache"
+            self.env["MPLCONFIGDIR"] = str(occupied)
+            self.env["XDG_CACHE_HOME"] = str(fallback)
+            result = self.run_shell('printf "%s" "$MPLCONFIGDIR"')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, str(fallback / "qbox/matplotlib"))
+
     def test_forced_task_keeps_numeric_filename_and_handler_status(self):
         result = self.run_shell('run_qe_scf_calculation() { return 91; }; '
                                 'ppin() { printf "input=%s" "$fname1"; return 17; }; '

@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 # Package-local entry used by legacy workflows and the source-tree launcher.
 _qbox_package="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+if [ -n "${_QBOX_OFFLINE_ROOT:-}" ]; then
+    _qbox_root="$(readlink -f -- "$_QBOX_OFFLINE_ROOT" 2>/dev/null || true)"
+    _qbox_python="$_qbox_root/python/bin/python3"
+    _qbox_configured="$(readlink -f -- "${QBOX_PYTHON:-}" 2>/dev/null || true)"
+    if [ -z "$_qbox_root" ] || [ "$_qbox_root" != "$_QBOX_OFFLINE_ROOT" ] ||
+       [ ! -x "$_qbox_python" ] || [ "$_qbox_configured" != "$(readlink -f -- "$_qbox_python")" ]; then
+        printf 'qbox：QBOX_PYTHON 未指向本版本解释器，请先执行 unset QBOX_PYTHON。\n' >&2
+        exit 1
+    fi
+    export QBOX_PYTHON="$_qbox_python"
+    exec "$_qbox_python" -I -B -m qbox "$@"
+fi
+
 export PYTHONPATH="$(dirname "$_qbox_package")${PYTHONPATH:+:$PYTHONPATH}"
 _qbox_python="${QBOX_PYTHON:-}"
 if [ -z "$_qbox_python" ] && [ -n "${QBOX_SHARED_ROOT:-}" ]; then

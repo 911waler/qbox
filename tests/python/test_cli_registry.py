@@ -1,12 +1,16 @@
 """Public entry and registry contracts, without QE or scientific dependencies."""
 
 import contextlib
+import hashlib
 import importlib
 import io
+import json
 import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -17,6 +21,52 @@ sys.path.insert(0, str(SOURCE))
 
 
 class CliRegistryTests(unittest.TestCase):
+    def setUp(self):
+        self.sandbox = tempfile.TemporaryDirectory(prefix="qbox cli offline ")
+        self.addCleanup(self.sandbox.cleanup)
+        self.release = Path(self.sandbox.name).resolve() / "release with spaces"
+        self.python_prefix = self.release / "python"
+        self.package_dir = self.python_prefix / "lib/python3.12/site-packages/qbox"
+        (self.release / "metadata").mkdir(parents=True)
+        (self.python_prefix / "bin").mkdir(parents=True)
+        self.package_dir.mkdir(parents=True)
+        bundled_python = self.python_prefix / "bin/python3"
+        bundled_python.write_text("", encoding="utf-8")
+        bundled_python.chmod(0o755)
+        identity = {"qbox_version": "0.1.0", "runtime_sha256": "c" * 64}
+        identity_bytes = (
+            json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+        self.release_id = "0.1.0-" + hashlib.sha256(identity_bytes).hexdigest()
+        manifest = {
+            "schema_version": 1,
+            "product": "qbox",
+            "qbox_version": "0.1.0",
+            "identity": identity,
+            "release_id": self.release_id,
+        }
+        manifest_path = self.release / "metadata/manifest.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        marker = {
+            "schema_version": 1,
+            "product": "qbox",
+            "release_id": self.release_id,
+            "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            "state": "verified",
+            "inventory_sha256": "b" * 64,
+        }
+        (self.release / "metadata/installed.json").write_text(
+            json.dumps(marker), encoding="utf-8"
+        )
+
+    def offline_runtime(self, cli):
+        return (
+            patch.object(cli, "__file__", str(self.package_dir / "cli.py")),
+            patch.object(cli.sys, "prefix", str(self.python_prefix)),
+            patch.object(cli.sys, "flags", SimpleNamespace(isolated=1)),
+        )
+
     def run_module(self, module, *args):
         env = os.environ.copy()
         env["PYTHONPATH"] = str(SOURCE)
@@ -128,6 +178,84 @@ class CliRegistryTests(unittest.TestCase):
             cli.main([])
             env = execute.call_args.args[2]
         self.assertEqual(env["QBOX_PYTHON"], "/shared/root/python/bin/python3")
+
+    def test_offline_exec_keeps_external_environment(self):
+        cli = importlib.import_module("qbox.cli")
+        original = {
+            "_QBOX_OFFLINE_ROOT": str(self.release),
+            "QBOX_PYTHON": str(self.release / "python/bin/python3"),
+            "PYTHONPATH": "/external/python-libs",
+            "PYTHONHOME": "/external/python",
+            "PATH": "/mpi/bin:/usr/bin:/bin",
+            "LD_LIBRARY_PATH": "/mpi/lib",
+            "OMPI_MCA_btl": "self,tcp",
+            "QBOX_QE_ENV_SCRIPT": "/external/qe.sh",
+        }
+        runtime = self.offline_runtime(cli)
+        with patch.dict(os.environ, original, clear=True), runtime[0], runtime[1], runtime[2], \
+                patch("qbox.cli.os.execvpe") as execute:
+            self.assertEqual(cli.main(["--task", "6", "input with spaces.in"]), 0)
+        forwarded = execute.call_args.args[2]
+        for key in (
+            "PATH", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONHOME",
+            "OMPI_MCA_btl", "QBOX_QE_ENV_SCRIPT",
+        ):
+            self.assertEqual(forwarded[key], original[key])
+        self.assertEqual(forwarded["QBOX_PYTHON"], original["QBOX_PYTHON"])
+        self.assertEqual(forwarded["_QBOX_OFFLINE_ROOT"], str(self.release))
+
+    def test_offline_identity_uses_installed_package_branding(self):
+        cli = importlib.import_module("qbox.cli")
+        runtime = self.offline_runtime(cli)
+        environment = {
+            "_QBOX_OFFLINE_ROOT": str(self.release),
+            "QBOX_PYTHON": str(self.release / "python/bin/python3"),
+            "QBOX_NAME": "forged-name",
+            "QBOX_VERSION": "forged-version",
+        }
+        output = io.StringIO()
+        with patch.dict(os.environ, environment, clear=True), runtime[0], runtime[1], runtime[2], \
+                contextlib.redirect_stdout(output):
+            self.assertEqual(cli.main(["--version"]), 0)
+        self.assertEqual(output.getvalue(), "qbox 0.1.0\n")
+
+    def test_offline_rejects_marker_that_does_not_match_manifest(self):
+        cli = importlib.import_module("qbox.cli")
+        marker_path = self.release / "metadata/installed.json"
+        marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        marker["manifest_sha256"] = "0" * 64
+        marker_path.write_text(json.dumps(marker), encoding="utf-8")
+        runtime = self.offline_runtime(cli)
+        error = io.StringIO()
+        environment = {
+            "_QBOX_OFFLINE_ROOT": str(self.release),
+            "QBOX_PYTHON": str(self.release / "python/bin/python3"),
+        }
+        with patch.dict(os.environ, environment, clear=True), runtime[0], runtime[1], runtime[2], \
+                patch("qbox.cli.os.execvpe") as execute, contextlib.redirect_stderr(error):
+            self.assertEqual(cli.main([]), 1)
+        execute.assert_not_called()
+        self.assertIn("安装标记", error.getvalue())
+
+    def test_offline_rejects_release_id_that_does_not_match_manifest_identity(self):
+        cli = importlib.import_module("qbox.cli")
+        manifest_path = self.release / "metadata/manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["identity"]["runtime_sha256"] = "d" * 64
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        marker_path = self.release / "metadata/installed.json"
+        marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        marker["manifest_sha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        marker_path.write_text(json.dumps(marker), encoding="utf-8")
+        runtime = self.offline_runtime(cli)
+        environment = {
+            "_QBOX_OFFLINE_ROOT": str(self.release),
+            "QBOX_PYTHON": str(self.release / "python/bin/python3"),
+        }
+        with patch.dict(os.environ, environment, clear=True), runtime[0], runtime[1], runtime[2], \
+                patch("qbox.cli.os.execvpe") as execute, contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(cli.main([]), 1)
+        execute.assert_not_called()
 
     def test_branding_configuration_affects_help_and_version(self):
         cli = importlib.import_module("qbox.cli")

@@ -78,6 +78,19 @@ qbox_python() {
         echo '错误：Python 环境不可用，请设置 QBOX_PYTHON。' >&2
         return 1
     fi
+    if [ -n "${_QBOX_OFFLINE_ROOT:-}" ]; then
+        local offline_root expected_python configured_python
+        offline_root="$(readlink -f -- "$_QBOX_OFFLINE_ROOT" 2>/dev/null || true)"
+        expected_python="$offline_root/python/bin/python3"
+        configured_python="$(readlink -f -- "$QBOX_PYTHON" 2>/dev/null || true)"
+        if [ -z "$offline_root" ] || [ "$offline_root" != "$_QBOX_OFFLINE_ROOT" ] ||
+           [ "$configured_python" != "$(readlink -f -- "$expected_python" 2>/dev/null)" ]; then
+            echo '错误：QBOX_PYTHON 未指向当前离线版本，请先执行 unset QBOX_PYTHON。' >&2
+            return 1
+        fi
+        "$QBOX_PYTHON" -I -B "$@"
+        return $?
+    fi
     "$QBOX_PYTHON" "$@"
 }
 

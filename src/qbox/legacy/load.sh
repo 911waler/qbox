@@ -2,7 +2,9 @@
 # One compatibility boundary while workflows are migrated domain by domain.
 QBOX_PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export QBOX_PACKAGE_DIR
-export PYTHONPATH="$(dirname "$QBOX_PACKAGE_DIR")${PYTHONPATH:+:$PYTHONPATH}"
+if [ -z "${_QBOX_OFFLINE_ROOT:-}" ]; then
+    export PYTHONPATH="$(dirname "$QBOX_PACKAGE_DIR")${PYTHONPATH:+:$PYTHONPATH}"
+fi
 
 # Order is explicit: bootstrap sets the environment; modules define functions
 # and the historical shared state. Do not execute a workflow while sourcing.
