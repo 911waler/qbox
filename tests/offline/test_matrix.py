@@ -69,3 +69,58 @@ class MatrixGateTests(unittest.TestCase):
             with self.subTest(key=key),self.assertRaises(ValueError):validate_evidence(c,r,b)
 
 if __name__=='__main__':unittest.main()
+
+class SupplementalGateTests(unittest.TestCase):
+    def test_each_supplement_required_field_and_case(self):
+        from tools.offline.matrix import validate_supplements, SUPPLEMENT_CASES
+        c,_,_=fixture()
+        good={name:dict(c,status='passed',failures=[],skipped=[],cases={case:'passed' for case in cases},evidence={'raw':{'path':name+'.json','sha256':'f'*64}}) for name,cases in SUPPLEMENT_CASES.items()}
+        validate_supplements(c,good)
+        for name,value in good.items():
+            changed=copy.deepcopy(good);del changed[name]
+            with self.subTest(name=name),self.assertRaises(ValueError):validate_supplements(c,changed)
+            for field in value:
+                changed=copy.deepcopy(good);del changed[name][field]
+                with self.subTest(name=name,field=field),self.assertRaises(ValueError):validate_supplements(c,changed)
+            for case in value['cases']:
+                for bad in ('failed','not_run','skipped',None):
+                    changed=copy.deepcopy(good)
+                    if bad is None:del changed[name]['cases'][case]
+                    else:changed[name]['cases'][case]=bad
+                    with self.subTest(name=name,case=case,bad=bad),self.assertRaises(ValueError):validate_supplements(c,changed)
+
+class ActualArchiveGateTests(unittest.TestCase):
+    def test_actual_archive_manifest_source_and_audits_are_verified(self):
+        import io,json,tarfile
+        from test_build import BuildTests
+        from tools.offline.matrix import verify_candidate,sha
+        helper=BuildTests(methodName='runTest');helper.setUp()
+        try:
+            candidate_path=helper.build('gate-candidate');original=json.loads(candidate_path.read_text())
+            archive=candidate_path.parent/original['artifact']
+            verify_candidate(candidate_path,helper.root/'valid')
+            for field in ('artifact_sha256','manifest_sha256','source_commit','audit_sha256'):
+                changed=dict(original);changed[field]='0'*len(changed[field]);candidate_path.write_text(json.dumps(changed))
+                with self.subTest(field=field),self.assertRaises(ValueError):verify_candidate(candidate_path,helper.root/field)
+            candidate_path.write_text(json.dumps(original))
+            with tarfile.open(archive) as source:
+                members=[(m,source.extractfile(m).read() if m.isfile() else None) for m in source]
+            for missing in ('checks/source-audit/licenses.json','checks/source-audit/elf.json','checks/final-payload-audit.json'):
+                with tarfile.open(archive,'w:gz') as target:
+                    for member,data in members:
+                        if member.name!=missing:target.addfile(member,io.BytesIO(data) if data is not None else None)
+                changed=dict(original,artifact_sha256=sha(archive));candidate_path.write_text(json.dumps(changed))
+                with self.subTest(missing=missing),self.assertRaises(ValueError):verify_candidate(candidate_path,helper.root/('missing-'+missing.rsplit('/',1)[-1]))
+        finally:helper.doCleanups()
+
+class ReadyMarkerTests(unittest.TestCase):
+    def test_rejected_missing_evidence_removes_stale_ready(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from tools.offline import matrix
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);ready=root/'dist/offline/release-ready.json';ready.parent.mkdir(parents=True);ready.write_text('{}')
+            with patch.object(matrix,'ROOT',root):
+                with self.assertRaises((ValueError,OSError)):matrix.gate(root/'missing-candidate',root/'missing-evidence')
+            self.assertFalse(ready.exists())

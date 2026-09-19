@@ -21,7 +21,14 @@ REPORT_FIELDS = 'schema_version platform_id os_release image_digest kernel arch 
 BASELINE_FIELDS = 'schema_version platform_id kernel arch cpu_model cpu_flags network_mode uid emulator negative_control cases evidence failures skipped status artifact_sha256 manifest_sha256 source_commit'.split()
 BASELINE_CASES = ('archive_install', 'full_smoke', 'sse3_negative_control', 'actual_noexec')
 BINDING = ('artifact_sha256', 'manifest_sha256', 'source_commit')
-SUPPLEMENTS = ('regressions', 'offline_tests', 'reproducibility', 'elf_loads', 'documentation')
+SUPPLEMENT_CASES = {
+    'regressions': ('shell', 'python'),
+    'offline_tests': ('unit_suite', 'five_actual_targets', 'gate_unit_tests'),
+    'reproducibility': ('first_build', 'second_build', 'identical_archives'),
+    'elf_loads': ('all_members_bound', 'all_loader_resolutions', 'allowed_library_origins'),
+    'documentation': ('checksum_extract', 'default_install', 'custom_spaces', 'verify_smoke', 'owned_lock_rollback', 'uninstall_ownership'),
+}
+SUPPLEMENTS = tuple(SUPPLEMENT_CASES)
 
 
 def require(condition, message):
@@ -95,7 +102,7 @@ def validate_evidence(candidate: dict, reports: list[dict], baseline_cpu_report:
         require({'results', 'inspect'} <= report['evidence'].keys(), 'missing results/inspect evidence')
         require(report['schema_version'] == 1 and report['arch'] == 'x86_64', 'schema/architecture')
         os_id, version = report['platform_id'].split('-')
-        require(report['os_release'].get('ID') == os_id and report['os_release'].get('VERSION_ID') == version, 'base platform mismatch')
+        require(report['os_release'].get('ID') == os_id and (report['os_release'].get('VERSION_ID') == version if os_id == 'ubuntu' else report['os_release'].get('VERSION_ID', '').split('.')[0] == version), 'base platform mismatch')
         require(report['network_mode'] == 'none' and type(report['uid']) is int and report['uid'] > 0, 'network/root uid')
         for key in ('kernel', 'cpu_flags', 'glibc', 'bash', 'awk', 'base_packages', 'image_digest'):
             require(bool(report[key]), 'empty ' + key)
@@ -118,6 +125,14 @@ def validate_evidence(candidate: dict, reports: list[dict], baseline_cpu_report:
     flags = set(b['cpu_flags'])
     require({'sse', 'sse2'} <= flags and not flags & {'pni','sse3','ssse3','sse4_1','sse4_2','popcnt','cx16','lahf_lm','avx','avx2','fma','f16c','xsave','3dnowprefetch','svm'}, 'baseline CPU flags')
     require(b['negative_control'] == {'instruction':'HADDPS','signal':'SIGILL'}, 'baseline instruction negative control')
+
+
+def validate_supplements(candidate, records):
+    require(set(records) == set(SUPPLEMENTS), 'missing/unknown supplements')
+    for name, record in records.items():
+        _fields(record, (*BINDING, 'status', 'failures', 'skipped', 'cases', 'evidence'), name)
+        _binding(candidate, record); _passed(record, name)
+        _cases(record['cases'], SUPPLEMENT_CASES[name]); _refs(record['evidence'])
 
 
 def verify_candidate(candidate_path, bundle):
@@ -243,9 +258,9 @@ def matrix(candidate: Path, engine: str, output: Path) -> None:
 def gate(candidate: Path, evidence: Path) -> None:
     """Write ready only after raw evidence, archive and all supplements agree."""
     import tempfile
-    evidence = Path(evidence).resolve(strict=True)
     ready = ROOT / 'dist/offline/release-ready.json'
     if ready.exists():ready.unlink()  # never leave a stale successful verdict
+    evidence = Path(evidence).resolve(strict=True)
     with tempfile.TemporaryDirectory(prefix='qbox-gate-') as temporary:
         identity, _, manifest = verify_candidate(candidate, Path(temporary)/'bundle')
         reports = [read(evidence/platform/'report.json') for platform in PLATFORMS]
@@ -265,20 +280,83 @@ def gate(candidate: Path, evidence: Path) -> None:
             require(inspect['HostConfig']['NetworkMode']=='none' and inspect['HostConfig']['ReadonlyRootfs'] is True, 'actual engine isolation')
             require(inspect['Image']==image['Id'] and report['image_digest'] in image['RepoDigests'], 'actual engine image identity')
             require(inspect['Config']['User'].split(':')[0]==str(report['uid']), 'actual engine uid')
+            host=inspect['HostConfig']
+            require(host['CapDrop']==['ALL'] and 'no-new-privileges' in host['SecurityOpt'], 'actual capabilities/security')
+            require(host['Tmpfs'].get('/tmp')=='rw,exec,mode=1777' and host['Tmpfs'].get('/noexec')=='rw,noexec,mode=1777', 'actual temporary mounts')
+            require(inspect['Config']['Cmd']==['bash','/harness/matrix-target.sh'], 'actual target command')
             destinations={m['Destination']:m for m in inspect['Mounts']}
             require(set(destinations)=={'/payload','/harness','/evidence','/etc/pip.conf','/etc/xdg/pip/pip.conf'}, 'unexpected host mounts')
-            for name,mount in destinations.items():require(mount['RW']==(name=='/evidence'), 'host mount mutability')
+            expected_sources={'/payload':evidence/'payload','/harness':evidence/'harness','/evidence':evidence/report['platform_id'],'/etc/pip.conf':evidence/'harness/pip.conf','/etc/xdg/pip/pip.conf':evidence/'harness/pip.conf'}
+            for name,mount in destinations.items():
+                require(mount['RW']==(name=='/evidence') and mount['Type']=='bind', 'host mount mutability')
+                require(Path(mount['Source']).resolve()==expected_sources[name].resolve(), 'unexpected host mount source')
+            require(set(p.name for p in (evidence/'harness').iterdir())=={'run-target.sh','matrix-target.sh','pip.conf'}, 'unexpected harness contents')
+            require(sha(evidence/'payload/artifact.tar.gz')==identity['artifact_sha256'], 'mounted actual archive binding')
+            require((evidence/report['platform_id']/'target/forbidden.log').read_bytes()==b'', 'forbidden host tool invoked')
+            text=_checked_reference(evidence,report['evidence']['unittest']).read_text()
+            for case in CASES[1:]:require(re.search(r'^'+re.escape(case)+r' \(.*\) \.\.\. ok$',text,re.M), 'raw target case not passed: '+case)
+            import ast
+            module=ast.parse(subprocess.check_output(['git','show',report['test_harness_commit']+':tools/offline/matrix.py'],cwd=ROOT))
+            wrapper=next(ast.literal_eval(node.value) for node in module.body if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='WRAPPER' for t in node.targets))
+            require((evidence/'harness/matrix-target.sh').read_text()==wrapper, 'committed target wrapper binding')
             committed=subprocess.check_output(['git','show',report['test_harness_commit']+':tests/offline/run-target.sh'],cwd=ROOT)
             require(hashlib.sha256(committed).hexdigest()==report['test_harness_sha256']==sha(evidence/'harness/run-target.sh'), 'actual harness binding')
-        for name in SUPPLEMENTS:
-            record=read(evidence/(name+'.json'))
+        supplements={name:read(evidence/(name+'.json')) for name in SUPPLEMENTS}
+        validate_supplements(identity, supplements)
+        for name,record in supplements.items():
             _binding(identity,record);_passed(record,name);_refs(record.get('evidence'))
             for ref in record['evidence'].values():_checked_reference(evidence,ref)
             require(record.get('cases') and all(v=='passed' for v in record['cases'].values()), name+': incomplete cases')
-        reproducibility=read(evidence/'reproducibility.json')
+        reproducibility=supplements['reproducibility']
         require(reproducibility.get('archive_sha256s')==[identity['artifact_sha256']]*2, 'two-build artifact binding')
-        elf=read(evidence/'elf_loads.json')
-        require(elf.get('expected_count')==249 and elf.get('resolved_count')==249 and elf.get('unresolved')==[], 'complete 249 ELF load closure required')
+        for name in ('archive1','archive2'):
+            require(sha(_checked_reference(evidence,reproducibility['evidence'][name]))==identity['artifact_sha256'], 'actual reproducibility archive mismatch')
+        require(reproducibility['evidence']['archive1']['path']!=reproducibility['evidence']['archive2']['path'], 'distinct build archives required')
+        regressions=_checked_reference(evidence,supplements['regressions']['evidence']['raw']).read_text()
+        require(len(re.findall(r'^PASS:',regressions,re.M))==241 and re.search(r'Ran 49 tests.*\n\nOK\s*$',regressions,re.S), 'original regression counts/results')
+        require(not re.search(r'FAIL:|FAILED|skipped=',regressions), 'original regression failures/skip')
+        units=read(_checked_reference(evidence,supplements['offline_tests']['evidence']['raw']))
+        require(units['tests_run']>=196 and units['failures']==units['errors']==0 and units['skipped']==[], 'offline unit failures/count/skip')
+        gate_tests=_checked_reference(evidence,supplements['offline_tests']['evidence']['gate']).read_text()
+        require(re.search(r'Ran [1-9][0-9]* tests.*\n\nOK\s*$',gate_tests,re.S) and 'skipped=' not in gate_tests, 'gate unit tests')
+        elf=supplements['elf_loads']
+        rawelf=read(_checked_reference(evidence,elf['evidence']['raw']))
+        expected=read(Path(temporary)/'bundle/checks/source-audit/elf.json')['elf']
+        require(rawelf.get('expected_count')==len(expected)==249 and rawelf.get('resolved_count')==249 and rawelf.get('unresolved')==[], 'complete 249 ELF load closure required')
+        require({r['member'] for r in rawelf['records']}==set(expected) and len(rawelf['records'])==249, 'missing/duplicate raw ELF members')
+        source_audit=read(Path(temporary)/'bundle/checks/source-audit/elf.json')
+        system_hashes={r['sha256'] for r in source_audit['baseline_system_libraries']['rocky8'].values()}
+        delivered_hashes={r['sha256'] for r in expected.values()}
+        for row in rawelf['records']:
+            require(row['sha256']==expected[row['member']]['sha256'] and row['returncode']==0 and 'not found' not in row['output'], 'actual ELF bytes/loader failure')
+            require(row['resolved'] and any(r['sha256']==row['sha256'] for r in row['resolved']), 'tested ELF not actually mapped')
+            for library in row['resolved']:
+                require(library['scope'] in ('release','OS'), 'unresolved library origin')
+                require(library['sha256'] in (delivered_hashes if library['scope']=='release' else system_hashes), 'unbound loaded library bytes')
+                require('/releases/'+identity['release_id']+'/' in library['path'] if library['scope']=='release' else library['path'].startswith(('/lib/','/lib64/','/usr/lib/','/usr/lib64/')), 'unexpected library path')
+        diagnostic=read(_checked_reference(evidence,elf['evidence']['inspect']))[0]
+        require(diagnostic['HostConfig']['NetworkMode']=='none' and diagnostic['HostConfig']['ReadonlyRootfs'] is True and diagnostic['Config']['User'].split(':')[0]!='0', 'diagnostic isolation')
+        require(diagnostic['Config']['Image']==expected_images['rocky-8'], 'diagnostic base image')
+        require({m['Destination'] for m in diagnostic['Mounts']}=={'/payload','/scripts','/evidence'} and all(m['RW']==(m['Destination']=='/evidence') for m in diagnostic['Mounts']), 'diagnostic mounts')
+        docs=read(_checked_reference(evidence,supplements['documentation']['evidence']['raw']))
+        _passed(docs,'actual documentation');_cases(docs['cases'],SUPPLEMENT_CASES['documentation'])
+        require(all(row['returncode']==0 for row in docs['blocks']) and docs['uninstall_wrong_link_returncode']!=0 and docs['uninstall_owned_link_returncode']==0 and docs['sentinel_unchanged'] is True, 'actual documentation command results')
+        guest=read(_checked_reference(evidence,baseline['evidence']['raw']))
+        _binding(identity,guest);_passed(guest,'actual baseline guest');_cases(guest['cases'],BASELINE_CASES)
+        require(guest['cpu_flags']==baseline['cpu_flags'] and guest['uid']==baseline['uid'] and guest['kernel']==baseline['kernel'] and guest['arch']==baseline['arch'], 'actual baseline facts')
+        require(guest['negative_returncode']==-4 and guest['noexec_returncode']!=0 and guest['noexec_denied'] is True and guest['interfaces']==['lo'] and guest['manifest_actual']==identity['manifest_sha256'], 'actual baseline negative controls/binding/network')
+        console=_checked_reference(evidence,baseline['evidence']['console']).read_text()
+        require('SSE3_HADDPS_SIGILL -4' in console and 'QBOX_FINAL_VM_EXIT=0' in console and 'QBOX_FINAL_VM_PASSED' in console, 'actual VM completion log')
+        command=read(_checked_reference(evidence,baseline['evidence']['commands']))[-1]
+        require(command[command.index('-cpu')+1]==baseline['cpu_model'] and command[command.index('-accel')+1]=='tcg' and command[command.index('-nic')+1]=='none', 'actual VM command baseline')
+        inspect=read(_checked_reference(evidence,baseline['evidence']['inspect']))[0]
+        require(inspect['HostConfig']['NetworkMode']=='none' and inspect['Config']['User'].split(':')[0]==str(baseline['uid']) and inspect['Image']=='sha256:7cbb7eb643e1bc7802755fdcdacfa71c439451cffe7f406f5744881c881c43ec', 'actual VM engine identity/isolation')
+        require(inspect['Config']['Cmd']==command[command.index(inspect['Image'])+1:], 'actual inspected VM command')
+        smoke=read(_checked_reference(evidence,baseline['evidence']['smoke']))
+        require(smoke['release_id']==identity['release_id'] and smoke['manifest_sha256']==identity['manifest_sha256'], 'actual VM smoke binding')
+        names={'isolation','numpy-scipy','matplotlib-agg','ase-pymatgen','seekpath-spglib','qbox-convert-ase','qbox-convert-pymatgen','qbox-convert-basic','qbox-kpath','qbox-band-edges','native-components'}
+        require(len(smoke['checks'])==len(names) and {r['name'] for r in smoke['checks']}==names and all(r['status']=='passed' for r in smoke['checks']), 'actual complete VM smoke required')
+
     index={str(p.relative_to(evidence)):sha(p) for p in sorted(evidence.rglob('*.json')) if 'payload' not in p.relative_to(evidence).parts}
     ready.parent.mkdir(parents=True,exist_ok=True)
     write(ready,{'schema_version':1,'status':'passed',**identity,'evidence':index,'created_at':now(),'scope':'local acceptance only; no publication'})
