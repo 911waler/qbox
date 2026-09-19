@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import tempfile
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 import zipfile
 
 from packaging.requirements import Requirement
@@ -24,7 +25,7 @@ from packaging.tags import cpython_tags, compatible_tags
 from packaging.utils import canonicalize_name, parse_wheel_filename
 from packaging.version import Version
 
-from .archive import normalize_runtime
+from .archive import normalize_runtime, preserve_runtime_materials
 from .model import canonical_json, sha256_file
 
 
@@ -319,9 +320,21 @@ def discover_runtime(settings, metadata):
             metadata,
             "github-releases.json",
         )
-        chosen = select_runtime(json.loads(path.read_text()), as_of)
-        return chosen, [provenance]
-    except Exception as error:
+    except HTTPError as error:
+        # Only the controller-authorized GitHub API rate-limit acquisition failure
+        # may change selection scope. Integrity/JSON/selection errors propagate.
+        if error.code != 403:
+            raise
+        remaining = (
+            error.headers.get("X-RateLimit-Remaining") if error.headers else None
+        )
+        body = error.read().decode("utf-8", errors="replace").lower()
+        if (
+            remaining != "0"
+            and "rate limit exceeded" not in body
+            and "secondary rate limit" not in body
+        ):
+            raise
         # Explicit, pinned official HTML fallback, never an unverified mirror.
         tag = settings["fallback_release_tag"]
         release_url = (
@@ -374,6 +387,8 @@ def discover_runtime(settings, metadata):
             "selection_scope": f"official pinned release {tag}; controller-approved API-rate-limit fallback",
         }
         return chosen, [page_provenance, asset_provenance]
+    chosen = select_runtime(json.loads(path.read_text()), as_of)
+    return chosen, [provenance]
 
 
 _RUNTIME_PROBE = """import ctypes, json, pip, sqlite3, ssl, sys, sysconfig, zlib
@@ -452,7 +467,7 @@ def resolve(policy: Path, cache: Path) -> dict:
         "url": upstream["url"].rsplit("/", 1)[0] + "/" + companion_name,
         "sha256": companion_match[1],
     }
-    cache_asset(
+    companion_archive = cache_asset(
         companion_source["url"],
         companion_source["sha256"],
         cache / "sha256",
@@ -461,6 +476,9 @@ def resolve(policy: Path, cache: Path) -> dict:
             if (cache / "downloads" / companion_name).exists()
             else None
         ),
+    )
+    companion_materials = preserve_runtime_materials(
+        companion_archive, cache / "runtime-license-materials", companion_source
     )
     normalized = normalize_runtime(archive, cache / "python.tar.gz")
     (cache / "normalization.json").write_bytes(canonical_json(normalized))
@@ -707,6 +725,10 @@ def resolve(policy: Path, cache: Path) -> dict:
             "source": companion_source,
             "official_metadata": companion_provenance,
             "purpose": "maintenance-only PYTHON.json and native license materials",
+            "materials": {
+                "directory": "runtime-license-materials",
+                **companion_materials,
+            },
         },
         "normalized": {k: v for k, v in normalized.items() if k != "links"},
         "link_map_sha256": sha256_file(cache / "normalization.json"),

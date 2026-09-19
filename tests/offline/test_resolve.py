@@ -1,15 +1,20 @@
 """Resolver contracts: portable wheels, complete extras, verified provenance, safe tar."""
 
 import io
+import hashlib
+import shutil
 import json
 from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
+from urllib.error import HTTPError
 import zipfile
 
 from tools.offline import resolve as resolver
 from tools.offline.archive import normalize_runtime
+from tools.offline import archive as archive_tools
 
 
 class ResolveTests(unittest.TestCase):
@@ -187,6 +192,273 @@ class ResolveTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             resolver.bootstrap_records({"installed": [], "pip_vendored": "broken>=1"})
+
+    def discovery_cache(self, api_content=None, *, corrupt_provenance=False):
+        metadata = self.root / "metadata"
+        metadata.mkdir(exist_ok=True)
+        tag = "20260901"
+        filename = (
+            "cpython-3.12.14+20260901-x86_64-unknown-linux-gnu-install_only.tar.gz"
+        )
+        assets = (
+            f'<a href="/astral-sh/python-build-standalone/releases/download/{tag}/{filename}">runtime</a>sha256:'
+            + "a" * 64
+        )
+        entries = [
+            (
+                f"github-release-{tag}.html",
+                f"https://github.com/astral-sh/python-build-standalone/releases/tag/{tag}",
+                '<relative-time datetime="2026-09-01T12:00:00Z">',
+            ),
+            (
+                f"github-assets-{tag}.html",
+                f"https://github.com/astral-sh/python-build-standalone/releases/expanded_assets/{tag}",
+                assets,
+            ),
+        ]
+        if api_content is not None:
+            entries.append(
+                (
+                    "github-releases.json",
+                    "https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=100",
+                    api_content,
+                )
+            )
+        for name, url, content in entries:
+            path = metadata / name
+            path.write_text(content)
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            if name == "github-releases.json" and corrupt_provenance:
+                digest = "0" * 64
+            (metadata / (name + ".provenance.json")).write_text(
+                json.dumps(
+                    {
+                        "url": url,
+                        "sha256": digest,
+                        "requested_at": "2026-09-19T00:00:00Z",
+                    }
+                )
+            )
+        return metadata
+
+    def test_discovery_does_not_fallback_on_integrity_or_selection_errors(self):
+        asset = {
+            "name": "cpython-3.12.14+20260901-x86_64-unknown-linux-gnu-install_only.tar.gz",
+            "digest": None,
+        }
+        release = {
+            "tag_name": "20260901",
+            "published_at": "2026-09-01T12:00:00Z",
+            "draft": False,
+            "prerelease": False,
+            "assets": [asset],
+        }
+        for text, corrupt, message in [
+            (json.dumps([release]), False, "digest"),
+            ("not JSON", False, "Expecting value"),
+            ("[]", True, "provenance mismatch"),
+        ]:
+            with self.subTest(message=message):
+                metadata = self.discovery_cache(text, corrupt_provenance=corrupt)
+                with self.assertRaisesRegex(ValueError, message):
+                    resolver.discover_runtime(
+                        {"fallback_release_tag": "20260901"}, metadata
+                    )
+
+    def test_discovery_only_falls_back_on_rate_limited_http403(self):
+        metadata = self.discovery_cache()
+        for status, headers, body, allowed in [
+            (403, {"X-RateLimit-Remaining": "0"}, b"", True),
+            (403, {}, b'{"message":"API rate limit exceeded"}', True),
+            (403, {}, b"permission denied", False),
+            (404, {}, b"not found", False),
+            (500, {}, b"server error", False),
+        ]:
+            with self.subTest(status=status, body=body):
+                error = HTTPError(
+                    "https://api.github.com/",
+                    status,
+                    "failure",
+                    headers,
+                    io.BytesIO(body),
+                )
+                with patch.object(resolver, "urlopen", side_effect=error):
+                    if allowed:
+                        chosen, provenance = resolver.discover_runtime(
+                            {"fallback_release_tag": "20260901"}, metadata
+                        )
+                        self.assertEqual(chosen["version"], "3.12.14")
+                        self.assertIn("403", provenance[-1]["fallback_reason"])
+                    else:
+                        with self.assertRaises(HTTPError):
+                            resolver.discover_runtime(
+                                {"fallback_release_tag": "20260901"}, metadata
+                            )
+
+    def material_source(self, archive):
+        return {
+            "url": "https://example.org/full.tar.gz",
+            "filename": "full.tar.gz",
+            "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        }
+
+    def test_preserve_materials_maps_ascii_names_and_exact_bytes_reproducibly(self):
+        source = self.archive(
+            [
+                (
+                    "python/PYTHON.json",
+                    '{"license_path":"licenses/许可 text.txt"}'.encode(),
+                    None,
+                ),
+                ("python/licenses/许可 text.txt", b"original\r\nlicense\x00", None),
+                ("python/install/bin/python3", b"not a license", None),
+            ]
+        )
+        output = self.root / "materials"
+        result = archive_tools.preserve_runtime_materials(
+            source, output, self.material_source(source)
+        )
+        index = json.loads((output / "index.json").read_text())
+        self.assertEqual(index["source"], self.material_source(source))
+        self.assertEqual(len(index["materials"]), 2)
+        license_row = next(
+            row
+            for row in index["materials"]
+            if row["source_member"].startswith("python/licenses/")
+        )
+        self.assertTrue(license_row["path"].isascii())
+        self.assertEqual(
+            (output / license_row["path"]).read_bytes(), b"original\r\nlicense\x00"
+        )
+        self.assertEqual(
+            result["index_sha256"],
+            hashlib.sha256((output / "index.json").read_bytes()).hexdigest(),
+        )
+        self.assertEqual(
+            archive_tools.preserve_runtime_materials(
+                source, output, self.material_source(source)
+            ),
+            result,
+        )
+
+    def test_preserve_materials_rejects_unsafe_or_ambiguous_archive(self):
+        fixtures = [
+            [
+                ("python/PYTHON.json", b"{}", None),
+                ("python/licenses/../../escape", b"bad", None),
+            ],
+            [
+                ("python/PYTHON.json", b"{}", None),
+                ("python/licenses/A", b"one", None),
+                ("python/licenses/A", b"two", None),
+            ],
+            [
+                ("python/PYTHON.json", b"{}", None),
+                ("python/licenses/A", b"", "../../escape"),
+            ],
+            [
+                ("python/PYTHON.json", b"{}", None),
+                ("python/licenses/a b", b"one", None),
+                ("python/licenses/a_b", b"two", None),
+            ],
+            [("python/licenses/A", b"license", None)],
+        ]
+        for entries in fixtures:
+            with self.subTest(entries=entries):
+                source = self.archive(entries)
+                with self.assertRaises(ValueError):
+                    archive_tools.preserve_runtime_materials(
+                        source,
+                        self.root / "bad-materials",
+                        self.material_source(source),
+                    )
+                self.assertFalse((self.root / "bad-materials/index.json").exists())
+
+    def test_resolve_preserves_companion_before_runtime_normalization(self):
+        cache = self.root / "cache"
+        downloads = cache / "downloads"
+        downloads.mkdir(parents=True)
+        version = "3.12.14"
+        build = "20260901"
+        upstream_name = (
+            f"cpython-{version}+{build}-x86_64-unknown-linux-gnu-install_only.tar.gz"
+        )
+        companion_name = (
+            f"cpython-{version}+{build}-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+        )
+        original = self.archive([("python/bin/python3", b"runtime fixture", None)])
+        shutil.copyfile(original, downloads / upstream_name)
+        companion = self.archive(
+            [
+                ("python/PYTHON.json", b"{}", None),
+                ("python/licenses/LICENSE.txt", b"original license", None),
+            ]
+        )
+        shutil.copyfile(companion, downloads / companion_name)
+        digest = hashlib.sha256(companion.read_bytes()).hexdigest()
+        html = self.root / "assets.html"
+        html.write_text(
+            f'aria-label="Copy to clipboard digest for {companion_name}" value="sha256:{digest}"'
+        )
+        upstream = {
+            "version": version,
+            "build": build,
+            "filename": upstream_name,
+            "url": f"https://github.com/astral-sh/python-build-standalone/releases/download/{build}/{upstream_name}",
+            "sha256": hashlib.sha256(
+                (downloads / upstream_name).read_bytes()
+            ).hexdigest(),
+        }
+        policy = self.root / "packaging/offline/policy.json"
+        policy.parent.mkdir(parents=True)
+        policy.write_text(
+            json.dumps({"resolver": {"build_image": "fixture@sha256:" + "a" * 64}})
+        )
+        with (
+            patch.object(resolver, "discover_runtime", return_value=(upstream, [])),
+            patch.object(resolver, "snapshot", return_value=(html, {})),
+            patch.object(
+                resolver,
+                "normalize_runtime",
+                side_effect=RuntimeError("stop after preservation"),
+            ),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "stop after preservation"):
+                resolver.resolve(policy, cache)
+        materials = cache / "runtime-license-materials"
+        index = json.loads((materials / "index.json").read_text())
+        self.assertEqual(index["source"]["sha256"], digest)
+        self.assertEqual(
+            (materials / "python_licenses_LICENSE.txt").read_bytes(),
+            b"original license",
+        )
+
+    def test_preservation_rejects_source_hash_mismatch_before_publication(self):
+        source = self.archive(
+            [
+                ("python/PYTHON.json", b"{}", None),
+                ("python/licenses/A", b"license", None),
+            ]
+        )
+        record = {**self.material_source(source), "sha256": "0" * 64}
+        output = self.root / "materials"
+        with self.assertRaisesRegex(ValueError, "SHA mismatch"):
+            archive_tools.preserve_runtime_materials(source, output, record)
+        self.assertFalse(output.exists())
+
+    def test_normalize_explicitly_rejects_safe_directory_alias(self):
+        source = self.root / "directory-link.tar.gz"
+        with tarfile.open(source, "w:gz") as archive:
+            directory = tarfile.TarInfo("python/lib")
+            directory.type = tarfile.DIRTYPE
+            archive.addfile(directory)
+            link = tarfile.TarInfo("python/lib-alias")
+            link.type = tarfile.SYMTYPE
+            link.linkname = "lib"
+            archive.addfile(link)
+        with self.assertRaisesRegex(ValueError, "directory links are unsupported"):
+            normalize_runtime(source, self.root / "normalized.tar.gz")
+        self.assertFalse((self.root / "normalized.tar.gz").exists())
 
     def archive(self, entries):
         path = self.root / "upstream.tar.gz"
