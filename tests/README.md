@@ -86,3 +86,61 @@ Quantum ESPRESSO reference calculations and domain assessment.
 The tests preserve observable behavior during qbox maintenance and guard the
 public release boundary. They are not a substitute for validating new
 scientific methods, pseudopotentials, or production calculations.
+
+## Actual offline candidate integration
+
+The maintainer driver uses an **actual candidate.json and its archive**, verifies
+all candidate and extracted payload hashes, then runs a private target container:
+
+```bash
+QBOX_OFFLINE_CANDIDATE="$PWD/dist/offline/candidate.json" \
+  python -B -m unittest discover -s tests/offline -p test_end_to_end.py -v
+```
+
+Without `QBOX_OFFLINE_CANDIDATE` the test explicitly skips. A skip is **not
+release verification**. The maintainer needs Docker and one locally available
+image pinned by `packaging/offline/images.lock.json`; the default is Ubuntu
+20.04. The driver never pulls or downloads dependencies. `QBOX_E2E_IMAGE` can
+select another image from that lock. `QBOX_E2E_EVIDENCE` chooses the evidence
+output directory (default `build/offline/end-to-end`); `QBOX_E2E_BUNDLE` may point
+to an existing extraction, whose complete inventory is still verified against
+the candidate. Keep each independent run's evidence directory separate.
+
+The reusable target interface is:
+
+```bash
+bash tests/offline/run-target.sh BUNDLE_DIR EVIDENCE_DIR
+```
+
+Run as an ordinary user with a writable HOME/TMPDIR and enough space for the
+real runtime, license materials and independent test copies. Before installation
+it uses only the stated target base commands. After installation it uses that
+release's absolute Python with `-I -B`. It never sources `tests/test_helper.sh`
+or uses the host development Python to validate an installation. Its controlled
+PATH rejects host Python, pip, compilers, downloaders and excluded calculation
+programs; optional `lscpu`, `file`, `ldd`, Lmod and gawk are absent. This PATH
+alone does not establish network isolation: the invoking container/VM must
+provide that boundary.
+
+The driver mounts hostile global pip configuration inside the disposable
+container; the target creates hostile user configuration inside its private
+HOME. No host pip or shell configuration is changed. Target evidence records
+real scientific checks, Python isolation, exact external environment,
+stdin/arguments/exit/signal behavior, read-only execution and cache fallback,
+corrupt bundle/destination protection, lock and command races, deterministic
+INT/TERM interruption boundaries, SIGKILL held-lock behavior, reuse and manual
+rollback. Large fixture copies use independent copies/reflinks, never mutable
+hardlinks. Modified fixtures are labelled `test-fixture` and are not candidates
+or inputs to a release gate.
+
+For the noexec case, the invoking layer must supply an actual noexec mount and
+set `QBOX_E2E_NOEXEC` to its ordinary-user-writable directory. The driver supplies
+a private Docker tmpfs with `noexec`. A missing mount is recorded as a skip and
+makes the target harness exit unsuccessfully. A VM invocation must provide its
+own mount. Docker shares the host kernel; these tests do not replace the five
+platform matrix or strict baseline-CPU VM acceptance.
+
+For focused development, `QBOX_E2E_CASES` may name comma-separated `TargetTests`
+methods (for example `test_06_corrupt_bundle_failures_preserve_old`). Such evidence
+records `complete_suite: false` and must not be used as full acceptance. The
+normal command above runs all groups, and skips make the target return nonzero.
