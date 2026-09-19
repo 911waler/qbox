@@ -124,3 +124,65 @@ class ReadyMarkerTests(unittest.TestCase):
             with patch.object(matrix,'ROOT',root):
                 with self.assertRaises((ValueError,OSError)):matrix.gate(root/'missing-candidate',root/'missing-evidence')
             self.assertFalse(ready.exists())
+
+class RollbackDocumentationTests(unittest.TestCase):
+    def test_failed_link_creation_never_removes_preexisting_user_file(self):
+        import os,re,subprocess,tempfile
+        from pathlib import Path
+        root=Path(__file__).resolve().parents[2]
+        block=re.findall(r'```bash\n(.*?)```',(root/'packaging/offline/README.zh-CN.md').read_text(),re.S)[3]
+        with tempfile.TemporaryDirectory() as temp:
+            home=Path(temp);prefix=home/'.local/share/qbox';release=prefix/'releases/old';(release/'python/bin').mkdir(parents=True);(release/'metadata').mkdir()
+            (prefix/'.qbox-root').write_text(f'schema_version=1\nuid={os.getuid()}\nprefix={prefix}\n')
+            (release/'metadata/installed.json').write_text('{}')
+            # Only the shell cleanup boundary is under test; full real verify and
+            # smoke are exercised separately against the delivered archive.
+            python=release/'python/bin/python3';python.write_text('#!/bin/sh\nexit 0\n');python.chmod(0o755)
+            code=block.replace("release_id='填写 releases 中保留的完整版本名'","release_id='old'")
+            code=code.replace('ln -s -- "releases/$release_id" "$link"','printf user-data > "$link"\nprintf "%s" "$link" > "$HOME/collision-path"\nln -s -- "releases/$release_id" "$link"')
+            result=subprocess.run(['/bin/bash','--noprofile','--norc','-c',code],env={**os.environ,'HOME':str(home)},text=True,capture_output=True)
+            self.assertNotEqual(result.returncode,0)
+            collision=Path((home/'collision-path').read_text())
+            self.assertTrue(collision.exists(),'rollback cleanup deleted a preexisting user path')
+            self.assertEqual(collision.read_text(),'user-data')
+
+    def test_uninstall_guard_blocks_foreign_link_without_errexit(self):
+        import os,re,subprocess,tempfile
+        from pathlib import Path
+        root=Path(__file__).resolve().parents[2]
+        block=re.findall(r'```bash\n(.*?)```',(root/'packaging/offline/README.zh-CN.md').read_text(),re.S)[4]
+        with tempfile.TemporaryDirectory() as temp:
+            home=Path(temp);bindir=home/'bin';bindir.mkdir();sentinel=home/'user-file';sentinel.write_text('user-data');entry=bindir/'qbox';entry.symlink_to(sentinel)
+            result=subprocess.run(['/bin/bash','--noprofile','--norc','-c',block],env={**os.environ,'prefix':str(home/'qbox'),'bin_dir':str(bindir)},text=True,capture_output=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertTrue(entry.is_symlink(),'unguarded rm followed a failed ownership check')
+            self.assertEqual(sentinel.read_text(),'user-data')
+
+    def test_rollback_failure_and_signals_cleanup_only_owned_paths(self):
+        import os,re,subprocess,tempfile
+        from pathlib import Path
+        root=Path(__file__).resolve().parents[2]
+        block=re.findall(r'```bash\n(.*?)```',(root/'packaging/offline/README.zh-CN.md').read_text(),re.S)[3]
+        for mode in ('verify_failure','foreign_lock','INT','TERM','before_owned_flag','after_commit','replaced_lock'):
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as temp:
+                home=Path(temp);prefix=home/'.local/share/qbox';release=prefix/'releases/old';(release/'python/bin').mkdir(parents=True);(release/'metadata').mkdir();(prefix/'releases/current').mkdir()
+                (prefix/'current').symlink_to('releases/current');(prefix/'sentinel').write_text('user-data')
+                (prefix/'.qbox-root').write_text(f'schema_version=1\nuid={os.getuid()}\nprefix={prefix}\n');(release/'metadata/installed.json').write_text('{}')
+                python=release/'python/bin/python3';python.write_text('#!/bin/sh\nexit '+('7' if mode=='verify_failure' else '0')+'\n');python.chmod(0o755)
+                code=block.replace("release_id='填写 releases 中保留的完整版本名'","release_id='old'")
+                if mode=='foreign_lock':
+                    (prefix/'.install-lock').mkdir();(prefix/'.install-lock/owner').write_text('foreign-owner')
+                elif mode in ('INT','TERM'):code=code.replace('link_owned=1','link_owned=1\nkill -'+mode+' "$$"')
+                elif mode=='before_owned_flag':code=code.replace('link_id=$(stat', 'kill -TERM "$$"\nlink_id=$(stat')
+                elif mode=='after_commit':code+='\nkill -TERM "$$"\n'
+                elif mode=='replaced_lock':code=code.replace('link_owned=1','link_owned=1\nmv -- "$lock" "$prefix/saved-owned-lock"\nmkdir -- "$lock"\nprintf foreign-owner > "$lock/owner"\nkill -TERM "$$"')
+                result=subprocess.run(['/bin/bash','--noprofile','--norc','-c',code],env={**os.environ,'HOME':str(home)},text=True,capture_output=True)
+                self.assertNotEqual(result.returncode,0)
+                self.assertEqual(os.readlink(prefix/'current'),'releases/old' if mode=='after_commit' else 'releases/current')
+                self.assertEqual((prefix/'sentinel').read_text(),'user-data')
+                if mode in ('foreign_lock','replaced_lock'):self.assertEqual((prefix/'.install-lock/owner').read_text(),'foreign-owner')
+                else:self.assertFalse((prefix/'.install-lock').exists())
+                links=list(prefix.glob('.rollback.*'))
+                if mode=='before_owned_flag':
+                    self.assertEqual(len(links),1);self.assertTrue(links[0].is_symlink());self.assertEqual(os.readlink(links[0]),'releases/old')
+                else:self.assertEqual(links,[])

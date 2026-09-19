@@ -83,19 +83,37 @@ release="$prefix/releases/$release_id"
 [[ -f $release/metadata/installed.json && ! -L $release/metadata/installed.json ]]
 lock="$prefix/.install-lock"
 mkdir -- "$lock"   # 失败即停止，绝不抢占现有锁
-printf 'manual-rollback %s\n' "$$" > "$lock/owner"
+lock_id=$(stat -c '%d:%i' -- "$lock")
+lock_token="manual-rollback $$ $lock_id"
+printf '%s\n' "$lock_token" > "$lock/owner"
 link="$prefix/.rollback.$$"
-cleanup() { rm -f -- "$link"; rm -- "$lock/owner"; rmdir -- "$lock"; }
+link_owned=0
+link_id=''
+cleanup() {
+  if (( link_owned )) && [[ -L $link && $(stat -c '%d:%i' -- "$link") == "$link_id" ]]; then
+    rm -- "$link"
+  fi
+  if [[ -d $lock && ! -L $lock && $(stat -c '%d:%i' -- "$lock") == "$lock_id" &&
+        -f $lock/owner && ! -L $lock/owner && $(cat -- "$lock/owner") == "$lock_token" ]]; then
+    rm -- "$lock/owner"
+    rmdir -- "$lock"
+  fi
+}
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 "$release/python/bin/python3" -I -B "$release/metadata/checks/verify.py" \
   --release "$release" --manifest "$release/metadata/manifest.json" --phase reuse
 work=$(mktemp -d)
 "$release/python/bin/python3" -I -B "$release/metadata/checks/smoke.py" \
   --release "$release" --work "$work/smoke"
 ln -s -- "releases/$release_id" "$link"
+link_id=$(stat -c '%d:%i' -- "$link")
+link_owned=1
 mv -Tf -- "$link" "$prefix/current"
 ```
 
+在记录临时链接归属之前中断，可能保守地留下本次 `.rollback.*`；不要删除未经核验的同名路径。
 SIGKILL 或断电可能留下 `.install-lock`、`.stage.*`、`.current.*`。先阅读锁内
 owner，核实 PID/进程组已结束、目录所有者、根标记、current 和版本标记，并验证
 当前版本完整性后，再由管理员人工处理确定属于该次失败事务的残留。PID 可能复用；
@@ -103,13 +121,15 @@ owner，核实 PID/进程组已结束、目录所有者、根标记、current �
 
 ## 卸载
 
-先退出 qbox 和使用该版本的所有作业，按上节检查 prefix 根标记并取得安装锁。
+先退出 qbox 和使用该版本的所有作业，将 prefix、bin_dir 设为实际安装路径，
+按上节检查 prefix 根标记并取得安装锁。
 核对命令确为符号链接且 `readlink "$bin_dir/qbox"` **精确等于**
 `"$prefix/current/bin/qbox"` 后，只删除这一个链接：
 
 ```bash
-[[ -L "$bin_dir/qbox" && $(readlink -- "$bin_dir/qbox") == "$prefix/current/bin/qbox" ]]
-rm -- "$bin_dir/qbox"
+: "${prefix:?请先核验安装根目录并取得锁}" "${bin_dir:?请设置实际命令目录}"
+[[ -L "$bin_dir/qbox" && $(readlink -- "$bin_dir/qbox") == "$prefix/current/bin/qbox" ]] &&
+  rm -- "$bin_dir/qbox"
 ```
 
 保留安装根目录可以稍后恢复。若要释放空间，在锁内人工逐项核验 releases 中每个
