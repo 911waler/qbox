@@ -614,6 +614,7 @@ main() (
     publish_release || return 1
     # No required operation after the commit may relabel a successful install.
     printf 'qbox 安装完成：%s\n命令入口：%s/qbox\n' "$final" "$bin_dir" || :
+    printf '如命令目录尚未加入 PATH，请在当前 Bash 执行：\n  export PATH=%q:"$PATH"\n' "$bin_dir" || :
     return 0
 )
 

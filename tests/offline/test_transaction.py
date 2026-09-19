@@ -96,6 +96,8 @@ main --prefix "$2" --bin-dir "$3"
         old = self.old_release()
         result = self.run_transaction()
         self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn('PATH', result.stdout)
+        self.assertIn('export PATH=', result.stdout)
         self.assertEqual(os.readlink(self.prefix/'current'),'releases/'+RID)
         self.assertEqual(os.readlink(self.bindir/'qbox'),str(self.prefix/'current/bin/qbox'))
         self.assertEqual((old/'payload').read_text(),'old payload')
