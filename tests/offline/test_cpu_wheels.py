@@ -90,7 +90,11 @@ class CpuWheelTests(unittest.TestCase):
         proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'tools/offline/recipes/numpy-baseline.sh':'e'*64},'patches':[], 'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package], 'network':'none','repeat_builds':2}
         proof['compilation_outputs']=[package]
         proof['normalization']={'code_commit':'d'*40,'recipe_files':{'normalize.py':'e'*64},'image':recipe['image'],'outputs':[package],'network':'none','independent_runs':2,'inputs':[{'run':n,'wheels':{package['filename']:package['sha256']}} for n in (1,2)]}
+        proof['sources']=[source]
         cpu_wheels.validate_provenance(proof,raw,[package])
+        proof['sources']=[source]
+        with self.assertRaisesRegex(ValueError,'source'):
+            cpu_wheels.validate_provenance({**proof,'sources':[]},raw,[package])
         changed={**package,'sha256':'f'*64}
         with self.assertRaisesRegex(ValueError,'output'):
             cpu_wheels.validate_provenance(proof,raw,[changed])
@@ -103,6 +107,7 @@ class CpuWheelTests(unittest.TestCase):
         raw=json.dumps(recipe).encode()
         package={'name':'numpy','filename':'numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_28_x86_64.whl','sha256':'c'*64,'source':source}
         proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'recipe.sh':'e'*64},'patches':[],'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package],'network':'none','repeat_builds':2,'normalization':{'code_commit':'d'*40,'recipe_files':{'normalize.py':'e'*64},'image':recipe['image'],'outputs':[{**package,'sha256':'f'*64}]}}
+        proof['sources']=[source]
         with self.assertRaisesRegex(ValueError,'normalization'):
             cpu_wheels.validate_provenance(proof,raw,[package])
 

@@ -158,6 +158,16 @@ def validate_provenance(proof, input_lock_bytes, packages):
         raise ValueError('CPU build recipe hashes missing')
     if proof['image']!=recipe['image'] or proof['network']!='none' or proof['repeat_builds']!=2:
         raise ValueError('CPU build isolation/reproducibility mismatch')
+    if proof.get('sources') != [s['source'] for s in recipe['sources']]:
+        raise ValueError('CPU build source inventory mismatch')
+    expected_build_inputs = [{k:p[k] for k in ('name','version','filename','sha256')} for p in recipe.get('build_packages',[])]
+    if proof.get('build_inputs',[]) != expected_build_inputs or any(proof.get(key) != recipe.get(key) for key in ('environment','build_options')):
+        raise ValueError('CPU build input/options mismatch')
+    if proof.get('patches',[]) != recipe.get('patches',[]):
+        raise ValueError('CPU build patch inventory mismatch')
+    for patch in proof.get('patches',[]):
+        if proof['recipe_files'].get(patch['path']) != patch['sha256'] or any(not re.fullmatch('[0-9a-f]{64}',patch[key]) for key in ('upstream_sha256','patched_sha256')):
+            raise ValueError('CPU build patch recipe/source binding mismatch')
     inputs={s['name']:s['source'] for s in recipe['sources']}
     outputs={p['name']:p for p in proof['outputs']}
     expected=set(recipe.get('wheel_names',inputs))

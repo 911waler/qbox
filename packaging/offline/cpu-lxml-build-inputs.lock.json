@@ -501,8 +501,8 @@
     }
   ],
   "environment": {
-    "CFLAGS": "-O2 -march=x86-64 -mtune=generic -ffile-prefix-map=/build=.",
-    "CXXFLAGS": "-O2 -march=x86-64 -mtune=generic -ffile-prefix-map=/build=.",
+    "CFLAGS": "-O2 -march=x86-64 -mtune=generic -ffile-prefix-map=/build=. -fPIC",
+    "CXXFLAGS": "-O2 -march=x86-64 -mtune=generic -ffile-prefix-map=/build=. -fPIC",
     "FFLAGS": "-O2 -march=x86-64 -mtune=generic -ffile-prefix-map=/build=.",
     "LC_ALL": "C",
     "LDFLAGS": "-Wl,--build-id=sha1",
