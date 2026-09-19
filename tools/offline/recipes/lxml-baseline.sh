@@ -9,6 +9,7 @@ ldd --version
 /build/env/bin/python -I -B -m pip --isolated install --no-index --only-binary=:all: --require-hashes --find-links /build/build-wheelhouse -r /build/build-requirements.lock
 mkdir -p /build/raw /build/repaired
 cd /build/source/lxml-6.1.3
+patch -p1 < /build/lxml-offline.patch
 mkdir -p libs
 cp /build/source-archives/* libs/
 export STATICBUILD=1 WITHOUT_CYTHON=true MULTICORE=8

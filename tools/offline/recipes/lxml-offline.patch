@@ -1,0 +1,20 @@
+--- a/buildlibxml.py
++++ b/buildlibxml.py
+@@ -316,7 +316,7 @@
+         from_location = "https://gitlab.gnome.org/GNOME/libxml2/-/archive/dea91c97debeac7c1aaf9c19f79029809e23a353/"
+         version = "dea91c97debeac7c1aaf9c19f79029809e23a353"
+     else:
+-        from_location = http_find_latest_version_directory(LIBXML2_LOCATION, version=version)
++        from_location = LIBXML2_LOCATION + version.rsplit(".", 1)[0] + "/"
+ 
+     return download_library(dest_dir, from_location, 'libxml2',
+                             version_re, filename, version=version)
+@@ -327,7 +327,7 @@
+     #version_re = re.compile(r'LATEST_LIBXSLT_IS_([0-9.]+[0-9](?:-[abrc0-9]+)?)')
+     version_re = re.compile(r'libxslt-([0-9.]+[0-9])[.]tar[.]xz')
+     filename = 'libxslt-%s.tar.xz'
+-    from_location = http_find_latest_version_directory(LIBXSLT_LOCATION, version=version)
++    from_location = LIBXSLT_LOCATION + version.rsplit(".", 1)[0] + "/"
+     return download_library(dest_dir, from_location, 'libxslt',
+                             version_re, filename, version=version)
+ 

@@ -12,7 +12,7 @@
       "libxslt": "1.1.43",
       "zlib": "1.3.2"
     },
-    "source_modifications": "none; upstream STATICBUILD uses fixed cached archives"
+    "source_modifications": "buildlibxml.py offline directory selection only; no application/native source changes"
   },
   "build_packages": [
     {
@@ -510,10 +510,20 @@
     "SOURCE_DATE_EPOCH": "1756684800",
     "TZ": "UTC"
   },
-  "helpers": {},
+  "helpers": {
+    "tools/offline/recipes/lxml-offline.patch": "lxml-offline.patch"
+  },
   "image": "quay.io/pypa/manylinux_2_28_x86_64@sha256:531d7aa844bbb0c131d4ab011d3db741c4abc8d498cd5ccc86121046f62303b4",
   "parallel_jobs": 8,
-  "patches": [],
+  "patches": [
+    {
+      "path": "tools/offline/recipes/lxml-offline.patch",
+      "purpose": "Use exact pinned version directory without online directory discovery; archive SHA verification unchanged.",
+      "sha256": "39745d0918963e0d6ff5d48370c7a564ed784a3891da8e00bbf9c163b70b95f1",
+      "upstream_file": "buildlibxml.py",
+      "upstream_sha256": "be99cde194739f2676e415e7b457d1dc6b94c00c5d86cae60ead44fcf3ea4c00"
+    }
+  ],
   "provenance_filename": "cpu-lxml-build-provenance.json",
   "python": "/opt/python/cp312-cp312/bin/python",
   "recipe": "tools/offline/recipes/lxml-baseline.sh",
