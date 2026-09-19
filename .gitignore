@@ -10,3 +10,6 @@ build/
 dist/
 *.egg-info/
 .worktrees/
+
+# Offline candidate staging (outside the already ignored build/dist trees).
+.qbox-candidate-*/

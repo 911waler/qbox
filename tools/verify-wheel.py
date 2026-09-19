@@ -6,6 +6,7 @@ Requires pip plus the analysis dependencies in this Python; never runs QE/MPI.
 """
 
 import os
+from email.parser import BytesParser
 from pathlib import Path
 import subprocess
 import sys
@@ -33,6 +34,8 @@ Si1 Si 0 0 0
 def verify(wheel):
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
+        metadata = next(name for name in names if name.endswith(".dist-info/METADATA"))
+        version = BytesParser().parsebytes(archive.read(metadata))["Version"]
         assert not any("__pycache__" in name or name.endswith(".pyc") for name in names)
         for resource in ("qbox/registry.py", "qbox/legacy/load.sh",
                          "qbox/legacy/entry.sh", "qbox/bin/qbox",
@@ -69,10 +72,10 @@ def verify(wheel):
         installed_cli = str(target / "bin/qbox")
         assert "--task" in run(installed_cli, "--help")
         assert "cif-to-vasp" in run(installed_cli, "--list")
-        assert run(installed_cli, "--version").strip() == "qbox 0.1.0"
+        assert run(installed_cli, "--version").strip() == f"qbox {version}"
         run(installed_cli, "--task", "unknown-task", expected=2)
         package_cli = str(target / "qbox/bin/qbox")
-        assert run(package_cli, "--version").strip() == "qbox 0.1.0"
+        assert run(package_cli, "--version").strip() == f"qbox {version}"
         assert "请输入功能编号" in run(installed_cli, input="", expected=1)
 
         (work / "sample.cif").write_text(CIF)

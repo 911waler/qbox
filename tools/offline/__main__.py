@@ -23,6 +23,9 @@ def _parser() -> argparse.ArgumentParser:
         "--policy", type=Path, default=Path("packaging/offline/policy.json")
     )
     resolve.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
+    build = commands.add_parser("build", help="assemble a deterministic candidate from local fixed inputs")
+    build.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
+    build.add_argument("--output", type=Path, default=Path("dist/offline"))
     audit = commands.add_parser("audit", help="audit offline license and native inputs")
     audit.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
     audit.add_argument("--output", type=Path, default=Path("build/offline/audit"))
@@ -40,6 +43,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "build":
+        from .build import build
+        try:
+            print(build(args.cache, args.output))
+        except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+            print(f"qbox offline: {error}", file=sys.stderr)
+            return 1
+        return 0
     if args.command == "cpu-finalize":
         from .cpu_wheels import finalize_wheels
         try:
