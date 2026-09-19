@@ -1,5 +1,6 @@
 """Small, network-forbidden offline assembly fixtures."""
 import gzip
+import copy
 import hashlib
 import io
 import json
@@ -37,8 +38,8 @@ class BuildTests(unittest.TestCase):
         self.locks.joinpath('build-requirements.lock').write_text('')
         self.runtime = self.cache / 'python.tar.gz'
         with tarfile.open(self.runtime, 'w:gz') as archive:
-            info = tarfile.TarInfo('python/bin/python3'); info.mode = 0o755; info.size = 4
-            archive.addfile(info, io.BytesIO(b'fake'))
+            info = tarfile.TarInfo('python/bin/python3'); info.mode = 0o755; info.size = len(b'\x7fELFruntime')
+            archive.addfile(info, io.BytesIO(b'\x7fELFruntime'))
         self.wheel = self.root / 'qbox-1.2.3-py3-none-any.whl'
         with zipfile.ZipFile(self.wheel, 'w') as wheel:
             for name in ('qbox/registry.py','qbox/legacy/load.sh','qbox/legacy/entry.sh','qbox/bin/qbox-dopant-pdos.py','qbox/postprocess/effective_mass_vasp.py'):
@@ -51,6 +52,7 @@ class BuildTests(unittest.TestCase):
         dep = deps / 'demo-1.0-py3-none-any.whl'
         with zipfile.ZipFile(dep, 'w') as wheel:
             wheel.writestr('demo-1.0.dist-info/METADATA', 'Name: demo\nVersion: 1.0\n')
+            wheel.writestr('demo/native.so', b'\x7fELFdependency')
         def asset(path):
             return dict(filename=path.name, sha256=sha256_file(path), url='https://example.org/'+path.name)
         self.package = dict(name='demo', version='1.0', filename=dep.name, sha256=sha256_file(dep), size=dep.stat().st_size, source=asset(dep))
@@ -65,7 +67,13 @@ class BuildTests(unittest.TestCase):
         component = dict(id='demo==1.0', licenses=['MIT'], materials=['materials/license'], sources=[], unresolved=[], license_ids=['LicenseRef-demo'])
         runtime_component = dict(component, id='cpython', license_ids=['LicenseRef-python'])
         report = dict(status='passed-static',errors=[],lock_sha256=sha256_file(self.locks/'licenses.lock.json'),payload_inputs=dict(runtime=runtime['normalized'],wheels={dep.name:self.package['sha256']}),components=[component,runtime_component],materials=[dict(path='materials/license',sha256=sha256_file(material),size=material.stat().st_size,source=asset(material),source_member='LICENSE')],license_map={'LicenseRef-demo':['materials/license'],'LicenseRef-python':['materials/license']})
-        for name,value in [('licenses',report),('elf',dict(status='passed-static',errors=[],cpu_baseline_verified=False))]:
+        (audit/'auditwheel').mkdir()
+        log=audit/'auditwheel'/ (dep.name+'.txt');log.write_text('fixture static auditwheel evidence')
+        elf=dict(status='passed-static',errors=[],cpu_baseline_verified=False,
+                 elf={'runtime/python/bin/python3':{'sha256':hashlib.sha256(b'\x7fELFruntime').hexdigest()},
+                      'wheels/'+dep.name+'/demo/native.so':{'sha256':hashlib.sha256(b'\x7fELFdependency').hexdigest()}},
+                 auditwheel=[{'path':'auditwheel/'+log.name,'sha256':sha256_file(log),'exit_code':0}])
+        for name,value in [('licenses',report),('elf',elf)]:
             (audit/(name+'.json')).write_bytes(canonical_json(value))
         descriptor = {name:dict(path=name+'.json',sha256=sha256_file(audit/(name+'.json')),size=(audit/(name+'.json')).stat().st_size) for name in ('licenses','elf')}
         (audit/'descriptor.json').write_bytes(canonical_json(descriptor))
@@ -144,6 +152,65 @@ class BuildTests(unittest.TestCase):
         descriptor.write_bytes(canonical_json(value))
         with self.assertRaisesRegex(ValueError,'audit does not bind'):self.build()
 
+    def write_elf_report(self, report):
+        path=self.cache/'audit/elf.json';path.write_bytes(canonical_json(report))
+        descriptor=self.cache/'audit/descriptor.json';value=json.loads(descriptor.read_text())
+        value['elf'].update(sha256=sha256_file(path),size=path.stat().st_size)
+        descriptor.write_bytes(canonical_json(value))
+
+    def test_unrelated_passing_elf_report_is_rejected(self):
+        report=json.loads((self.cache/'audit/elf.json').read_text())
+        report['elf']={'wheels/unrelated-9.9.whl/unrelated.so':{'sha256':'0'*64}}
+        self.write_elf_report(report)
+        with self.assertRaisesRegex(ValueError,'ELF.*coverage'):self.build()
+        self.assertFalse((self.root/'output/candidate.json').exists())
+
+    def test_native_audit_requires_exact_member_and_log_coverage(self):
+        original=json.loads((self.cache/'audit/elf.json').read_text())
+        mutations={
+            'absent ELF inventory':lambda r:r.pop('elf'),
+            'empty ELF inventory':lambda r:r.update(elf={}),
+            'omitted runtime':lambda r:r['elf'].pop('runtime/python/bin/python3'),
+            'omitted dependency':lambda r:r['elf'].pop('wheels/'+self.package['filename']+'/demo/native.so'),
+            'extra unrelated member':lambda r:r['elf'].update({'wheels/other.whl/other.so':{'sha256':'0'*64}}),
+            'runtime member byte mismatch':lambda r:r['elf']['runtime/python/bin/python3'].update(sha256='0'*64),
+            'dependency member byte mismatch':lambda r:r['elf']['wheels/'+self.package['filename']+'/demo/native.so'].update(sha256='0'*64),
+            'missing member SHA':lambda r:r['elf']['runtime/python/bin/python3'].pop('sha256'),
+            'absent auditwheel inventory':lambda r:r.pop('auditwheel'),
+            'missing native wheel log':lambda r:r.update(auditwheel=[]),
+            'duplicate native wheel log':lambda r:r['auditwheel'].append(copy.deepcopy(r['auditwheel'][0])),
+            'unrelated wheel log':lambda r:r['auditwheel'][0].update(path='auditwheel/unrelated.whl.txt'),
+        }
+        for index,(name,mutate) in enumerate(mutations.items()):
+            with self.subTest(name=name):
+                report=copy.deepcopy(original);mutate(report);self.write_elf_report(report)
+                output='invalid-coverage-'+str(index)
+                with self.assertRaises(ValueError):self.build(output)
+                self.assertFalse((self.root/output/'candidate.json').exists())
+        self.write_elf_report(original)
+        self.assertTrue(self.build('complete-native-coverage').is_file())
+
+    def test_pure_python_fixture_accepts_explicit_empty_native_inventory(self):
+        with tarfile.open(self.runtime,'w:gz') as archive:
+            info=tarfile.TarInfo('python/readme.txt');info.size=4
+            archive.addfile(info,io.BytesIO(b'text'))
+        path=self.cache/'candidate-wheelhouse'/self.package['filename']
+        with zipfile.ZipFile(path,'w') as archive:
+            archive.writestr('demo/__init__.py','')
+        builder._verify_native_coverage(self.cache,{'packages':[self.package]}, {'elf':{},'auditwheel':[]})
+        with self.assertRaisesRegex(ValueError,'coverage'):
+            builder._verify_native_coverage(self.cache,{'packages':[self.package]}, {'elf':{'runtime/absent.so':{'sha256':'0'*64}},'auditwheel':[]})
+
+    def test_duplicate_elf_inventory_key_is_rejected(self):
+        path=self.cache/'audit/elf.json';raw=path.read_text()
+        name='runtime/python/bin/python3';needle='"'+name+'":'
+        raw=raw.replace(needle,needle+'{"sha256":"'+('0'*64)+'"},'+needle)
+        path.write_text(raw)
+        descriptor=self.cache/'audit/descriptor.json';value=json.loads(descriptor.read_text())
+        value['elf'].update(sha256=sha256_file(path),size=path.stat().st_size)
+        descriptor.write_bytes(canonical_json(value))
+        with self.assertRaisesRegex(ValueError,'duplicate'):self.build()
+
     def test_license_package_names_are_normalized(self):
         path=self.cache/'audit/licenses.json';report=json.loads(path.read_text())
         report['components'][0]['id']='Demo==1.0'
@@ -166,7 +233,7 @@ class BuildTests(unittest.TestCase):
                 (self.locks/'requirements.lock').write_text(f'demo==1.0 --hash=sha256:{self.package["sha256"]}\n')
                 # Audit binding is independent of ZIP path policy and covered separately.
                 report=json.loads((self.cache/'audit/licenses.json').read_text())
-                with patch.object(builder,'_source_identity',return_value=('a'*40,1577836800)),patch.object(builder,'_audit_inputs',return_value=(json.loads((self.cache/'audit/descriptor.json').read_text()),{'licenses':report,'elf':{'auditwheel':[]}})):
+                with patch.object(builder,'_source_identity',return_value=('a'*40,1577836800)),patch.object(builder,'_audit_inputs',return_value=(json.loads((self.cache/'audit/descriptor.json').read_text()),{'licenses':report,'elf':{'auditwheel':[],'elf':{}}})):
                     if allowed:self.assertTrue(self.build(member.replace('/','_')).is_file())
                     else:
                         with self.assertRaises(ValueError):self.build()

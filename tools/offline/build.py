@@ -57,7 +57,13 @@ def _input(root, name, record=None):
 
 
 def _json(path):
-    return json.loads(path.read_bytes())
+    def unique(pairs):
+        result={}
+        for key,value in pairs:
+            if key in result:raise ValueError('duplicate JSON key: '+key)
+            result[key]=value
+        return result
+    return json.loads(path.read_bytes(),object_pairs_hook=unique)
 
 
 def _runtime_members(path):
@@ -156,6 +162,56 @@ def _inspect_qbox(path, resolution):
     return metadata
 
 
+def _verify_native_coverage(cache, dependencies, report):
+    """Match historical ELF records to every actual native archive member.
+
+    This reads bytes and verifies coverage, not ELF ABI properties. The original
+    static analysis is reused only for the exact complete member inventory.
+    """
+    actual={};native_wheels=set()
+    def inspect(name, stream):
+        magic=stream.read(4)
+        if magic!=b'\x7fELF':return False
+        digest=hashlib.sha256(magic)
+        for chunk in iter(lambda:stream.read(1024*1024),b''):digest.update(chunk)
+        if name in actual:raise ValueError('duplicate native member: '+name)
+        actual[name]=digest.hexdigest()
+        return True
+    with tarfile.open(cache/'python.tar.gz','r|gz') as archive:
+        for member in archive:
+            safe_payload_path(member.name)
+            if not (member.isfile() or member.isdir()):
+                raise ValueError('unsafe runtime member: '+member.name)
+            if member.isfile():
+                with archive.extractfile(member) as stream:
+                    inspect('runtime/'+member.name,stream)
+    for package in dependencies['packages']:
+        filename=package['filename']
+        with zipfile.ZipFile(cache/'candidate-wheelhouse'/filename) as archive:
+            if len(archive.namelist())!=len(set(archive.namelist())):
+                raise ValueError('duplicate dependency wheel member')
+            for member in archive.infolist():
+                safe_wheel_member(member.filename)
+                if stat.S_ISLNK(member.external_attr>>16):
+                    raise ValueError('dependency wheel symlink forbidden')
+                if not member.is_dir():
+                    with archive.open(member) as stream:
+                        if inspect('wheels/'+filename+'/'+member.filename,stream):
+                            native_wheels.add(filename)
+    recorded=report.get('elf')
+    if not isinstance(recorded,dict) or set(recorded)!=set(actual):
+        raise ValueError('historical ELF inventory coverage differs from delivered native members')
+    for name,digest in actual.items():
+        if not isinstance(recorded[name],dict) or recorded[name].get('sha256')!=digest:
+            raise ValueError('historical ELF member SHA mismatch: '+name)
+    logs=report.get('auditwheel')
+    if not isinstance(logs,list) or any(not isinstance(row,dict) or not isinstance(row.get('path'),str) for row in logs):
+        raise ValueError('historical auditwheel inventory is missing or invalid')
+    paths=[row['path'] for row in logs]
+    if len(paths)!=len(set(paths)) or set(paths)!={'auditwheel/'+name+'.txt' for name in native_wheels}:
+        raise ValueError('historical auditwheel coverage differs from delivered native wheels')
+
+
 def _audit_inputs(cache, locks, runtime, dependencies):
     base=cache/'audit'
     descriptor=_json(_input(base,'descriptor.json'))
@@ -175,6 +231,7 @@ def _audit_inputs(cache, locks, runtime, dependencies):
     for package in dependencies['packages']:
         if report['payload_inputs']['wheels'].get(package['filename'])!=package['sha256'] or license_lock['wheels'][package['filename']]['sha256']!=package['sha256']:
             raise ValueError('audit does not bind delivered dependency')
+    _verify_native_coverage(cache,dependencies,reports['elf'])
     validate_license_inventory(report)
     for item in report['materials']:
         _input(base,item['path'],item)
@@ -315,6 +372,8 @@ def build(cache: Path, output: Path) -> Path:
         # This audit is fresh composition, with exact source-report references and
         # final paths. It deliberately does not claim rerunning unchanged ELF scans.
         audit={'schema_version':1,'status':'passed-static','cpu_baseline_verified':False,
+               'native_evidence_binding':{'method':'complete actual archive ELF member path/SHA and native-wheel log coverage; original static scans reused',
+                                          'elf_members':len(reports['elf']['elf']),'native_wheels':len(reports['elf']['auditwheel'])},
                'source_commit':commit,'historical_reports':{n:files['checks/source-audit/'+n+'.json']['sha256'] for n in ('licenses','elf')},
                'qbox':{'path':qbox_path,'sha256':qbox['sha256'],'components':current['components'],'native':[]},
                'payloads':{p:files[p]['sha256'] for p in sorted(files) if p.startswith(('runtime/','wheelhouse/','packages/','THIRD_PARTY_LICENSES/'))},
