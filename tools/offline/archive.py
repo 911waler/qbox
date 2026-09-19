@@ -50,10 +50,12 @@ def normalize_runtime(upstream: Path, output: Path) -> dict:
     with _seekable_tar(upstream) as source:
         members = {}
         for member in source:
-            name = member.name.rstrip("/") if member.isdir() else member.name
+            name = member.name.removesuffix("/") if member.isdir() else member.name
             safe_payload_path(name)
             if name != "python" and not name.startswith("python/"):
                 raise ValueError(f"outside Python install tree: {name}")
+            if name == "python" and not member.isdir():
+                raise ValueError("Python archive root must be a directory")
             if name in members:
                 raise ValueError(f"duplicate tar member: {name}")
             if not (
