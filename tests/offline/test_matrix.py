@@ -186,3 +186,11 @@ class RollbackDocumentationTests(unittest.TestCase):
                 if mode=='before_owned_flag':
                     self.assertEqual(len(links),1);self.assertTrue(links[0].is_symlink());self.assertEqual(os.readlink(links[0]),'releases/old')
                 else:self.assertEqual(links,[])
+
+class StaticReportGateTests(unittest.TestCase):
+    def test_license_and_elf_reports_must_have_completed_without_errors(self):
+        from tools.offline.matrix import validate_static_report
+        for name in ('licenses','elf'):
+            validate_static_report({'status':'passed-static','errors':[]},name)
+            for value in ({},{'status':'failed','errors':[]},{'status':'not_run','errors':[]},{'status':'skipped','errors':[]},{'status':'passed-static'},{'status':'passed-static','errors':['unresolved']}):
+                with self.subTest(name=name,value=value),self.assertRaises(ValueError):validate_static_report(value,name)

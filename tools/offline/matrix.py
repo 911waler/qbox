@@ -135,6 +135,10 @@ def validate_supplements(candidate, records):
         _cases(record['cases'], SUPPLEMENT_CASES[name]); _refs(record['evidence'])
 
 
+def validate_static_report(value, name):
+    require(value.get('status') == 'passed-static' and value.get('errors') == [], name + ': missing/failed/not_run static audit')
+
+
 def verify_candidate(candidate_path, bundle):
     """Check actual archive plus every declared byte, rejecting links/traversal."""
     candidate_path = Path(candidate_path).resolve(strict=True)
@@ -168,6 +172,7 @@ def verify_candidate(candidate_path, bundle):
     require(audit['status'] == 'passed-static' and audit['errors'] == [] and audit['source_commit'] == candidate['source_commit'], 'payload audit failure')
     for key in ('licenses','elf'):
         require(sha(bundle / ('checks/source-audit/' + key + '.json')) == audit['historical_reports'][key], key + ' audit binding')
+        validate_static_report(read(bundle / ('checks/source-audit/' + key + '.json')), key)
     return candidate, archive, manifest
 
 
