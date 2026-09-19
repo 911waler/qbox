@@ -106,6 +106,17 @@ class CpuWheelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'normalization'):
             cpu_wheels.validate_provenance(proof,raw,[package])
 
+    def test_components_reject_duplicate_ids_overlapping_and_uncovered_outputs(self):
+        from unittest.mock import patch
+        a={'id':'scientific','proof':{'outputs':[{'name':'numpy'}]},'input_bytes':b'{}'}
+        b={'id':'lxml','proof':{'outputs':[{'name':'lxml'}]},'input_bytes':b'{}'}
+        packages=[{'name':n,'build_provenance':'proof.json'} for n in ('numpy','lxml')]
+        with patch.object(cpu_wheels,'validate_provenance'):
+            cpu_wheels.validate_components([a,b],packages)
+            for components in ([a,a],[a,{**b,'proof':a['proof']}],[a]):
+                with self.assertRaisesRegex(ValueError,'component|overlap|uncovered'):
+                    cpu_wheels.validate_components(components,packages)
+
     def test_selection_replaces_only_the_built_distribution(self):
         original=self.wheel(self.root/'candidate')
         old=original.with_name(original.name.replace('-1qboxcpu',''))

@@ -101,8 +101,9 @@ def build_wheels(lock_path, cache, output, *, fetch=False):
     for number in (1,2):
         with tempfile.TemporaryDirectory(prefix='cpu-build-',dir=cache) as temporary:
             work=Path(temporary)
-            (work/'source').mkdir(); (work/'build-wheelhouse').mkdir()
+            (work/'source').mkdir(); (work/'source-archives').mkdir(); (work/'build-wheelhouse').mkdir()
             for item in recipe['sources']:
+                shutil.copyfile(assets[item['source']['sha256']],work/'source-archives'/item['source']['filename'])
                 with tarfile.open(assets[item['source']['sha256']]) as archive:
                     archive.extractall(work/'source',filter='data')
             for item in recipe['build_packages']:
@@ -128,7 +129,7 @@ def build_wheels(lock_path, cache, output, *, fetch=False):
         record=wheel_metadata(path)
         source=next(s['source'] for s in recipe['sources'] if s['name']==record['name'])
         record['source']=source
-        record['build_provenance']='cpu-build-provenance.json'
+        record['build_provenance']=recipe.get('provenance_filename','cpu-build-provenance.json')
         records.append(record)
     provenance={'schema_version':1,'kind':'qbox-maintainer-cpu-build','code_commit':code_commit,
                 'recipe_files':recipe_hashes,'patches':recipe['patches'],'image':recipe['image'],
@@ -254,3 +255,22 @@ def finalize_wheels(provenance_path, cache, output):
             raise ValueError('corrupt content-addressed CPU wheel cache')
         shutil.copyfile(path,content)
     return proof
+
+
+def validate_components(components, packages):
+    """Validate independently built components without rewriting their histories."""
+    ids = set()
+    outputs = set()
+    for component in components:
+        identity = component['id']
+        if not re.fullmatch('[a-z][a-z0-9-]*', identity) or identity in ids:
+            raise ValueError('invalid or duplicate CPU build component')
+        ids.add(identity)
+        names = {p['name'] for p in component['proof']['outputs']}
+        if outputs.intersection(names):
+            raise ValueError('overlapping CPU build component outputs')
+        outputs.update(names)
+        validate_provenance(component['proof'], component['input_bytes'], packages)
+    custom = {p['name'] for p in packages if p.get('build_provenance') or '-1qboxcpu-' in p.get('filename','')}
+    if custom != outputs:
+        raise ValueError('uncovered CPU build component outputs')
