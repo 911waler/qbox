@@ -265,6 +265,26 @@ def wheel_inventory(path: Path, output: Path, rules: dict, source=None, suppleme
     return {'components':components, 'materials':list(materials.values()),'native':native}
 
 
+def validate_native_comparisons(comparisons: list, wheels: dict) -> None:
+    """Bind source-section comparison evidence to the actual shipped native bytes."""
+    seen = set()
+    for record in comparisons:
+        key = (record['wheel'], record['member'])
+        if key in seen or record['wheel'] not in wheels:
+            raise ValueError('duplicate or unknown native comparison wheel/member')
+        seen.add(key)
+        with zipfile.ZipFile(wheels[record['wheel']]) as wheel:
+            if record['member'] not in wheel.namelist():
+                raise ValueError('missing native comparison member: ' + record['member'])
+            if _sha(wheel.read(record['member'])) != record['native']['sha256']:
+                raise ValueError('native comparison member digest mismatch: ' + record['member'])
+        native, original = record['native'], record['original']
+        if (set(native['sections']) != {'.text', '.rodata', '.eh_frame'} or
+                native['sections'] != original['sections'] or not native['build_id'] or
+                native['build_id'] != original['build_id']):
+            raise ValueError('native comparison source sections/build ID mismatch')
+
+
 def _extract_runtime(archive: Path, target: Path) -> None:
     with tarfile.open(archive, 'r:gz') as tar:
         seen=set()
@@ -497,6 +517,8 @@ def audit(cache: Path, output: Path) -> dict:
         inventory['components'].extend(report['components'])
         inventory['materials'].extend(report['materials'])
         wheels=dependencies['packages']+[dependencies['qbox_resolution_wheel']]
+        validate_native_comparisons(lock.get('provenance_records', {}).get('cpu-build/native-runtime-comparison', []),
+                                   {p['filename']:cache/'candidate-wheelhouse'/p['filename'] for p in wheels})
         auditwheel_logs=[]
         for package in wheels:
             filename=package['filename']

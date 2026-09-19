@@ -588,6 +588,7 @@
     },
     "cpu-build/native-runtime-comparison": [
       {
+        "comparison_method": "read-only ELF64 section/build-ID parsing of final ZIP member and fixed RPM payload",
         "member": "scipy.libs/libgfortran-83c28eba.so.5.0.0",
         "native": {
           "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
@@ -596,7 +597,7 @@
             ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
             ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
           },
-          "sha256": "db32e5acd682110c9645b51a8f1d9314fafa5c65bbb94c3bb1eade6fee5eb5e1"
+          "sha256": "d06e88dcb39248adf44b9ab845fe98df055498523801c83254e88ab61f0de46e"
         },
         "original": {
           "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
@@ -608,10 +609,12 @@
           "sha256": "83c28ebaf89c4072df0a9577a507212d5b8eca64fb4f3e462e0f8deb8de6dc23"
         },
         "source_binary": "libgfortran.so.5.0.0",
+        "source_binary_rpm_sha256": "9a32e0f526dff21a2cc891d0bbc174ce6f1c70d6e232f806e962907ae575aba5",
         "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
         "wheel": "scipy-1.18.1-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
       },
       {
+        "comparison_method": "read-only ELF64 section/build-ID parsing of final ZIP member and fixed RPM payload",
         "member": "scipy.libs/libquadmath-2284e583.so.0.0.0",
         "native": {
           "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
@@ -620,7 +623,7 @@
             ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
             ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
           },
-          "sha256": "75edaf2301b169a92aee0edffeca7c6fcbd554d4f5f3cbd4acda908300316198"
+          "sha256": "570b1bc35e2f2e178f5233a8c9dddca076ecb47c5c65fa09f8bd3951989cb481"
         },
         "original": {
           "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
@@ -632,10 +635,12 @@
           "sha256": "2284e5833f5ea62b141499d32373fc207878c1778fe004b4867bc41d75086be2"
         },
         "source_binary": "libquadmath.so.0.0.0",
+        "source_binary_rpm_sha256": "e50ce3215fc8c5fcabb60664fe4933dc84db9f7b27d304e3168fafacb6016a9e",
         "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
         "wheel": "scipy-1.18.1-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
       },
       {
+        "comparison_method": "read-only ELF64 section/build-ID parsing of final ZIP member and fixed RPM payload",
         "member": "numpy.libs/libgfortran-83c28eba.so.5.0.0",
         "native": {
           "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
@@ -644,7 +649,7 @@
             ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
             ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
           },
-          "sha256": "db32e5acd682110c9645b51a8f1d9314fafa5c65bbb94c3bb1eade6fee5eb5e1"
+          "sha256": "d06e88dcb39248adf44b9ab845fe98df055498523801c83254e88ab61f0de46e"
         },
         "original": {
           "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
@@ -656,10 +661,12 @@
           "sha256": "83c28ebaf89c4072df0a9577a507212d5b8eca64fb4f3e462e0f8deb8de6dc23"
         },
         "source_binary": "libgfortran.so.5.0.0",
+        "source_binary_rpm_sha256": "9a32e0f526dff21a2cc891d0bbc174ce6f1c70d6e232f806e962907ae575aba5",
         "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
         "wheel": "numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
       },
       {
+        "comparison_method": "read-only ELF64 section/build-ID parsing of final ZIP member and fixed RPM payload",
         "member": "numpy.libs/libquadmath-2284e583.so.0.0.0",
         "native": {
           "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
@@ -668,7 +675,7 @@
             ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
             ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
           },
-          "sha256": "75edaf2301b169a92aee0edffeca7c6fcbd554d4f5f3cbd4acda908300316198"
+          "sha256": "570b1bc35e2f2e178f5233a8c9dddca076ecb47c5c65fa09f8bd3951989cb481"
         },
         "original": {
           "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
@@ -680,6 +687,7 @@
           "sha256": "2284e5833f5ea62b141499d32373fc207878c1778fe004b4867bc41d75086be2"
         },
         "source_binary": "libquadmath.so.0.0.0",
+        "source_binary_rpm_sha256": "e50ce3215fc8c5fcabb60664fe4933dc84db9f7b27d304e3168fafacb6016a9e",
         "source_rpm": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
         "wheel": "numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl"
       }

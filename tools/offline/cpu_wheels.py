@@ -11,6 +11,10 @@ from .model import sha256_file
 from .resolve import wheel_metadata
 from .recipes.wheel_normalize import normalize_wheel, validate_record
 
+BUILD_ORCHESTRATOR = 'tools/offline/cpu_wheels.py'
+NORMALIZER_PATH = 'tools/offline/recipes/wheel_normalize.py'
+NORMALIZATION_FILES = frozenset({BUILD_ORCHESTRATOR, NORMALIZER_PATH})
+
 
 def select_wheels(lock, cache):
     """No network/build fallback: missing custom bytes need explicit maintainer build."""
@@ -156,6 +160,10 @@ def validate_provenance(proof, input_lock_bytes, packages):
         raise ValueError('CPU build requires actual recipe code commit')
     if not proof['recipe_files'] or any(not re.fullmatch('[0-9a-f]{64}',v) for v in proof['recipe_files'].values()):
         raise ValueError('CPU build recipe hashes missing')
+    required_recipe_files = {BUILD_ORCHESTRATOR, recipe['recipe'], *recipe.get('helpers', {})}
+    missing = required_recipe_files - proof['recipe_files'].keys()
+    if missing:
+        raise ValueError('CPU build recipe inventory missing: ' + ', '.join(sorted(missing)))
     if proof['image']!=recipe['image'] or proof['network']!='none' or proof['repeat_builds']!=2:
         raise ValueError('CPU build isolation/reproducibility mismatch')
     if proof.get('sources') != [s['source'] for s in recipe['sources']]:
@@ -183,6 +191,9 @@ def validate_provenance(proof, input_lock_bytes, packages):
             raise ValueError('CPU normalization does not bind final outputs/image')
         if not re.fullmatch('[0-9a-f]{40}',normalization['code_commit']) or not normalization['recipe_files'] or any(not re.fullmatch('[0-9a-f]{64}', value) for value in normalization['recipe_files'].values()):
             raise ValueError('CPU normalization code identity missing')
+        missing = NORMALIZATION_FILES - normalization['recipe_files'].keys()
+        if missing:
+            raise ValueError('CPU normalization recipe inventory missing: ' + ', '.join(sorted(missing)))
         compiled = {p['filename']:p['sha256'] for p in proof['compilation_outputs']}
         if normalization['network'] != 'none' or normalization['independent_runs'] != 2 or normalization['inputs'] != [{'run':n, 'wheels':compiled} for n in (1,2)]:
             raise ValueError('CPU normalization input/isolation mismatch')
@@ -221,7 +232,7 @@ def finalize_wheels(provenance_path, cache, output):
     provenance_path, cache, output = Path(provenance_path).resolve(), Path(cache).resolve(), Path(output).resolve()
     proof = json.loads(provenance_path.read_text())
     root = Path(__file__).resolve().parents[2]
-    paths = ['tools/offline/cpu_wheels.py', 'tools/offline/recipes/wheel_normalize.py']
+    paths = sorted(NORMALIZATION_FILES)
     subprocess.run(['git','diff','--exit-code','HEAD','--',*paths],cwd=root,check=True,capture_output=True)
     commit = subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
     image = proof['image']
@@ -238,7 +249,7 @@ def finalize_wheels(provenance_path, cache, output):
         outgoing=output/f'run-{number}';outgoing.mkdir()
         command=['docker','run','--rm','--network','none','--user',f'{os.getuid()}:{os.getgid()}',
                  '-v',f'{incoming}:/input:ro','-v',f'{outgoing}:/output',
-                 '-v',f'{root/paths[1]}:/normalize.py:ro',image,
+                 '-v',f'{root/NORMALIZER_PATH}:/normalize.py:ro',image,
                  '/opt/python/cp312-cp312/bin/python','-I','-B','/normalize.py','/input','/output']
         subprocess.run(command,check=True,capture_output=True)
         runs.append(sorted(outgoing.glob('*.whl')))

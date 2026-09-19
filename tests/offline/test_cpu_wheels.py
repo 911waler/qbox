@@ -84,12 +84,12 @@ class CpuWheelTests(unittest.TestCase):
 
     def test_provenance_binds_inputs_source_and_output_identity(self):
         source={'url':'https://example.org/numpy.tar.gz','filename':'numpy.tar.gz','sha256':'a'*64}
-        recipe={'image':'image@sha256:'+'b'*64,'sources':[{'name':'numpy','source':source}]}
+        recipe={'recipe':'recipe.sh','image':'image@sha256:'+'b'*64,'sources':[{'name':'numpy','source':source}]}
         raw=json.dumps(recipe).encode()
         package={'name':'numpy','filename':'numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_28_x86_64.whl','sha256':'c'*64,'source':source}
-        proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'tools/offline/recipes/numpy-baseline.sh':'e'*64},'patches':[], 'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package], 'network':'none','repeat_builds':2}
+        proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'recipe.sh':'e'*64,'tools/offline/cpu_wheels.py':'e'*64},'patches':[], 'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package], 'network':'none','repeat_builds':2}
         proof['compilation_outputs']=[package]
-        proof['normalization']={'code_commit':'d'*40,'recipe_files':{'normalize.py':'e'*64},'image':recipe['image'],'outputs':[package],'network':'none','independent_runs':2,'inputs':[{'run':n,'wheels':{package['filename']:package['sha256']}} for n in (1,2)]}
+        proof['normalization']={'code_commit':'d'*40,'recipe_files':{path:'e'*64 for path in cpu_wheels.NORMALIZATION_FILES},'image':recipe['image'],'outputs':[package],'network':'none','independent_runs':2,'inputs':[{'run':n,'wheels':{package['filename']:package['sha256']}} for n in (1,2)]}
         proof['sources']=[source]
         cpu_wheels.validate_provenance(proof,raw,[package])
         proof['sources']=[source]
@@ -103,13 +103,32 @@ class CpuWheelTests(unittest.TestCase):
 
     def test_normalization_provenance_must_bind_final_output(self):
         source={'url':'https://example.org/numpy.tar.gz','filename':'numpy.tar.gz','sha256':'a'*64}
-        recipe={'image':'image@sha256:'+'b'*64,'sources':[{'name':'numpy','source':source}]}
+        recipe={'recipe':'recipe.sh','image':'image@sha256:'+'b'*64,'sources':[{'name':'numpy','source':source}]}
         raw=json.dumps(recipe).encode()
         package={'name':'numpy','filename':'numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_28_x86_64.whl','sha256':'c'*64,'source':source}
-        proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'recipe.sh':'e'*64},'patches':[],'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package],'network':'none','repeat_builds':2,'normalization':{'code_commit':'d'*40,'recipe_files':{'normalize.py':'e'*64},'image':recipe['image'],'outputs':[{**package,'sha256':'f'*64}]}}
+        proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'recipe.sh':'e'*64,'tools/offline/cpu_wheels.py':'e'*64},'patches':[],'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package],'network':'none','repeat_builds':2,'normalization':{'code_commit':'d'*40,'recipe_files':{path:'e'*64 for path in cpu_wheels.NORMALIZATION_FILES},'image':recipe['image'],'outputs':[{**package,'sha256':'f'*64}]}}
         proof['sources']=[source]
         with self.assertRaisesRegex(ValueError,'normalization'):
             cpu_wheels.validate_provenance(proof,raw,[package])
+
+    def test_provenance_requires_every_compile_and_normalization_recipe(self):
+        import copy
+        locks=Path(__file__).resolve().parents[2]/'packaging/offline'
+        for prefix in ('cpu-build','cpu-lxml-build'):
+            raw=(locks/(prefix+'-inputs.lock.json')).read_bytes()
+            recipe=json.loads(raw)
+            proof=json.loads((locks/(prefix+'-provenance.json')).read_text())
+            cpu_wheels.validate_provenance(proof,raw,proof['outputs'])
+            for path in [recipe['recipe'],*recipe.get('helpers',{}),'tools/offline/cpu_wheels.py']:
+                with self.subTest(component=prefix,compile_path=path):
+                    broken=copy.deepcopy(proof);del broken['recipe_files'][path]
+                    with self.assertRaisesRegex(ValueError,'recipe inventory'):
+                        cpu_wheels.validate_provenance(broken,raw,proof['outputs'])
+            for path in ('tools/offline/recipes/wheel_normalize.py','tools/offline/cpu_wheels.py'):
+                with self.subTest(component=prefix,normalization_path=path):
+                    broken=copy.deepcopy(proof);del broken['normalization']['recipe_files'][path]
+                    with self.assertRaisesRegex(ValueError,'normalization.*inventory'):
+                        cpu_wheels.validate_provenance(broken,raw,proof['outputs'])
 
     def test_components_reject_duplicate_ids_overlapping_and_uncovered_outputs(self):
         from unittest.mock import patch

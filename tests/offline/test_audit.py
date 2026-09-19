@@ -153,6 +153,20 @@ class AuditTests(unittest.TestCase):
             self.assertEqual(elf['status'],'blocked')
             self.assertEqual(elf['errors'],[filename+': disallowed native wheel tag'])
 
+    def test_native_comparison_binds_the_actual_wheel_member(self):
+        import hashlib
+        from tools.offline.audit import validate_native_comparisons
+        with tempfile.TemporaryDirectory() as temp:
+            wheel=Path(temp)/'demo.whl';member='demo.libs/libgfortran.so'
+            with zipfile.ZipFile(wheel,'w') as z:z.writestr(member,b'final native bytes')
+            identity={'sha256':hashlib.sha256(b'final native bytes').hexdigest(),
+                      'sections':{'.text':'a'*64,'.rodata':'b'*64,'.eh_frame':'c'*64},'build_id':'d'*40}
+            record={'wheel':wheel.name,'member':member,'native':identity,'original':{**identity,'sha256':'e'*64}}
+            validate_native_comparisons([record],{wheel.name:wheel})
+            record['native']={**identity,'sha256':hashlib.sha256(b'intermediate bytes').hexdigest()}
+            with self.assertRaisesRegex(ValueError,'native comparison.*digest'):
+                validate_native_comparisons([record],{wheel.name:wheel})
+
     def test_empty_license_body_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'demo-1.0-py3-none-any.whl'
