@@ -1,0 +1,102 @@
+"""Pinned maintainer CPU wheels: selection, integrity and build isolation."""
+import base64
+import csv
+import hashlib
+import io
+import json
+from pathlib import Path
+import tempfile
+import unittest
+import zipfile
+
+from tools.offline import cpu_wheels
+
+
+class CpuWheelTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+
+    def wheel(self, directory, text=b'baseline'):
+        directory.mkdir(parents=True, exist_ok=True)
+        p = directory/'numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_28_x86_64.whl'
+        files = {'numpy/demo.so':text, 'numpy-2.5.3.dist-info/METADATA':b'Name: numpy\nVersion: 2.5.3\n', 'numpy-2.5.3.dist-info/WHEEL':b'Wheel-Version: 1.0\nTag: cp312-cp312-manylinux_2_28_x86_64\n'}
+        rows = []
+        for name, data in files.items():
+            rows.append([name, 'sha256='+base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b'=').decode(),str(len(data))])
+        record='numpy-2.5.3.dist-info/RECORD'
+        rows.append([record,'',''])
+        out=io.StringIO();csv.writer(out,lineterminator='\n').writerows(rows)
+        files[record]=out.getvalue().encode()
+        with zipfile.ZipFile(p,'w') as z:
+            for n,d in files.items():z.writestr(n,d)
+        return p
+
+    def test_record_validation_checks_all_content_and_members(self):
+        p=self.wheel(self.root/'wheels')
+        cpu_wheels.validate_record(p)
+        with zipfile.ZipFile(p,'a') as z:z.writestr('unrecorded',b'bad')
+        with self.assertRaisesRegex(ValueError,'RECORD'):
+            cpu_wheels.validate_record(p)
+
+    def test_cached_selection_fails_closed_and_never_builds_or_downloads(self):
+        p=self.wheel(self.root/'cache'/'cpu-wheelhouse')
+        record={'name':'numpy','version':'2.5.3','filename':p.name,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+        lock={'outputs':[record]}
+        self.assertEqual(cpu_wheels.select_wheels(lock,self.root/'cache'),[p])
+        p.write_bytes(b'corrupt')
+        with self.assertRaisesRegex(ValueError,'hash'):
+            cpu_wheels.select_wheels(lock,self.root/'cache')
+        p.unlink()
+        with self.assertRaisesRegex(ValueError,'explicit.*build'):
+            cpu_wheels.select_wheels(lock,self.root/'cache')
+
+    def test_build_contract_rejects_unpinned_image_and_native_flags(self):
+        recipe={'image':'quay.io/pypa/manylinux_2_28_x86_64:latest','environment':{'CFLAGS':'-O2 -march=x86-64 -mtune=generic'},'sources':[], 'build_packages':[]}
+        with self.assertRaisesRegex(ValueError,'digest'):
+            cpu_wheels.validate_recipe(recipe)
+        recipe['image']='quay.io/pypa/manylinux_2_28_x86_64@sha256:'+'a'*64
+        recipe['environment']['CFLAGS']='-O2 -march=native'
+        with self.assertRaisesRegex(ValueError,'native'):
+            cpu_wheels.validate_recipe(recipe)
+
+    def test_normalization_sets_build_tag_and_preserves_payload(self):
+        p=self.wheel(self.root/'original')
+        out=cpu_wheels.normalize_wheel(p,self.root/'out')
+        cpu_wheels.validate_record(out)
+        with zipfile.ZipFile(out) as z:
+            self.assertEqual(z.read('numpy/demo.so'),b'baseline')
+            self.assertIn(b'Build: 1qboxcpu',z.read('numpy-2.5.3.dist-info/WHEEL'))
+        second=cpu_wheels.normalize_wheel(p,self.root/'second')
+        self.assertEqual(out.read_bytes(),second.read_bytes())
+
+    def test_provenance_binds_inputs_source_and_output_identity(self):
+        source={'url':'https://example.org/numpy.tar.gz','filename':'numpy.tar.gz','sha256':'a'*64}
+        recipe={'image':'image@sha256:'+'b'*64,'sources':[{'name':'numpy','source':source}]}
+        raw=json.dumps(recipe).encode()
+        package={'name':'numpy','filename':'numpy-2.5.3-1qboxcpu-cp312-cp312-manylinux_2_28_x86_64.whl','sha256':'c'*64,'source':source}
+        proof={'kind':'qbox-maintainer-cpu-build','code_commit':'d'*40,'recipe_files':{'tools/offline/recipes/numpy-baseline.sh':'e'*64},'patches':[], 'image':recipe['image'],'input_lock_sha256':hashlib.sha256(raw).hexdigest(),'outputs':[package], 'network':'none','repeat_builds':2}
+        cpu_wheels.validate_provenance(proof,raw,[package])
+        changed={**package,'sha256':'f'*64}
+        with self.assertRaisesRegex(ValueError,'output'):
+            cpu_wheels.validate_provenance(proof,raw,[changed])
+        with self.assertRaisesRegex(ValueError,'input'):
+            cpu_wheels.validate_provenance(proof,raw+b' ',[package])
+
+    def test_selection_replaces_only_the_built_distribution(self):
+        original=self.wheel(self.root/'candidate')
+        cached=self.wheel(self.root/'cache'/'cpu-wheelhouse')
+        proof={'outputs':[{'name':'numpy','version':'2.5.3','filename':cached.name,'sha256':hashlib.sha256(cached.read_bytes()).hexdigest()}]}
+        cpu_wheels.apply_selection(self.root/'candidate',proof,self.root/'cache')
+        self.assertEqual(list((self.root/'candidate').glob('*.whl')),[original])
+
+    def test_reproducibility_compares_actual_bytes(self):
+        a=self.wheel(self.root/'a');b=self.wheel(self.root/'b')
+        self.assertEqual(cpu_wheels.compare_builds([a],[b])[a.name],hashlib.sha256(a.read_bytes()).hexdigest())
+        b=self.wheel(self.root/'b',b'different')
+        with self.assertRaisesRegex(ValueError,'reproduc'):
+            cpu_wheels.compare_builds([a],[b])
+
+
+if __name__=='__main__':unittest.main()

@@ -26,11 +26,24 @@ def _parser() -> argparse.ArgumentParser:
     audit = commands.add_parser("audit", help="audit offline license and native inputs")
     audit.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
     audit.add_argument("--output", type=Path, default=Path("build/offline/audit"))
+    cpu = commands.add_parser("cpu-build", help="explicit pinned maintainer CPU wheel build (two clean runs)")
+    cpu.add_argument("--lock", type=Path, default=Path("packaging/offline/cpu-build-inputs.lock.json"))
+    cpu.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
+    cpu.add_argument("--output", type=Path, default=Path("build/offline/cpu-build"))
+    cpu.add_argument("--fetch", action="store_true", help="acquire missing fixed-hash build inputs")
     return parser
 
 
 def main(argv=None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "cpu-build":
+        from .cpu_wheels import build_wheels
+        try:
+            print(json.dumps(build_wheels(args.lock, args.cache, args.output, fetch=args.fetch), indent=2))
+        except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+            print(f"qbox offline: {error}", file=sys.stderr)
+            return 1
+        return 0
     if args.command == "audit":
         from .audit import audit
 
