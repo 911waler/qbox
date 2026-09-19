@@ -63,36 +63,38 @@ Explicit per-dependency settings always take precedence.
 
 ## Usage
 
+Examples below use the installed `qbox` command. From a source checkout, use `./qbox` instead.
+
 Show the available command-line options:
 
 ```bash
-./qbox --help
+qbox --help
 ```
 
 Start the interactive workflow menu:
 
 ```bash
-./qbox
+qbox
 ```
 
 Run an available workflow action directly:
 
 ```bash
-./qbox ACTION [INPUT ...]
+qbox ACTION [INPUT ...]
 ```
 
-Use `./qbox --version` to display the release version.
+Use `qbox --version` to display the release version.
 
 Discover all task IDs and readable names, or select a task explicitly:
 
 ```bash
-./qbox --list
-./qbox --task scf sample.cif
-./qbox --task 11 sample.cif
+qbox --list
+qbox --task scf sample.cif
+qbox --task 11 sample.cif
 ```
 
 Task IDs 0–37, interactive menus, legacy argument positions and PW presets
-(such as `./qbox sample.cif 00`) are preserved. `--task` removes ambiguity between
+(such as `qbox sample.cif 00`) are preserved. `--task` removes ambiguity between
 a numeric filename and a task ID; the remaining arguments are input paths, not
 legacy selectors. Tasks may still ask for workflow-specific choices. The module
 entry `python -m qbox` is also available after installation.

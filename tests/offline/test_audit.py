@@ -222,7 +222,7 @@ class AdditionalAuditTests(unittest.TestCase):
 
 
 class SupplementalMaterialTests(unittest.TestCase):
-    def test_locked_fetch_extracts_exact_body_without_delivering_tool_archive(self):
+    def test_locked_cache_extracts_exact_body_without_delivering_tool_archive(self):
         import hashlib
         import io
         import tarfile
@@ -236,11 +236,10 @@ class SupplementalMaterialTests(unittest.TestCase):
         source={'name':'tool-library','version':'exact','source':{'url':'https://official.example/tool.tar.gz','filename':'tool.tar.gz','sha256':digest},'deliver_archive':False,'license_members':['tool/COPYRIGHT-library.html']}
         with tempfile.TemporaryDirectory() as tmp:
             cache=Path(tmp)/'cache';output=Path(tmp)/'materials'
-            def fetch(url,sha,target):
-                self.assertEqual(url,source['source']['url']);self.assertEqual(sha,digest)
-                target.mkdir(parents=True);(target/sha).write_bytes(archive)
-            with patch('tools.offline.resolve.cache_asset',side_effect=fetch) as download:
-                materials=_supplemental_materials(cache,output,[source]);download.assert_called_once()
+            (cache/'sha256').mkdir(parents=True)
+            (cache/'sha256'/digest).write_bytes(archive)
+            with patch('tools.offline.resolve.cache_asset',side_effect=AssertionError('audit network forbidden')) as download:
+                materials=_supplemental_materials(cache,output,[source]);download.assert_not_called()
             self.assertEqual(list(materials),['source-licenses/tool-library/tool/COPYRIGHT-library.html'])
             self.assertEqual(next(output.iterdir()).read_bytes(),b'complete original library notice')
             (cache/'sha256'/digest).write_bytes(b'corrupt')

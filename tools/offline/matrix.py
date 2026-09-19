@@ -254,10 +254,12 @@ def matrix(candidate: Path, engine: str, output: Path) -> None:
                 if path.exists():report['evidence'][key]=reference(path,output)
             write(target_output/'report.json',report)
             print(platform,report['status'],flush=True)
+            return report['status']
         finally:
             subprocess.run([engine,'rm','--force',container],check=True,stdout=subprocess.DEVNULL)
     with ThreadPoolExecutor(max_workers=5) as pool:
-        list(pool.map(target,PLATFORMS))
+        statuses = list(pool.map(target,PLATFORMS))
+    require(all(status == 'passed' for status in statuses), 'one or more matrix platforms failed; reports retained')
 
 
 def gate(candidate: Path, evidence: Path) -> None:

@@ -135,11 +135,12 @@ class RollbackDocumentationTests(unittest.TestCase):
             home=Path(temp);prefix=home/'.local/share/qbox';release=prefix/'releases/old';(release/'python/bin').mkdir(parents=True);(release/'metadata').mkdir()
             (prefix/'.qbox-root').write_text(f'schema_version=1\nuid={os.getuid()}\nprefix={prefix}\n')
             (release/'metadata/installed.json').write_text('{}')
+            (prefix/'current').symlink_to('releases/old')
             # Only the shell cleanup boundary is under test; full real verify and
             # smoke are exercised separately against the delivered archive.
             python=release/'python/bin/python3';python.write_text('#!/bin/sh\nexit 0\n');python.chmod(0o755)
             code=block.replace("release_id='填写 releases 中保留的完整版本名'","release_id='old'")
-            code=code.replace('ln -s -- "releases/$release_id" "$link"','printf user-data > "$link"\nprintf "%s" "$link" > "$HOME/collision-path"\nln -s -- "releases/$release_id" "$link"')
+            code=code.replace('ln -sT -- "releases/$release_id" "$link"','printf user-data > "$link"\nprintf "%s" "$link" > "$HOME/collision-path"\nln -sT -- "releases/$release_id" "$link"')
             result=subprocess.run(['/bin/bash','--noprofile','--norc','-c',code],env={**os.environ,'HOME':str(home)},text=True,capture_output=True)
             self.assertNotEqual(result.returncode,0)
             collision=Path((home/'collision-path').read_text())
@@ -165,7 +166,7 @@ class RollbackDocumentationTests(unittest.TestCase):
         block=re.findall(r'```bash\n(.*?)```',(root/'packaging/offline/README.zh-CN.md').read_text(),re.S)[3]
         for mode in ('verify_failure','foreign_lock','INT','TERM','before_owned_flag','after_commit','replaced_lock'):
             with self.subTest(mode=mode),tempfile.TemporaryDirectory() as temp:
-                home=Path(temp);prefix=home/'.local/share/qbox';release=prefix/'releases/old';(release/'python/bin').mkdir(parents=True);(release/'metadata').mkdir();(prefix/'releases/current').mkdir()
+                home=Path(temp);prefix=home/'.local/share/qbox';release=prefix/'releases/old';(release/'python/bin').mkdir(parents=True);(release/'metadata').mkdir();(prefix/'releases/current/metadata').mkdir(parents=True);(prefix/'releases/current/metadata/installed.json').write_text('{}')
                 (prefix/'current').symlink_to('releases/current');(prefix/'sentinel').write_text('user-data')
                 (prefix/'.qbox-root').write_text(f'schema_version=1\nuid={os.getuid()}\nprefix={prefix}\n');(release/'metadata/installed.json').write_text('{}')
                 python=release/'python/bin/python3';python.write_text('#!/bin/sh\nexit '+('7' if mode=='verify_failure' else '0')+'\n');python.chmod(0o755)

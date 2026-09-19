@@ -355,17 +355,8 @@ def _supplemental_materials(cache: Path, output: Path, sources: list) -> dict:
     for item in sources:
         source=item['source']
         archive=cache/'sha256'/source['sha256']
-        if not archive.exists():
-            from .resolve import cache_asset
-            failures=[]
-            for url in [source['url'],*item.get('retrieval_urls',[])]:
-                try:
-                    cache_asset(url,source['sha256'],cache/'sha256')
-                    break
-                except (OSError,ValueError) as error:
-                    failures.append(str(error))
-            else:
-                raise ValueError('cannot acquire pinned material '+source['filename']+': '+'; '.join(failures))
+        if not archive.is_file() or archive.is_symlink():
+            raise ValueError('missing pinned material; run resolve --acquire-locked-materials: '+source['filename'])
         if _digest(archive)!=source['sha256']:
             raise ValueError('supplemental source hash mismatch: '+item['name'])
         key='sources/'+source['filename']

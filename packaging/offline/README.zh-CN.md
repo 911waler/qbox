@@ -52,7 +52,7 @@ release=$(readlink -f -- "$prefix/current")
 "$release/python/bin/python3" -I -B "$release/metadata/checks/verify.py" \
   --release "$release" --manifest "$release/metadata/manifest.json" --phase reuse
 work=$(mktemp -d)
-"$release/python/bin/python3" -I -B "$release/metadata/checks/smoke.py" \
+env -u DISPLAY "$release/python/bin/python3" -I -B "$release/metadata/checks/smoke.py" \
   --release "$release" --work "$work/smoke"
 ```
 
@@ -81,6 +81,11 @@ actual=$(sha256sum < "$prefix/.qbox-root")
 release="$prefix/releases/$release_id"
 [[ -d $release && ! -L $release && -O $release ]]
 [[ -f $release/metadata/installed.json && ! -L $release/metadata/installed.json ]]
+release_identity=$(stat -c '%d:%i' -- "$release")
+installed_identity=$(stat -c '%d:%i' -- "$release/metadata/installed.json")
+root_id=$(stat -c '%d:%i' -- "$prefix")
+marker_id=$(stat -c '%d:%i' -- "$prefix/.qbox-root")
+releases_id=$(stat -c '%d:%i' -- "$prefix/releases")
 lock="$prefix/.install-lock"
 mkdir -- "$lock"   # 失败即停止，绝不抢占现有锁
 lock_id=$(stat -c '%d:%i' -- "$lock")
@@ -88,13 +93,44 @@ lock_token="manual-rollback $$ $lock_id"
 printf '%s\n' "$lock_token" > "$lock/owner"
 link="$prefix/.rollback.$$"
 link_owned=0
+current_id=''
+current_value=''
+root_owned() {
+  [[ -d $prefix && ! -L $prefix && -O $prefix && $(stat -c '%d:%i' -- "$prefix") == "$root_id" &&
+     -f $prefix/.qbox-root && ! -L $prefix/.qbox-root && -O $prefix/.qbox-root &&
+     $(stat -c '%d:%i' -- "$prefix/.qbox-root") == "$marker_id" &&
+     -d $prefix/releases && ! -L $prefix/releases && -O $prefix/releases &&
+     $(stat -c '%d:%i' -- "$prefix/releases") == "$releases_id" &&
+     -d $release && ! -L $release && -O $release &&
+     $(stat -c '%d:%i' -- "$release") == "$release_identity" &&
+     -f $release/metadata/installed.json && ! -L $release/metadata && ! -L $release/metadata/installed.json &&
+     $(stat -c '%d:%i' -- "$release/metadata/installed.json") == "$installed_identity" ]] || return 1
+  actual=$(sha256sum < "$prefix/.qbox-root")
+  [[ ${expected%% *} == "${actual%% *}" ]]
+}
+lock_held() {
+  root_owned && [[ -d $lock && ! -L $lock && -O $lock &&
+    $(stat -c '%d:%i' -- "$lock") == "$lock_id" &&
+    -f $lock/owner && ! -L $lock/owner && -O $lock/owner &&
+    $(cat -- "$lock/owner") == "$lock_token" ]]
+}
+managed_current() {
+  [[ -L $prefix/current && -O $prefix/current ]] || return 1
+  local target name
+  target=$(readlink -- "$prefix/current")
+  name=${target#releases/}
+  [[ $target == releases/* && -n $name && $name != */* && $name != . && $name != .. &&
+     -d $prefix/releases/$name && ! -L $prefix/releases/$name && -O $prefix/releases/$name &&
+     -f $prefix/releases/$name/metadata/installed.json &&
+     ! -L $prefix/releases/$name/metadata && ! -L $prefix/releases/$name/metadata/installed.json &&
+     -O $prefix/releases/$name/metadata/installed.json ]]
+}
 link_id=''
 cleanup() {
-  if (( link_owned )) && [[ -L $link && $(stat -c '%d:%i' -- "$link") == "$link_id" ]]; then
+  if root_owned && (( link_owned )) && [[ -L $link && $(stat -c '%d:%i' -- "$link") == "$link_id" && $(readlink -- "$link") == "releases/$release_id" ]]; then
     rm -- "$link"
   fi
-  if [[ -d $lock && ! -L $lock && $(stat -c '%d:%i' -- "$lock") == "$lock_id" &&
-        -f $lock/owner && ! -L $lock/owner && $(cat -- "$lock/owner") == "$lock_token" ]]; then
+  if lock_held; then
     rm -- "$lock/owner"
     rmdir -- "$lock"
   fi
@@ -102,17 +138,30 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+lock_held
+managed_current
+current_id=$(stat -c '%d:%i' -- "$prefix/current")
+current_value=$(readlink -- "$prefix/current")
 "$release/python/bin/python3" -I -B "$release/metadata/checks/verify.py" \
   --release "$release" --manifest "$release/metadata/manifest.json" --phase reuse
 work=$(mktemp -d)
-"$release/python/bin/python3" -I -B "$release/metadata/checks/smoke.py" \
+env -u DISPLAY "$release/python/bin/python3" -I -B "$release/metadata/checks/smoke.py" \
   --release "$release" --work "$work/smoke"
-ln -s -- "releases/$release_id" "$link"
+ln -sT -- "releases/$release_id" "$link"
 link_id=$(stat -c '%d:%i' -- "$link")
 link_owned=1
+# 验证期间可能失去归属；紧邻提交点再次核对，不覆盖变化后的对象。
+lock_held
+managed_current
+[[ $(stat -c '%d:%i' -- "$prefix/current") == "$current_id" &&
+   $(readlink -- "$prefix/current") == "$current_value" &&
+   -L $link && $(stat -c '%d:%i' -- "$link") == "$link_id" &&
+   $(readlink -- "$link") == "releases/$release_id" ]]
 mv -Tf -- "$link" "$prefix/current"
 ```
 
+自检与回退 smoke 仅在该进程中清除 DISPLAY，适用于图形登录会话。
+同一用户的恶意并发进程不属于安全隔离承诺；若发现对象归属变化则停止，并保留无法证明归属的残留。
 在记录临时链接归属之前中断，可能保守地留下本次 `.rollback.*`；不要删除未经核验的同名路径。
 SIGKILL 或断电可能留下 `.install-lock`、`.stage.*`、`.current.*`。先阅读锁内
 owner，核实 PID/进程组已结束、目录所有者、根标记、current 和版本标记，并验证
@@ -140,7 +189,7 @@ owner，核实 PID/进程组已结束、目录所有者、根标记、current �
 ## 维护者资料
 
 正式用户交付形式为这个 tar.gz，验证容器和 VM 仅用于维护者。
-构建流程为 resolve → 审阅固定锁 → audit → 两次本地 build → matrix → gate。
+构建流程为 resolve → 审阅固定锁并显式获取材料 → audit → audit-promote → 两次本地 build → matrix → gate。
 构建只接受干净提交和完整固定缓存，不下载材料。产品、锁、安装器、自检或本 README
 改变后需重建并重新验收最终包。包外报告可晚于构建提交，但不能改写包的 source_commit。
 原始审计全部材料均保留；LicenseRef-qbox-supplemental-audited-material 是聚合索引，

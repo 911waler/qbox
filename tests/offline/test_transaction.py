@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import shutil
 import signal
+import sys
+import shlex
 import subprocess
 import tempfile
 import time
@@ -12,7 +14,7 @@ import unittest
 
 from test_bootstrap import INSTALL, ENV, make_bundle, hash_bundle
 
-PYTHON = '/opt/nwu911/envs/qetoolkit-python/current/bin/python'
+PYTHON = shlex.quote(shlex.quote(sys.executable))
 RID = '0.1.0-' + 'a'*64
 
 

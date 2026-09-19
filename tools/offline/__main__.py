@@ -23,6 +23,11 @@ def _parser() -> argparse.ArgumentParser:
         "--policy", type=Path, default=Path("packaging/offline/policy.json")
     )
     resolve.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
+    resolve.add_argument('--acquire-locked-materials', action='store_true',
+                         help='acquire only reviewed licenses.lock.json assets; do not re-resolve wheels/runtime')
+    promote = commands.add_parser('audit-promote', help='validate and publish static audit reports/materials to a new cache/audit')
+    promote.add_argument('--audit', type=Path, required=True)
+    promote.add_argument('--cache', type=Path, default=Path('build/offline/cache'))
     build = commands.add_parser("build", help="assemble a deterministic candidate from local fixed inputs")
     build.add_argument("--cache", type=Path, default=Path("build/offline/cache"))
     build.add_argument("--output", type=Path, default=Path("dist/offline"))
@@ -60,6 +65,14 @@ def main(argv=None) -> int:
                 gate(args.candidate, args.evidence)
         except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as error:
             print(f"qbox offline: {error}", file=sys.stderr)
+            return 1
+        return 0
+    if args.command == 'audit-promote':
+        from .build import promote_audit
+        try:
+            print(promote_audit(args.audit, args.cache))
+        except (OSError, ValueError, KeyError, RuntimeError) as error:
+            print(f'qbox offline: {error}', file=sys.stderr)
             return 1
         return 0
     if args.command == "build":
@@ -100,7 +113,12 @@ def main(argv=None) -> int:
         from .resolve import resolve
 
         try:
-            print(json.dumps(resolve(args.policy, args.cache), indent=2))
+            if args.acquire_locked_materials:
+                from .resolve import acquire_locked_materials
+                result = acquire_locked_materials(args.cache, args.policy.parent/'licenses.lock.json')
+            else:
+                result = resolve(args.policy, args.cache)
+            print(json.dumps(result, indent=2))
         except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
             print(f"qbox offline: {error}", file=sys.stderr)
             return 1

@@ -88,15 +88,15 @@ def wheel_closure(wheels, roots, environment):
     # Explicit deterministic target defaults, never maintainer sys_tags/markers.
     defaults = {
         "implementation_name": "cpython",
-        "implementation_version": "3.12.14",
+        "implementation_version": environment.get("python_full_version", ""),
         "os_name": "posix",
         "platform_machine": "x86_64",
         "platform_python_implementation": "CPython",
         "platform_release": "",
         "platform_system": "Linux",
         "platform_version": "",
-        "python_full_version": "3.12.14",
-        "python_version": "3.12",
+        "python_full_version": "",
+        "python_version": ".".join(environment.get("python_full_version", "3.12").split(".")[:2]),
         "sys_platform": "linux",
     }
     defaults.update(env)
@@ -648,7 +648,8 @@ def resolve(policy: Path, cache: Path) -> dict:
         log="build-download.log",
     )
     build_packages = wheel_closure(
-        sorted(tools_dir.glob("*.whl")), settings["build_requirements"], {}
+        sorted(tools_dir.glob("*.whl")), settings["build_requirements"],
+        runtime_marker_environment(probes["runtime"]["version"])
     )
     record_sources(build_packages, tools_dir)
     build_lock = requirements_bytes(build_packages)
@@ -868,3 +869,26 @@ def resolve(policy: Path, cache: Path) -> dict:
     result = write_candidates(policy.parent, cache / "candidate-locks", contents)
     (cache / "resolution-result.json").write_bytes(canonical_json(result))
     return result
+
+
+def runtime_marker_environment(version):
+    """Derive full-version markers from the selected interpreter's actual probe."""
+    return {'python_full_version': version, 'implementation_version': version,
+            'python_version': '.'.join(version.split('.')[:2])}
+
+
+def acquire_locked_materials(cache: Path, lock: Path) -> list:
+    """Explicit resolution phase: acquire only reviewed hash-pinned source/notices."""
+    records=[]
+    for item in json.loads(Path(lock).read_text()).get('sources', []):
+        source=item['source']; failures=[]
+        for url in [source['url'], *item.get('retrieval_urls', [])]:
+            try:
+                path=cache_asset(url, source['sha256'], Path(cache)/'sha256')
+                break
+            except (OSError, ValueError) as error:
+                failures.append(str(error))
+        else:
+            raise ValueError('cannot acquire pinned material '+source['filename']+': '+'; '.join(failures))
+        records.append({'path': str(path), 'size': path.stat().st_size, 'sha256': sha256_file(path)})
+    return records

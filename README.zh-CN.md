@@ -52,35 +52,37 @@ export QBOX_ONEAPI_ENV_SCRIPT=/path/to/compiler-mpi-environment.sh
 
 ## 使用方法
 
+下列示例使用安装后的 `qbox` 命令；在源码仓库中运行时改用 `./qbox`。
+
 查看可用的命令行选项：
 
 ```bash
-./qbox --help
+qbox --help
 ```
 
 启动交互式工作流菜单：
 
 ```bash
-./qbox
+qbox
 ```
 
 直接运行可用的工作流操作：
 
 ```bash
-./qbox ACTION [INPUT ...]
+qbox ACTION [INPUT ...]
 ```
 
-使用 `./qbox --version` 查看版本号。
+使用 `qbox --version` 查看版本号。
 
 列出任务编号和可读名称，或明确指定一个任务：
 
 ```bash
-./qbox --list
-./qbox --task scf sample.cif
-./qbox --task 11 sample.cif
+qbox --list
+qbox --task scf sample.cif
+qbox --task 11 sample.cif
 ```
 
-原有 0–37 编号、交互菜单、旧参数位置和 PW 快捷选项（例如 `./qbox sample.cif 00`）
+原有 0–37 编号、交互菜单、旧参数位置和 PW 快捷选项（例如 `qbox sample.cif 00`）
 保持兼容。使用 `--task` 后，其余参数视为输入路径，不再解释为旧编号或快捷选项，
 避免数字文件名与任务编号混淆；任务仍可能询问自身所需的参数。安装后也可通过
 `python -m qbox` 启动。

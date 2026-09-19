@@ -212,8 +212,8 @@ def _verify_native_coverage(cache, dependencies, report):
         raise ValueError('historical auditwheel coverage differs from delivered native wheels')
 
 
-def _audit_inputs(cache, locks, runtime, dependencies):
-    base=cache/'audit'
+def _audit_inputs(cache, locks, runtime, dependencies, *, base=None):
+    base=cache/'audit' if base is None else base
     descriptor=_json(_input(base,'descriptor.json'))
     for name in ('licenses','elf'):
         if set(descriptor[name])!={'path','sha256','size'}:
@@ -233,6 +233,10 @@ def _audit_inputs(cache, locks, runtime, dependencies):
             raise ValueError('audit does not bind delivered dependency')
     _verify_native_coverage(cache,dependencies,reports['elf'])
     validate_license_inventory(report)
+    for item in descriptor.get('files', {}).values():
+        if set(item) != {'path','sha256','size'}:
+            raise ValueError('audit file descriptor requires path, SHA and size')
+        _input(base,item['path'],item)
     for item in report['materials']:
         _input(base,item['path'],item)
     for item in reports['elf'].get('auditwheel',[]):
@@ -418,3 +422,57 @@ def build(cache: Path, output: Path) -> Path:
                 raise ValueError('source changed during candidate assembly')
             publication.rename(output)
     return output/'candidate.json'
+
+
+def promote_audit(audit: Path, cache: Path) -> Path:
+    """Publish a complete validated audit handoff to a new cache/audit directory.
+
+    The descriptor is the commit marker: an interrupted copy is never consumable.
+    An exclusive directory reservation rejects all existing destinations, including
+    symlinks. Validation occurs in private staging before publication; partial
+    publication is retained for diagnosis instead of deleting uncertain paths.
+    """
+    audit, cache = Path(audit).absolute(), Path(cache).absolute()
+    if audit.is_symlink() or cache.is_symlink():
+        raise ValueError('symlink audit/cache root forbidden')
+    destination = cache/'audit'
+    if destination.exists() or destination.is_symlink():
+        raise ValueError('audit destination exists; use a new cache or review it manually')
+    locks = ROOT/'packaging/offline'
+    runtime = _json(_input(locks,'runtime.lock.json'))
+    dependencies = _json(_input(locks,'dependencies.lock.json'))
+    _input(cache,'python.tar.gz',runtime['normalized'])
+    _runtime_members(cache/'python.tar.gz')
+    for package in dependencies['packages']:
+        _input(cache/'candidate-wheelhouse',package['filename'],package)
+    with tempfile.TemporaryDirectory(prefix='.audit-promote-', dir=cache) as temporary:
+        stage = Path(temporary)
+        descriptor = {}
+        reports = {}
+        for name in ('licenses','elf'):
+            path = _input(audit,name+'.json')
+            reports[name] = _json(path)
+            descriptor[name] = {'path':path.name,'size':path.stat().st_size,'sha256':sha256_file(path)}
+        records = [*descriptor.values(), *reports['licenses']['materials'], *reports['elf']['auditwheel']]
+        descriptor['files'] = {}
+        for record in records:
+            source = _input(audit,record['path'],record)
+            descriptor['files'][record['path']] = {'path':record['path'],'sha256':sha256_file(source),'size':source.stat().st_size}
+            target = stage/record['path']; target.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(source,target)
+        (stage/'descriptor.json').write_bytes(canonical_json(descriptor))
+        # Use precisely the builder's full lock, native coverage and license checks.
+        _audit_inputs(cache,locks,runtime,dependencies,base=stage)
+        destination.mkdir()  # exclusive reservation; never replace an existing path
+        for source in sorted(stage.rglob('*')):
+            if source == stage/'descriptor.json':
+                continue
+            target = destination/source.relative_to(stage)
+            if source.is_dir():
+                target.mkdir(exist_ok=True)
+            else:
+                with source.open('rb') as src, target.open('xb') as dst:
+                    shutil.copyfileobj(src,dst)
+        # Files are all in place before the descriptor becomes visible atomically.
+        os.link(stage/'descriptor.json',destination/'descriptor.json')
+    return destination/'descriptor.json'
