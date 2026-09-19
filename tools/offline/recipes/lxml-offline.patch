@@ -18,3 +18,18 @@
      return download_library(dest_dir, from_location, 'libxslt',
                              version_re, filename, version=version)
  
+@@ -388,6 +388,14 @@
+ 
+ 
+ def download_library(dest_dir, location, name, version_re, filename, version=None):
++    if os.environ.get("QBOX_OFFLINE_BUILD") == "1":
++        if not version:
++            raise ValueError("Offline build requires a fixed version")
++        archive = Path(dest_dir) / (filename % version)
++        digest = ARCHIVE_HASHES[archive.name]
++        if not file_exists(archive, digest=digest):
++            raise ValueError("Missing or mismatched offline source: " + str(archive))
++        return str(archive)
+     if version is None:
+         try:
+             if location.startswith('ftp://'):
