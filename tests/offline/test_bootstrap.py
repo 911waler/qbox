@@ -463,5 +463,55 @@ class ReviewRegressionTests(unittest.TestCase):
                 root.chmod(0o700)
 
 
+class BundleIdentityTests(unittest.TestCase):
+    """Identity must bind delivered bytes before either new install or reuse."""
+    def test_identity_rejects_rehashed_incomplete_or_changed_payload(self):
+        import copy
+        import sys
+        from test_model import complete_manifest
+        from tools.offline.model import canonical_json, release_id, validate_manifest
+        for mutation in ['valid','missing-wheel','changed-byte','changed-size','extra-file']:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);bundle=root/'bundle';bundle.mkdir()
+                manifest=complete_manifest()
+                record=copy.deepcopy(manifest['files'][0])
+                record.update(path='checks/manifest.py')
+                manifest['files'].append(record)
+                for item in manifest['files']:
+                    path=bundle/item['path'];path.parent.mkdir(parents=True,exist_ok=True)
+                    content=((INSTALL.parent/'checks/manifest.py').read_bytes()
+                             if item['path']=='checks/manifest.py' else item['path'].encode())
+                    path.write_bytes(content)
+                    item.update(size=len(content),sha256=hashlib.sha256(content).hexdigest())
+                records={item['path']:item for item in manifest['files']}
+                for item in [manifest['runtime'],*manifest['wheels']]:item.update(records[item['path']])
+                identity=manifest['identity']
+                identity.update(runtime_sha256=manifest['runtime']['sha256'],
+                    qbox_wheel_sha256=manifest['wheels'][0]['sha256'],
+                    dependencies_lock_sha256=records['requirements.lock']['sha256'],
+                    build_requirements_lock_sha256=records['checks/build-requirements.lock']['sha256'],
+                    installer_template_sha256=records['install.sh']['sha256'],
+                    launcher_template_sha256=records['checks/qbox-launcher.sh']['sha256'],
+                    checks={p:r['sha256'] for p,r in records.items() if p.startswith('checks/') and p!='checks/qbox-launcher.sh'},
+                    licenses={p:records[p]['sha256'] for paths in manifest['licenses'].values() for p in paths})
+                manifest['release_id']=release_id(manifest['qbox_version'],identity)
+                validate_manifest(manifest)
+                (bundle/'manifest.json').write_bytes(canonical_json(manifest))
+                wheel=bundle/manifest['wheels'][1]['path']
+                if mutation=='missing-wheel':wheel.unlink()
+                elif mutation=='changed-byte':wheel.write_bytes(b'X'+wheel.read_bytes()[1:])
+                elif mutation=='changed-size':wheel.write_bytes(b'short')
+                elif mutation=='extra-file':(bundle/'checks/unlisted.txt').write_text('not in manifest')
+                hash_bundle(bundle)
+                stage=root/'stage';(stage/'python/bin').mkdir(parents=True)
+                (stage/'python/bin/python3').symlink_to(sys.executable)
+                result=shell('bundle=$1; stage=$2; verify_bundle_files "$bundle" || exit; printf "checksums-ok\\n"; read_bundle_identity',bundle,stage)
+                self.assertIn('checksums-ok',result.stdout)
+                if mutation=='valid':self.assertEqual(result.returncode,0,result.stderr)
+                else:
+                    self.assertNotEqual(result.returncode,0,result.stderr)
+                    self.assertIn('manifest 身份校验失败',result.stderr)
+
+
 if __name__ == '__main__':
     unittest.main()

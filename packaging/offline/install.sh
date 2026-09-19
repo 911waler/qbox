@@ -375,6 +375,20 @@ spec=importlib.util.spec_from_file_location('qbox_manifest',bundle/'checks/manif
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 data=(bundle/'manifest.json').read_bytes(); manifest=json.loads(data)
 module.validate_manifest(manifest)
+# Reuse skips pip/prepared checks, so the complete original delivery must bind
+# to the manifest here, before branching between new and existing releases.
+expected={item['path'] for item in manifest['files']} | {'manifest.json','SHA256SUMS'}
+actual=set()
+for path in bundle.rglob('*'):
+    if path.is_symlink(): raise ValueError('bundle symlink: '+str(path))
+    if path.is_file(): actual.add(path.relative_to(bundle).as_posix())
+    elif not path.is_dir(): raise ValueError('bundle special file: '+str(path))
+if actual != expected:
+    raise ValueError('bundle manifest file inventory mismatch: missing='+repr(sorted(expected-actual))+' extra='+repr(sorted(actual-expected)))
+for item in manifest['files']:
+    path=bundle/item['path']
+    if path.stat().st_size != item['size'] or module.sha256_file(path) != item['sha256']:
+        raise ValueError('bundle manifest size/hash mismatch: '+item['path'])
 print(manifest['release_id']); print(hashlib.sha256(data).hexdigest())
 PY
     ) || { qbox_error 'manifest 身份校验失败'; return 1; }
