@@ -17,6 +17,7 @@ import tarfile
 import tempfile
 import zipfile
 from email.parser import BytesParser
+from packaging.utils import canonicalize_name
 
 from .model import canonical_json, release_id, safe_payload_path, sha256_file, validate_manifest
 from .resolve import wheel_metadata, requirements_bytes, load_cpu_builds
@@ -284,7 +285,7 @@ def build(cache: Path, output: Path) -> Path:
             if set(provenance)!={'url','sha256','filename'}:provenance={'commit':commit}
             add('THIRD_PARTY_LICENSES/'+path,_input(cache/'audit',path,record),provenance=provenance,licenses=sorted(material_licenses[path]),expected=record)
         def component_licenses(name):
-            matches=[c for c in retained if c['id']==name or c['id'].startswith((name+'==',name+'/'))]
+            matches=[c for c in retained if canonicalize_name(c['id'].split('==')[0].split('/')[0])==canonicalize_name(name)]
             if not matches:raise ValueError('missing component license mapping: '+name)
             return sorted({i for c in matches for i in c['license_ids']})
         runtime_ids=sorted({i for c in retained if c['id']=='cpython' or c['id'].startswith(('runtime/','pip')) for i in c['license_ids']})

@@ -144,6 +144,15 @@ class BuildTests(unittest.TestCase):
         descriptor.write_bytes(canonical_json(value))
         with self.assertRaisesRegex(ValueError,'audit does not bind'):self.build()
 
+    def test_license_package_names_are_normalized(self):
+        path=self.cache/'audit/licenses.json';report=json.loads(path.read_text())
+        report['components'][0]['id']='Demo==1.0'
+        path.write_bytes(canonical_json(report))
+        descriptor=self.cache/'audit/descriptor.json';value=json.loads(descriptor.read_text())
+        value['licenses'].update(sha256=sha256_file(path),size=path.stat().st_size)
+        descriptor.write_bytes(canonical_json(value))
+        self.assertTrue(self.build().is_file())
+
     def test_cache_symlink_is_rejected(self):
         path=self.cache/'candidate-wheelhouse'/self.package['filename']
         actual=self.root/'alias.whl';path.rename(actual);path.symlink_to(actual)
