@@ -1,0 +1,403 @@
+{
+  "actual_target_harness_sha256": "c49a6a5efa70efbe10dc327806fa301699efcee64bd345bfa3cd97bfe6bc1e98",
+  "artifact_size": 1115903959,
+  "baseline": {
+    "arch": "x86_64",
+    "cases": {
+      "actual_noexec": "passed",
+      "archive_install": "passed",
+      "full_smoke": "passed",
+      "sse3_negative_control": "passed"
+    },
+    "cpu_flags": [
+      "fpu",
+      "de",
+      "pse",
+      "tsc",
+      "msr",
+      "pae",
+      "mce",
+      "cx8",
+      "apic",
+      "sep",
+      "mtrr",
+      "pge",
+      "mca",
+      "cmov",
+      "pat",
+      "pse36",
+      "clflush",
+      "mmx",
+      "fxsr",
+      "sse",
+      "sse2",
+      "ht",
+      "syscall",
+      "nx",
+      "lm",
+      "constant_tsc",
+      "nopl",
+      "xtopology",
+      "cpuid",
+      "hypervisor",
+      "pti"
+    ],
+    "cpu_model": "qemu64,vendor=GenuineIntel,-sse3,-ssse3,-sse4.1,-sse4.2,-popcnt,-cx16,-lahf_lm,-avx,-avx2,-fma,-f16c,-xsave,-xsaveopt,-3dnowprefetch,-svm",
+    "emulator": "QEMU 8.2.2 TCG",
+    "interfaces": [
+      "lo"
+    ],
+    "kernel": "5.4.0-216-generic",
+    "negative_control": {
+      "instruction": "HADDPS",
+      "signal": "SIGILL"
+    },
+    "negative_returncode": -4,
+    "network_mode": "none",
+    "noexec_denied": true,
+    "noexec_returncode": 1,
+    "platform_id": "ubuntu-20.04",
+    "runtime": {
+      "driver_timeout_seconds": 14400,
+      "elapsed_seconds": 1918.286022955,
+      "finished_at_unix_ns": 1789842865021561511,
+      "noexec_install_timeout_seconds": 3600,
+      "smoke_timeout_seconds": 7200,
+      "source": "actual Docker start/die events",
+      "started_at_unix_ns": 1789840946735538556
+    },
+    "status": "passed",
+    "uid": 1000
+  },
+  "candidate": {
+    "artifact": "qbox-0.1.0-linux-x86_64-offline.tar.gz",
+    "artifact_sha256": "341d8a7abd74af0c404d1a7c6b47dac6b70c4a09de42e0272e60aecf9988057d",
+    "audit_sha256": "162dac03519d720f3ec0eb6d6027bcc0aec2cae6ec404c34364572889cc3fae8",
+    "manifest_sha256": "5a477de5296b1557b65c01167fd107910e79045e7c09802a75d12f8eb6800e64",
+    "release_id": "0.1.0-b981a3ad0ee35ea5450d24a1a985e29ba6664031d5bacbc151015d7f80e60c6d",
+    "schema_version": 1,
+    "source_commit": "9020693e5dbe3979b91216b8b775866021bd958c"
+  },
+  "gate_code_commit": "e3238da",
+  "limitations": [
+    "Containers share the host kernel; only the Ubuntu20 CPU VM uses its own kernel.",
+    "Scientific fixture smoke and loader closure do not claim every external QE/MPI workflow or every native-library API.",
+    "Superseded e9a43fa candidate runs were terminated and are not final acceptance evidence."
+  ],
+  "local_artifact_directory": "dist/task11-final/candidate-1",
+  "local_evidence_directory": "build/offline/task11-final/evidence",
+  "offline_test_commit": "7dc2b0c",
+  "platforms": [
+    {
+      "arch": "x86_64",
+      "artifact_sha256": "341d8a7abd74af0c404d1a7c6b47dac6b70c4a09de42e0272e60aecf9988057d",
+      "awk": "/usr/bin/mawk",
+      "bash": "GNU bash, version 5.0.17(1)-release (x86_64-pc-linux-gnu)",
+      "cases_passed": 13,
+      "engine_image_id": "sha256:7e9558e1203a9a2b0967554abf9ebdc5552f29013b01f6e7271bf2d776d51234",
+      "evidence": {
+        "archive_checksum": {
+          "path": "ubuntu-20.04/archive.sha256",
+          "sha256": "7dfef5618284dec65f822be4367e3f5fca8ed4bf36a0f8f65a8743eea549afe4"
+        },
+        "base_packages": {
+          "path": "ubuntu-20.04/base-packages",
+          "sha256": "12fa8756251d950e4dedd20b5e231e049f72d2616ccf487b7cd0745e9f278a4e"
+        },
+        "engine_inspect": {
+          "path": "ubuntu-20.04/inspect.json",
+          "sha256": "88daba7a83e7515ec0bb25f0d13e53ed80511ba47e2aca38708f543a9586d498"
+        },
+        "report": {
+          "path": "ubuntu-20.04/report.json",
+          "sha256": "99bba954fa93f604e87b09c61bf13122846803aafb0e74d8fcb2ffac9eb88540"
+        },
+        "results": {
+          "path": "ubuntu-20.04/target/results.json",
+          "sha256": "cc97ed6ee080e6d8ac2f266d80a91b0a52e6b3ab6d4f271766bbcb3cce3b0650"
+        },
+        "signals": {
+          "path": "ubuntu-20.04/target/interruption-results.json",
+          "sha256": "9de10a717188fed3fdfcf066017bf84b087902973e2272b2978cfe2401867aad"
+        },
+        "unittest": {
+          "path": "ubuntu-20.04/target/unittest.log",
+          "sha256": "2f6c54e7c154798511efc79c81016c4711423b651d93ebb119b33ec9f3c68b28"
+        }
+      },
+      "finished_at": "2026-09-19T18:37:57.589716+00:00",
+      "glibc": "glibc 2.31",
+      "image_digest": "public.ecr.aws/ubuntu/ubuntu@sha256:7e9558e1203a9a2b0967554abf9ebdc5552f29013b01f6e7271bf2d776d51234",
+      "kernel": "7.0.0-28-generic",
+      "kernel_scope": "container shares host kernel",
+      "manifest_sha256": "5a477de5296b1557b65c01167fd107910e79045e7c09802a75d12f8eb6800e64",
+      "network_mode": "none",
+      "os_release": {
+        "ID": "ubuntu",
+        "VERSION_ID": "20.04"
+      },
+      "platform_id": "ubuntu-20.04",
+      "source_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "started_at": "2026-09-19T18:02:29.290763+00:00",
+      "status": "passed",
+      "test_harness_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "test_harness_sha256": "c49a6a5efa70efbe10dc327806fa301699efcee64bd345bfa3cd97bfe6bc1e98",
+      "uid": 1000
+    },
+    {
+      "arch": "x86_64",
+      "artifact_sha256": "341d8a7abd74af0c404d1a7c6b47dac6b70c4a09de42e0272e60aecf9988057d",
+      "awk": "/usr/bin/mawk",
+      "bash": "GNU bash, version 5.1.16(1)-release (x86_64-pc-linux-gnu)",
+      "cases_passed": 13,
+      "engine_image_id": "sha256:8ccaf730badfcec4ba7b5f0ba82419984c224d184deb0e6d994a0f3a19f609e2",
+      "evidence": {
+        "archive_checksum": {
+          "path": "ubuntu-22.04/archive.sha256",
+          "sha256": "7dfef5618284dec65f822be4367e3f5fca8ed4bf36a0f8f65a8743eea549afe4"
+        },
+        "base_packages": {
+          "path": "ubuntu-22.04/base-packages",
+          "sha256": "7550cca4caa8588b932de1ba1e730a2363baee44b8d25ff5fc6cff35f2541dcd"
+        },
+        "engine_inspect": {
+          "path": "ubuntu-22.04/inspect.json",
+          "sha256": "39dfc4f5d2cfd8a6eece0c75fd533560d9e4ab1bda9f7375b90094429cb667cf"
+        },
+        "report": {
+          "path": "ubuntu-22.04/report.json",
+          "sha256": "0146a0dc1ddf93ae64cbf2347ab8bb4aef8f12ef6da9b8a66d6eab971c474fb5"
+        },
+        "results": {
+          "path": "ubuntu-22.04/target/results.json",
+          "sha256": "cc97ed6ee080e6d8ac2f266d80a91b0a52e6b3ab6d4f271766bbcb3cce3b0650"
+        },
+        "signals": {
+          "path": "ubuntu-22.04/target/interruption-results.json",
+          "sha256": "c71b0634a33008dda9011dc46f76f3b36e96de5d4d4e0447d6c00b4446a71b13"
+        },
+        "unittest": {
+          "path": "ubuntu-22.04/target/unittest.log",
+          "sha256": "701263f3b6d65683efb3991c0926c5e390ac095da417378891d923f45881d2c6"
+        }
+      },
+      "finished_at": "2026-09-19T18:38:09.812708+00:00",
+      "glibc": "glibc 2.35",
+      "image_digest": "public.ecr.aws/ubuntu/ubuntu@sha256:8ccaf730badfcec4ba7b5f0ba82419984c224d184deb0e6d994a0f3a19f609e2",
+      "kernel": "7.0.0-28-generic",
+      "kernel_scope": "container shares host kernel",
+      "manifest_sha256": "5a477de5296b1557b65c01167fd107910e79045e7c09802a75d12f8eb6800e64",
+      "network_mode": "none",
+      "os_release": {
+        "ID": "ubuntu",
+        "VERSION_ID": "22.04"
+      },
+      "platform_id": "ubuntu-22.04",
+      "source_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "started_at": "2026-09-19T18:02:29.291748+00:00",
+      "status": "passed",
+      "test_harness_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "test_harness_sha256": "c49a6a5efa70efbe10dc327806fa301699efcee64bd345bfa3cd97bfe6bc1e98",
+      "uid": 1000
+    },
+    {
+      "arch": "x86_64",
+      "artifact_sha256": "341d8a7abd74af0c404d1a7c6b47dac6b70c4a09de42e0272e60aecf9988057d",
+      "awk": "/usr/bin/mawk",
+      "bash": "GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu)",
+      "cases_passed": 13,
+      "engine_image_id": "sha256:22a8228e1e48cbe7e0e0f2056e752ffb8a35950cda150a4e5e16417200bec648",
+      "evidence": {
+        "archive_checksum": {
+          "path": "ubuntu-24.04/archive.sha256",
+          "sha256": "7dfef5618284dec65f822be4367e3f5fca8ed4bf36a0f8f65a8743eea549afe4"
+        },
+        "base_packages": {
+          "path": "ubuntu-24.04/base-packages",
+          "sha256": "f543574c11c0c6bfcd83818cf83da54642d2fa6b603e8298458cc2eca6bdb4d5"
+        },
+        "engine_inspect": {
+          "path": "ubuntu-24.04/inspect.json",
+          "sha256": "cc6850f23f4b05cd2c15199166cb5e2d4d51fc0ff81671c8318b4ca24a8cb855"
+        },
+        "report": {
+          "path": "ubuntu-24.04/report.json",
+          "sha256": "dfbb5a1c41ea100c61a42416b9644a6a6a8c236112cf2d2a48a6174c39daf933"
+        },
+        "results": {
+          "path": "ubuntu-24.04/target/results.json",
+          "sha256": "cc97ed6ee080e6d8ac2f266d80a91b0a52e6b3ab6d4f271766bbcb3cce3b0650"
+        },
+        "signals": {
+          "path": "ubuntu-24.04/target/interruption-results.json",
+          "sha256": "d60ea95e4f7e273f36dbfe95be35102256270248c11e3d1ee7a670da142c3ee1"
+        },
+        "unittest": {
+          "path": "ubuntu-24.04/target/unittest.log",
+          "sha256": "7a01b7c105024768a963c0bcdfd6a8093acc11f59f6b12f613813d15cefd140c"
+        }
+      },
+      "finished_at": "2026-09-19T18:35:03.643410+00:00",
+      "glibc": "glibc 2.39",
+      "image_digest": "public.ecr.aws/ubuntu/ubuntu@sha256:22a8228e1e48cbe7e0e0f2056e752ffb8a35950cda150a4e5e16417200bec648",
+      "kernel": "7.0.0-28-generic",
+      "kernel_scope": "container shares host kernel",
+      "manifest_sha256": "5a477de5296b1557b65c01167fd107910e79045e7c09802a75d12f8eb6800e64",
+      "network_mode": "none",
+      "os_release": {
+        "ID": "ubuntu",
+        "VERSION_ID": "24.04"
+      },
+      "platform_id": "ubuntu-24.04",
+      "source_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "started_at": "2026-09-19T18:02:29.293321+00:00",
+      "status": "passed",
+      "test_harness_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "test_harness_sha256": "c49a6a5efa70efbe10dc327806fa301699efcee64bd345bfa3cd97bfe6bc1e98",
+      "uid": 1000
+    },
+    {
+      "arch": "x86_64",
+      "artifact_sha256": "341d8a7abd74af0c404d1a7c6b47dac6b70c4a09de42e0272e60aecf9988057d",
+      "awk": "/usr/bin/gawk",
+      "bash": "GNU bash, version 4.4.20(1)-release (x86_64-redhat-linux-gnu)",
+      "cases_passed": 13,
+      "engine_image_id": "sha256:e8a49c5403b687db05d4d67333fa45808fbe74f36e683cec7abb1f7d0f2338c6",
+      "evidence": {
+        "archive_checksum": {
+          "path": "rocky-8/archive.sha256",
+          "sha256": "7dfef5618284dec65f822be4367e3f5fca8ed4bf36a0f8f65a8743eea549afe4"
+        },
+        "base_packages": {
+          "path": "rocky-8/base-packages",
+          "sha256": "6910fe95a997e67b9b61c98b730aada615957b6721ae05b52317aa13e77fb725"
+        },
+        "engine_inspect": {
+          "path": "rocky-8/inspect.json",
+          "sha256": "6842b08677de630b9eedc6084d5bff8d372628700aebbb3e2a30c1f3ffdb03a3"
+        },
+        "report": {
+          "path": "rocky-8/report.json",
+          "sha256": "eb820cf40e63d743da8ee6b6777939434e34ae1b3e89fc9a91dc02b6b4f0c83c"
+        },
+        "results": {
+          "path": "rocky-8/target/results.json",
+          "sha256": "cc97ed6ee080e6d8ac2f266d80a91b0a52e6b3ab6d4f271766bbcb3cce3b0650"
+        },
+        "signals": {
+          "path": "rocky-8/target/interruption-results.json",
+          "sha256": "f4b5a29f21a049ed2c40ff226b2a7bca8eed7e228508270d520a63568794026c"
+        },
+        "unittest": {
+          "path": "rocky-8/target/unittest.log",
+          "sha256": "3a410796912184c8930ac9301d709cb30a350057c2016612c692e1b0f8f88e14"
+        }
+      },
+      "finished_at": "2026-09-19T18:38:26.314707+00:00",
+      "glibc": "glibc 2.28",
+      "image_digest": "quay.io/rockylinux/rockylinux@sha256:e8a49c5403b687db05d4d67333fa45808fbe74f36e683cec7abb1f7d0f2338c6",
+      "kernel": "7.0.0-28-generic",
+      "kernel_scope": "container shares host kernel",
+      "manifest_sha256": "5a477de5296b1557b65c01167fd107910e79045e7c09802a75d12f8eb6800e64",
+      "network_mode": "none",
+      "os_release": {
+        "ID": "rocky",
+        "VERSION_ID": "8.10"
+      },
+      "platform_id": "rocky-8",
+      "source_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "started_at": "2026-09-19T18:02:29.293737+00:00",
+      "status": "passed",
+      "test_harness_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "test_harness_sha256": "c49a6a5efa70efbe10dc327806fa301699efcee64bd345bfa3cd97bfe6bc1e98",
+      "uid": 1000
+    },
+    {
+      "arch": "x86_64",
+      "artifact_sha256": "341d8a7abd74af0c404d1a7c6b47dac6b70c4a09de42e0272e60aecf9988057d",
+      "awk": "/usr/bin/gawk",
+      "bash": "GNU bash, version 5.1.8(1)-release (x86_64-redhat-linux-gnu)",
+      "cases_passed": 13,
+      "engine_image_id": "sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f",
+      "evidence": {
+        "archive_checksum": {
+          "path": "rocky-9/archive.sha256",
+          "sha256": "7dfef5618284dec65f822be4367e3f5fca8ed4bf36a0f8f65a8743eea549afe4"
+        },
+        "base_packages": {
+          "path": "rocky-9/base-packages",
+          "sha256": "2b8b7e84a52eae8d02a36f0f8816d68d80505028a74743326d676d632739cacb"
+        },
+        "engine_inspect": {
+          "path": "rocky-9/inspect.json",
+          "sha256": "cb8609a5af1afca21e7ef2bf2a34a2cd65f7fb32d7bb35b4fa918fa9a4ea8b60"
+        },
+        "report": {
+          "path": "rocky-9/report.json",
+          "sha256": "d79ca536508e1731ff0c02d5d31ef4318b37406bf008885d8d14dbbee78a5a94"
+        },
+        "results": {
+          "path": "rocky-9/target/results.json",
+          "sha256": "cc97ed6ee080e6d8ac2f266d80a91b0a52e6b3ab6d4f271766bbcb3cce3b0650"
+        },
+        "signals": {
+          "path": "rocky-9/target/interruption-results.json",
+          "sha256": "6edfb2225d81fc6ff4649fbcd42549cb415c15524847643d335d5cb168d64d36"
+        },
+        "unittest": {
+          "path": "rocky-9/target/unittest.log",
+          "sha256": "e9c317f998b9233a73c8c23a2d9b2217e4872ba1ec83aa2f6a4dc7d1ae5a85bc"
+        }
+      },
+      "finished_at": "2026-09-19T18:38:35.196180+00:00",
+      "glibc": "glibc 2.34",
+      "image_digest": "quay.io/rockylinux/rockylinux@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f",
+      "kernel": "7.0.0-28-generic",
+      "kernel_scope": "container shares host kernel",
+      "manifest_sha256": "5a477de5296b1557b65c01167fd107910e79045e7c09802a75d12f8eb6800e64",
+      "network_mode": "none",
+      "os_release": {
+        "ID": "rocky",
+        "VERSION_ID": "9.8"
+      },
+      "platform_id": "rocky-9",
+      "source_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "started_at": "2026-09-19T18:02:29.294455+00:00",
+      "status": "passed",
+      "test_harness_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+      "test_harness_sha256": "c49a6a5efa70efbe10dc327806fa301699efcee64bd345bfa3cd97bfe6bc1e98",
+      "uid": 1000
+    }
+  ],
+  "product_source_commit": "9020693e5dbe3979b91216b8b775866021bd958c",
+  "publication": "not published; local maintainer acceptance only",
+  "ready_sha256": "2749a47a8e8ed1c0e8c245df566e49198de32d78544afffb2e23e9ccd0c6b4d6",
+  "schema_version": 1,
+  "status": "passed",
+  "supplements": {
+    "baseline-cpu": {
+      "path": "baseline-cpu.json",
+      "sha256": "1cf0e9172251ad1809540ddded2d85d96289790f03bfc0bd501e9c4290dacc70"
+    },
+    "documentation": {
+      "path": "documentation.json",
+      "sha256": "0e6db2c09e5d2bada86fc7dd9203d8835c55fbea884ff09dee480b85cd8180bf"
+    },
+    "elf_loads": {
+      "path": "elf_loads.json",
+      "sha256": "9f7dcf44edef19a54e9f78cdd46afadc59d845eebb3619598f4611515a67c671"
+    },
+    "offline_tests": {
+      "path": "offline_tests.json",
+      "sha256": "27172af05730c900df509b95742c0bd7c185641de9d31402cd20c53156313135"
+    },
+    "regressions": {
+      "path": "regressions.json",
+      "sha256": "d68aea8485ef451c7495547bec135d51bb322f70844f2dbb95a693d427e5daa1"
+    },
+    "reproducibility": {
+      "path": "reproducibility.json",
+      "sha256": "68bf9e1490d1b3624cc8a360c1fe982c81ed83c83dd87c95263606a3a6fa31d1"
+    }
+  }
+}

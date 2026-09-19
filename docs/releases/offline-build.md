@@ -49,5 +49,10 @@ source_commit, status=passed, failures=[], skipped=[], explicit passed cases and
 SHA256 references to real logs. Reproducibility records both archive_sha256s.
 ELF loads record exact expected_count/resolved_count=249 and unresolved=[] plus
 all member paths/hashes and resolved library origins in the minimal diagnostic
-container. Gate rejection is expected for missing, failed, skipped or not_run
-records. JSON reports are local evidence, not cryptographic third-party attestations.
+container. The accepted diagnostic runs the actual bundled Python with `-I -B`,
+imports extension prerequisites, and records `LD_DEBUG=libs` plus actual mapped
+file SHA256 values. Do not replace this with running an extension as a standalone
+main ELF, or force success with a global `LD_LIBRARY_PATH`. Each tested member
+must actually appear among the mapped bytes; system providers must match the
+previously locked baseline hashes. Gate rejection is expected for missing, failed,
+skipped or not_run records. JSON reports are local evidence, not cryptographic third-party attestations.
