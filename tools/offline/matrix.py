@@ -317,6 +317,17 @@ def gate(candidate: Path, evidence: Path) -> None:
         require(not re.search(r'FAIL:|FAILED|skipped=',regressions), 'original regression failures/skip')
         units=read(_checked_reference(evidence,supplements['offline_tests']['evidence']['raw']))
         require(units['tests_run']>=196 and units['failures']==units['errors']==0 and units['skipped']==[], 'offline unit failures/count/skip')
+        # Compare the actual verbose log with discovery; a plausible count alone
+        # must not hide an omitted offline regression or duplicate test execution.
+        import unittest
+        def test_ids(suite):
+            for item in suite:
+                if isinstance(item,unittest.TestSuite):yield from test_ids(item)
+                else:yield item.id()
+        expected_tests={name for name in test_ids(unittest.TestLoader().discover(str(ROOT/'tests/offline'))) if not name.startswith('test_end_to_end.')}
+        unit_log=_checked_reference(evidence,supplements['offline_tests']['evidence']['log']).read_text()
+        actual_tests=re.findall(r'^test_\w+ \(([^)]+)\) \.\.\. ok$',unit_log,re.M)
+        require(set(actual_tests)==expected_tests and len(actual_tests)==len(expected_tests)==units['tests_run'], 'omitted/duplicate offline tests')
         gate_tests=_checked_reference(evidence,supplements['offline_tests']['evidence']['gate']).read_text()
         require(re.search(r'Ran [1-9][0-9]* tests.*\n\nOK\s*$',gate_tests,re.S) and 'skipped=' not in gate_tests, 'gate unit tests')
         elf=supplements['elf_loads']
