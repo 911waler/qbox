@@ -278,7 +278,8 @@ extract_runtime() (
     [[ "${actual%% *}" == "$QBOX_RUNTIME_SHA256" ]] || { qbox_error '运行时归档副本 SHA256 不匹配'; return 1; }
     inspect_runtime_archive "$runtime_copy" || return 1
     tar --extract --gzip --file "$runtime_copy" --directory "$stage" --no-same-owner --no-same-permissions --delay-directory-restore || { qbox_error '运行时归档展开失败'; return 1; }
-    [[ -f "$stage/python/bin/python3" && ! -L "$stage/python/bin/python3" && -x "$stage/python/bin/python3" && -f "$stage/python/bin/python3.12" && ! -L "$stage/python/bin/python3.12" && -x "$stage/python/bin/python3.12" ]] || { qbox_error '运行时归档缺少必需解释器'; return 1; }
+    [[ -f "$stage/python/bin/python3" && ! -L "$stage/python/bin/python3" && -f "$stage/python/bin/python3.12" && ! -L "$stage/python/bin/python3.12" ]] || { qbox_error '运行时归档缺少必需解释器'; return 1; }
+    [[ -x "$stage/python/bin/python3" && -x "$stage/python/bin/python3.12" ]] || { qbox_error '包内解释器存在但不可执行；请检查执行权限及安装文件系统的 noexec 挂载选项'; return 1; }
     # The first Python executed is the verified bundled interpreter, in isolated mode.
     "$stage/python/bin/python3" -I -B -c 'import os, sys; v = os.confstr("CS_GNU_LIBC_VERSION"); assert v and v.startswith("glibc "); assert tuple(map(int, v.split()[1].split("."))) >= (2, 28); assert sys.version_info[:2] == (3, 12)' || { qbox_error '包内 Python/glibc 复核失败'; return 1; }
 )

@@ -144,6 +144,19 @@ def hash_bundle(root):
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_present_nonexecutable_interpreter_reports_execution_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);bundle=root/'bundle';stage=root/'stage';stage.mkdir()
+            entries=[('python',tarfile.DIRTYPE,b''),('python/bin',tarfile.DIRTYPE,b''),
+                     ('python/bin/python3',tarfile.REGTYPE,b'#!/bin/sh\nexit 0\n'),
+                     ('python/bin/python3.12',tarfile.REGTYPE,b'#!/bin/sh\nexit 0\n')]
+            make_bundle(bundle,entries)
+            result=shell('verify_bundle_files "$1" && extract_runtime "$1/runtime/python.tar.gz" "$2"',bundle,stage)
+            self.assertNotEqual(result.returncode,0)
+            self.assertTrue((stage/'python/bin/python3').is_file())
+            self.assertIn('不可执行',result.stderr)
+            self.assertIn('noexec',result.stderr)
+
     def test_safe_runtime_inspection_and_inventory(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)/'bundle'
