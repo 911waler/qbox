@@ -25,7 +25,7 @@ from packaging.tags import cpython_tags, compatible_tags
 from packaging.utils import canonicalize_name, parse_wheel_filename
 from packaging.version import Version
 
-from .archive import normalize_runtime, preserve_runtime_materials
+from .archive import normalize_runtime, preserve_runtime_materials, read_newc, repair_runtime
 from .model import canonical_json, sha256_file
 
 
@@ -391,13 +391,13 @@ def discover_runtime(settings, metadata):
     return chosen, [provenance]
 
 
-_RUNTIME_PROBE = """import ctypes, json, pip, sqlite3, ssl, sys, sysconfig, zlib
+_RUNTIME_PROBE = """import ctypes, json, pip, sqlite3, ssl, sys, sysconfig, zlib, tkinter
 assert sys.version_info[:2] == (3, 12)
 assert ctypes.CDLL(None)
 assert sqlite3.connect(':memory:').execute('select 1').fetchone() == (1,)
 assert ssl.create_default_context()
 assert sysconfig.get_path('stdlib').startswith(sys.prefix)
-print(json.dumps({'version':sys.version.split()[0], 'prefix':sys.prefix, 'ssl':ssl.OPENSSL_VERSION,'sqlite':sqlite3.sqlite_version,'pip':pip.__version__,'stdlib':sysconfig.get_path('stdlib')}))
+print(json.dumps({'version':sys.version.split()[0], 'prefix':sys.prefix, 'ssl':ssl.OPENSSL_VERSION,'sqlite':sqlite3.sqlite_version,'pip':pip.__version__,'stdlib':sysconfig.get_path('stdlib'),'zlib':zlib.ZLIB_RUNTIME_VERSION,'tcl':tkinter.Tcl().eval('info patchlevel')}))
 """
 
 
@@ -419,6 +419,52 @@ def bootstrap_records(inventory):
             }
         )
     return sorted(records, key=lambda item: item["name"])
+
+
+def prepare_native_repairs(settings, cache, root, image):
+    """Fetch, verify and execute only pinned maintainer repair inputs."""
+    inputs = settings["native_repairs"]
+    paths = {}
+    for key in ("patchelf", "zlib_rpm", "zlib_srpm"):
+        source = inputs[key]["source"]
+        paths[key] = cache_asset(source["url"], source["sha256"], cache / "sha256")
+    def inside(path):
+        return "/work/" + str(path.relative_to(root))
+    rpm_paths = [inside(paths[key]) for key in ("zlib_rpm", "zlib_srpm")]
+    # Trust roots come from the digest-pinned Rocky image; import is confined to
+    # an ephemeral container and never changes the maintainer RPM database.
+    command = ["/bin/sh", "-c", 'mkdir /tmp/qbox-rpmdb && rpmkeys --dbpath /tmp/qbox-rpmdb --import /etc/pki/rpm-gpg/RPM-GPG-KEY-rockyofficial && rpmkeys --dbpath /tmp/qbox-rpmdb -Kv "$@"', "rpm-verify", *rpm_paths]
+    verification = subprocess.run(container_command(image,root,command,network=False),
+        check=True,capture_output=True,text=True)
+    if "NOT OK" in verification.stdout or "NOKEY" in verification.stdout or "Signature" not in verification.stdout:
+        raise ValueError("native library RPM signature verification failed")
+    (cache / "native-rpm-verification.log").write_text(verification.stdout)
+    payload = subprocess.run(container_command(image,root,["rpm2cpio",rpm_paths[0]],network=False),
+        check=True,capture_output=True).stdout
+    files = read_newc(payload)
+    library = files[inputs["zlib_rpm"]["library_member"]]
+    license_body = files[inputs["zlib_rpm"]["license_member"]]
+    from hashlib import sha256
+    if sha256(library).hexdigest()!=inputs["zlib_rpm"]["library_sha256"]:
+        raise ValueError("pinned libz ELF digest mismatch")
+    if sha256(license_body).hexdigest()!=inputs["zlib_rpm"]["license_sha256"]:
+        raise ValueError("pinned libz license digest mismatch")
+    with zipfile.ZipFile(paths["patchelf"]) as wheel:
+        binary = wheel.read(inputs["patchelf"]["member"])
+    if sha256(binary).hexdigest()!=inputs["patchelf"]["binary_sha256"]:
+        raise ValueError("patchelf binary digest mismatch")
+    tool = cache / "native-tools/patchelf"
+    tool.parent.mkdir(exist_ok=True)
+    tool.write_bytes(binary)
+    tool.chmod(0o755)
+    normalized = normalize_runtime(cache / "sha256" / inputs["runtime_upstream_sha256"], cache / "python-unrepaired.tar.gz")
+    repair = repair_runtime(cache / "python-unrepaired.tar.gz",cache / "python.tar.gz",tool,
+        {"python/lib/libz.so.1":library,"python/licenses/LICENSE.libz-system.txt":license_body})
+    repair["inputs"] = inputs
+    repair["rpm_verification_sha256"] = sha256_file(cache / "native-rpm-verification.log")
+    (cache / "native-repair.json").write_bytes(canonical_json(repair))
+    normalized.update({key:repair[key] for key in ("sha256","size")})
+    return normalized, repair
 
 
 def resolve(policy: Path, cache: Path) -> dict:
@@ -480,7 +526,13 @@ def resolve(policy: Path, cache: Path) -> dict:
     companion_materials = preserve_runtime_materials(
         companion_archive, cache / "runtime-license-materials", companion_source
     )
-    normalized = normalize_runtime(archive, cache / "python.tar.gz")
+    repair = None
+    if "native_repairs" in settings:
+        if settings["native_repairs"]["runtime_upstream_sha256"] != upstream["sha256"]:
+            raise ValueError("native repair pins do not match selected runtime")
+        normalized, repair = prepare_native_repairs(settings, cache, root, image)
+    else:
+        normalized = normalize_runtime(archive, cache / "python.tar.gz")
     (cache / "normalization.json").write_bytes(canonical_json(normalized))
     import tarfile
 
@@ -735,6 +787,8 @@ def resolve(policy: Path, cache: Path) -> dict:
         "bootstrap_packages": bootstrap_records(bootstrap),
         "probes": probes,
     }
+    if repair is not None:
+        runtime_lock["native_repair"] = repair
     deps = {
         "schema_version": 1,
         "extras": config["extras"],

@@ -220,3 +220,101 @@ def preserve_runtime_materials(upstream: Path, output: Path, source: dict) -> di
             os.replace(stage / row["path"], output / row["path"])
         os.replace(index, output / "index.json")
     return result
+
+
+def read_newc(data: bytes) -> dict[str, bytes]:
+    """Read regular files from rpm2cpio newc output without extracting any paths."""
+    import stat
+
+    position, files, seen = 0, {}, set()
+    while position + 110 <= len(data):
+        header = data[position:position + 110]
+        if header[:6] not in (b'070701', b'070702'):
+            raise ValueError('invalid cpio header')
+        fields = [int(header[6 + i * 8:14 + i * 8], 16) for i in range(13)]
+        mode, size, namesize = fields[1], fields[6], fields[11]
+        position += 110
+        if not namesize or position + namesize > len(data):
+            raise ValueError('truncated cpio filename')
+        raw = data[position:position + namesize]
+        if raw[-1:] != b'\0':
+            raise ValueError('unterminated cpio filename')
+        name = raw[:-1].decode('utf-8')
+        position += namesize
+        position += -position % 4
+        if name == 'TRAILER!!!':
+            return files
+        name = name.removeprefix('./')
+        safe_payload_path(name)
+        if name in seen:
+            raise ValueError('duplicate cpio member: ' + name)
+        seen.add(name)
+        if position + size > len(data):
+            raise ValueError('truncated cpio data')
+        if stat.S_ISREG(mode):
+            files[name] = data[position:position + size]
+        elif not (stat.S_ISDIR(mode) or stat.S_ISLNK(mode)):
+            raise ValueError('unsupported cpio member: ' + name)
+        position += size
+        position += -position % 4
+    raise ValueError('missing cpio trailer')
+
+
+def repair_runtime(source: Path, output: Path, patchelf: Path, additions: dict) -> dict:
+    """Apply the two approved Tcl RPATH repairs and add pinned libz bytes.
+
+    Input is the validated normalized archive; source is retained. No original
+    binaries or global environment are modified. The second normalization keeps
+    the deterministic archive contract unchanged.
+    """
+    import hashlib
+    import io
+
+    targets = {'python/lib/libtcl9.0.so', 'python/lib/libtcl9tk9.0.so'}
+    changes = []
+    with tempfile.TemporaryDirectory(prefix='qbox-runtime-repair-') as temporary:
+        directory = Path(temporary)
+        intermediate = directory / 'repaired.tar'
+        with _seekable_tar(source) as archive, tarfile.open(intermediate, 'w') as result:
+            seen = set()
+            for member in archive:
+                safe_payload_path(member.name)
+                if not (member.isfile() or member.isdir()) or member.name in seen:
+                    raise ValueError('runtime repair requires normalized input')
+                seen.add(member.name)
+                if member.name in additions:
+                    raise ValueError('runtime addition conflicts: ' + member.name)
+                if member.name not in targets:
+                    result.addfile(member, archive.extractfile(member) if member.isfile() else None)
+                    continue
+                binary = directory / PurePosixPath(member.name).name
+                before = archive.extractfile(member).read()
+                binary.write_bytes(before)
+                existing = subprocess.run([str(patchelf), '--print-rpath', str(binary)],
+                    check=True, capture_output=True, text=True).stdout.strip()
+                if existing != ('/tools/deps/lib:/tools/deps/lib' if member.name.endswith('libtcl9tk9.0.so') else '/tools/deps/lib'):
+                    raise ValueError('unexpected upstream RPATH: ' + member.name)
+                subprocess.run([str(patchelf), '--force-rpath', '--set-rpath', '$ORIGIN', str(binary)],
+                    check=True, capture_output=True)
+                after = binary.read_bytes()
+                member.size = len(after)
+                result.addfile(member, io.BytesIO(after))
+                changes.append({'path':member.name, 'operation':'RPATH '+existing+' -> $ORIGIN',
+                    'before_sha256':hashlib.sha256(before).hexdigest(),
+                    'after_sha256':hashlib.sha256(after).hexdigest()})
+            if not targets <= seen:
+                raise ValueError('runtime repair target missing')
+            for name, data in sorted(additions.items()):
+                safe_payload_path(name)
+                if not name.startswith('python/'):
+                    raise ValueError('runtime addition outside python')
+                info=tarfile.TarInfo(name)
+                info.mode=0o644
+                info.size=len(data)
+                result.addfile(info,io.BytesIO(data))
+                changes.append({'path':name,'operation':'add pinned library',
+                    'after_sha256':hashlib.sha256(data).hexdigest()})
+        result=normalize_runtime(intermediate,output)
+    return {'sha256':result['sha256'],'size':result['size'],
+            'input_sha256':sha256_file(source),'changes':changes,
+            'patchelf_sha256':sha256_file(patchelf)}

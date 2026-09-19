@@ -1,0 +1,4613 @@
+{
+  "notes": [
+    "Maintainer audit inputs, not a release manifest. Unresolved items block release.",
+    "Static CPU evidence is incomplete by design; Task11 baseline VM/QEMU execution is mandatory.",
+    "Build-tool wheels are maintainer-only and are not product payload."
+  ],
+  "notices": [
+    {
+      "name": "notices/REDISTRIBUTION.txt",
+      "text": "qbox offline redistribution materials\n\nThe accompanying licenses and corresponding-source archives are part of this distribution. The report maps each component and original filename to its byte-preserved SHA-256 material. Archive filenames are recorded even where the material storage uses content hashes. Standard tar/zip/RPM tools can unpack the source archives.\n\nPython 3.12.14+20260901 includes Berkeley DB 6.0.19. Complete Python, Berkeley DB and linked library source archives, plus the exact python-build-standalone 20260901 build recipes/patches, accompany this distribution. Sources remain under their original freely redistributable licenses. The executable's build recipe is in python-build-standalone's cpython-unix build scripts. Our only runtime modifications replace Tcl/Tk development RPATHs with $ORIGIN and add an unmodified Rocky Linux zlib 1.2.11-26 library, all recorded in native-repair.json.\n\nThe included libgfortran and libquadmath libraries have corresponding distribution SRPMs including their build specifications and patches. AlmaLinux GCC 8.5.0-28.el8_10.alma.1 and CentOS gcc-libraries 8.3.1-2.1.1.el7 / GCC 4.8.5-44.el7 sources are included. Wheel repair changes loader names/RPATH only; exact build-id and code-section matches are recorded in provenance. GPL library source obligations are not waived by the GCC Runtime Library Exception.\n\nlxml 6.1.3 embeds libxml2 2.14.6, libxslt 1.1.43 and libiconv 1.18. Corresponding library sources and the complete lxml source including generated C, buildlibxml.py, and backport patches accompany it. To rebuild/relink modified libraries, use that source's static build with LIBXML2_VERSION=2.14.6 LIBXSLT_VERSION=1.1.43 LIBICONV_VERSION=1.18 ZLIB_VERSION=1.3.2 STATIC_DEPS=true; buildlibxml.py documents local archive directories, patches, and build flags. These materials permit rebuilding the work with modified LGPL library source; no term of this distribution restricts modification or reverse engineering for debugging such modifications.\n\nASE source is supplied alongside its LGPL license. Source for orjson's MPL-covered code is supplied in the same-version sdist, including the vendored Cargo source. certifi's source-form files and certificate data are included in its source archive; the pip-vendored certifi source-form files are already in python/lib/python3.12/site-packages/pip/_vendor/certifi. The Pillow same-version source contains its LGPL FriBiDi shim and LGPL license text accompanies it; any optional external FriBiDi loaded by Pillow is not included in qbox.\n\nThis software is based in part on the work of the Independent JPEG Group. Portions of this software are copyright (C) 1996-2026 The FreeType Project (https://freetype.org). All rights reserved. The complete FreeType FTL text and upstream notices accompany the distribution. Matplotlib/Pillow application code is unmodified.\n\nSome permissive compiled header components do not expose their exact compilation version in upstream wheels. pybind11 is identified by same-version package build declarations; all compared official releases 2.13.2 through 3.1.0 carry byte-identical complete license/copyright text. Its actual compilation version is recorded as unknown; this is a license-body coverage finding, not an assertion of a binary source version.\n"
+    }
+  ],
+  "provenance_records": {
+    "audit-gcc-materials/binary-sources.json": {
+      "data": [
+        {
+          "arch": "x86_64",
+          "filename": "libgfortran-8.5.0-28.el8_10.alma.1.x86_64.rpm",
+          "name": "libgfortran",
+          "official_checksum": "9a32e0f526dff21a2cc891d0bbc174ce6f1c70d6e232f806e962907ae575aba5",
+          "official_checksum_type": "sha256",
+          "primary_sha256": "aae83ab1dcf858ff8a45390c05d3e7855f4d58308dcd97f3589bc504b8f807ad",
+          "primary_url": "https://repo.almalinux.org/almalinux/8.10/BaseOS/x86_64/os/repodata/aae83ab1dcf858ff8a45390c05d3e7855f4d58308dcd97f3589bc504b8f807ad-primary.xml.gz",
+          "release": "28.el8_10.alma.1",
+          "repomd_sha256": "af4890614c16881c377bc1f8c4b980fd044fea2a43b714ff1804aca1f47b2e58",
+          "repository": "https://repo.almalinux.org/almalinux/8.10/BaseOS/x86_64/os/",
+          "sha256": "9a32e0f526dff21a2cc891d0bbc174ce6f1c70d6e232f806e962907ae575aba5",
+          "size": 660524,
+          "url": "https://repo.almalinux.org/almalinux/8.10/BaseOS/x86_64/os/Packages/libgfortran-8.5.0-28.el8_10.alma.1.x86_64.rpm",
+          "version": "8.5.0"
+        },
+        {
+          "arch": "x86_64",
+          "filename": "libquadmath-8.5.0-28.el8_10.alma.1.x86_64.rpm",
+          "name": "libquadmath",
+          "official_checksum": "e50ce3215fc8c5fcabb60664fe4933dc84db9f7b27d304e3168fafacb6016a9e",
+          "official_checksum_type": "sha256",
+          "primary_sha256": "aae83ab1dcf858ff8a45390c05d3e7855f4d58308dcd97f3589bc504b8f807ad",
+          "primary_url": "https://repo.almalinux.org/almalinux/8.10/BaseOS/x86_64/os/repodata/aae83ab1dcf858ff8a45390c05d3e7855f4d58308dcd97f3589bc504b8f807ad-primary.xml.gz",
+          "release": "28.el8_10.alma.1",
+          "repomd_sha256": "af4890614c16881c377bc1f8c4b980fd044fea2a43b714ff1804aca1f47b2e58",
+          "repository": "https://repo.almalinux.org/almalinux/8.10/BaseOS/x86_64/os/",
+          "sha256": "e50ce3215fc8c5fcabb60664fe4933dc84db9f7b27d304e3168fafacb6016a9e",
+          "size": 176324,
+          "url": "https://repo.almalinux.org/almalinux/8.10/BaseOS/x86_64/os/Packages/libquadmath-8.5.0-28.el8_10.alma.1.x86_64.rpm",
+          "version": "8.5.0"
+        }
+      ],
+      "original_sha256": "81f2485aed588c7b42eda9d7cbb9d828ad257f949be3c26fb1efb23dffe645cd"
+    },
+    "audit-gcc-materials/centos/binary-sources.json": {
+      "data": [
+        {
+          "arch": "x86_64",
+          "filename": "libgfortran5-8.3.1-2.1.1.el7.x86_64.rpm",
+          "name": "libgfortran5",
+          "official_checksum": "f0bebfc9c53dbbd867f3e6a509afb3352a7a9bd2bee0f34f798f7d17b7ff9f66",
+          "official_checksum_type": "sha256",
+          "primary_sha256": "2b479c0f3efa73f75b7fb76c82687744275fff78e4a138b5b3efba95f91e099e",
+          "primary_url": "https://vault.centos.org/7.9.2009/os/x86_64/repodata/2b479c0f3efa73f75b7fb76c82687744275fff78e4a138b5b3efba95f91e099e-primary.xml.gz",
+          "release": "2.1.1.el7",
+          "repomd_sha256": "8b45b07b03813d3248c4fe4f407c4d9e4ebe91ca63591cc9e13243ec719c69e8",
+          "repository": "https://vault.centos.org/7.9.2009/os/x86_64/",
+          "sha256": "f0bebfc9c53dbbd867f3e6a509afb3352a7a9bd2bee0f34f798f7d17b7ff9f66",
+          "size": 815396,
+          "url": "https://vault.centos.org/7.9.2009/os/x86_64/Packages/libgfortran5-8.3.1-2.1.1.el7.x86_64.rpm",
+          "version": "8.3.1"
+        },
+        {
+          "arch": "x86_64",
+          "filename": "libquadmath-4.8.5-44.el7.x86_64.rpm",
+          "name": "libquadmath",
+          "official_checksum": "72c210666a44092430a965f8319492faf4950959d56650067d0629ee71caa2ab",
+          "official_checksum_type": "sha256",
+          "primary_sha256": "2b479c0f3efa73f75b7fb76c82687744275fff78e4a138b5b3efba95f91e099e",
+          "primary_url": "https://vault.centos.org/7.9.2009/os/x86_64/repodata/2b479c0f3efa73f75b7fb76c82687744275fff78e4a138b5b3efba95f91e099e-primary.xml.gz",
+          "release": "44.el7",
+          "repomd_sha256": "8b45b07b03813d3248c4fe4f407c4d9e4ebe91ca63591cc9e13243ec719c69e8",
+          "repository": "https://vault.centos.org/7.9.2009/os/x86_64/",
+          "sha256": "72c210666a44092430a965f8319492faf4950959d56650067d0629ee71caa2ab",
+          "size": 194944,
+          "url": "https://vault.centos.org/7.9.2009/os/x86_64/Packages/libquadmath-4.8.5-44.el7.x86_64.rpm",
+          "version": "4.8.5"
+        }
+      ],
+      "original_sha256": "18354346a5939db6b693fb4c7ff77c9c45302991dc4788900acbe54cc812ac90"
+    },
+    "audit-gcc-materials/centos/elf-comparison.json": {
+      "data": {
+        "originals": [
+          {
+            "build_id": "5bbe74eb6855e0a2c043c0bec2f484bf3e9f14c0",
+            "path": "extracted/libgfortran.so.5.0.0",
+            "sections": {
+              ".eh_frame": "8def5d334da3bf4350494645f1111042668d22a4cbc863a9c11e0c117fc374cf",
+              ".rodata": "ac4fb77497638a59b0fcdb3211ec95949697e4296732e246d45b401fbd459e2e",
+              ".text": "774dd2e9d04a30d4b1e68bac3fe0b023bf85a30388d90942c03c8cc2c57da790"
+            },
+            "sha256": "040039e193a33d4d4304a514f9e51441c9fe42549c8432a3588850c4517ecfde",
+            "size": 2597208
+          },
+          {
+            "build_id": "549b4c82347785459571c79239872ad31509dcf4",
+            "path": "extracted/libquadmath.so.0.0.0",
+            "sections": {
+              ".eh_frame": "4817c8858fc0c63c86fed4884cc814bcc1edd42b9e926feafbfe5e25b5f818e8",
+              ".rodata": "e136180b0009974224ea550f3caadad87dfa57095c50427d0aa0d54e8be69d35",
+              ".text": "4dcdf3ba6ed0886a109161a4cdb6701252fb46496c77f1ac425951dfa6860458"
+            },
+            "sha256": "96973f995bad4e4b80eaa188b7bac60bd0df44b22ee67bd046b3aa4ecb9e34fd",
+            "size": 244904
+          }
+        ],
+        "rpms": [
+          {
+            "metadata": "libgfortran5 8.3.1-2.1.1.el7 x86_64\nSourceRPM: gcc-libraries-8.3.1-2.1.1.el7.src.rpm\n",
+            "rpm": "libgfortran5-8.3.1-2.1.1.el7.x86_64.rpm"
+          },
+          {
+            "metadata": "libquadmath 4.8.5-44.el7 x86_64\nSourceRPM: gcc-4.8.5-44.el7.src.rpm\n",
+            "rpm": "libquadmath-4.8.5-44.el7.x86_64.rpm"
+          }
+        ],
+        "wheel_libraries": [
+          {
+            "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+            "matching_originals": [],
+            "path": "libquadmath-2284e583.so.0.0.0",
+            "sections": {
+              ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+              ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+              ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+            },
+            "sha256": "a9307bbaa353623fa014e8b682d50c4629f5e5c7d61daa9a8652f7d165cd421a",
+            "size": 272193
+          },
+          {
+            "build_id": "5bbe74eb6855e0a2c043c0bec2f484bf3e9f14c0",
+            "matching_originals": [
+              "extracted/libgfortran.so.5.0.0"
+            ],
+            "path": "libgfortran-040039e1-0352e75f.so.5.0.0",
+            "sections": {
+              ".eh_frame": "8def5d334da3bf4350494645f1111042668d22a4cbc863a9c11e0c117fc374cf",
+              ".rodata": "ac4fb77497638a59b0fcdb3211ec95949697e4296732e246d45b401fbd459e2e",
+              ".text": "774dd2e9d04a30d4b1e68bac3fe0b023bf85a30388d90942c03c8cc2c57da790"
+            },
+            "sha256": "c6090048eccc763522c12ef016f81da6b627cb3a044f55cf0479a839c41c0980",
+            "size": 2833617
+          },
+          {
+            "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+            "matching_originals": [],
+            "path": "libgfortran-83c28eba-468e71e5.so.5.0.0",
+            "sections": {
+              ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+              ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+              ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+            },
+            "sha256": "a6a368328d02a5d8a149746f13f6268f8cc9192df5c18777b25c3c9b5ef52160",
+            "size": 2862249
+          },
+          {
+            "build_id": "549b4c82347785459571c79239872ad31509dcf4",
+            "matching_originals": [
+              "extracted/libquadmath.so.0.0.0"
+            ],
+            "path": "libquadmath-96973f99-934c22de.so.0.0.0",
+            "sections": {
+              ".eh_frame": "4817c8858fc0c63c86fed4884cc814bcc1edd42b9e926feafbfe5e25b5f818e8",
+              ".rodata": "e136180b0009974224ea550f3caadad87dfa57095c50427d0aa0d54e8be69d35",
+              ".text": "4dcdf3ba6ed0886a109161a4cdb6701252fb46496c77f1ac425951dfa6860458"
+            },
+            "sha256": "6ed5137f412781ad7863439fb543613f620b43c32b63292a0029246162f5bbc6",
+            "size": 250985
+          },
+          {
+            "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+            "matching_originals": [],
+            "path": "libquadmath-2284e583-a9307bba.so.0.0.0",
+            "sections": {
+              ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+              ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+              ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+            },
+            "sha256": "6bc3069003caec1f075be3c51ae8355332f081fa9465910c4b5724e7fe7d8ad4",
+            "size": 275553
+          },
+          {
+            "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+            "matching_originals": [],
+            "path": "libgfortran-83c28eba.so.5.0.0",
+            "sections": {
+              ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+              ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+              ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+            },
+            "sha256": "468e71e59e1d784821a76702e5ecd1e0dbcfc024499f74a552d1bea4b26f27ad",
+            "size": 2751569
+          }
+        ]
+      },
+      "original_sha256": "7ba36330e0bb45fa6e02f9701627d9a4fda98b6e5198bb677ee71ac10416637d"
+    },
+    "audit-gcc-materials/centos/source-sources.json": {
+      "data": [
+        {
+          "arch": "src",
+          "filename": "gcc-4.8.5-44.el7.src.rpm",
+          "name": "gcc",
+          "official_checksum": "642c4085f6af9565e39583e54a9d7a5d9e6b93dd8c8e9474aec8a892d6c7aa36",
+          "official_checksum_type": "sha256",
+          "primary_sha256": "e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6",
+          "primary_url": "https://vault.centos.org/7.9.2009/os/Source/repodata/e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6-primary.xml.gz",
+          "release": "44.el7",
+          "repomd_sha256": "8dc202dc2d74ad04e824905eba4777e8fa5358f57983663b313ee2db2bf2129a",
+          "repository": "https://vault.centos.org/7.9.2009/os/Source/",
+          "sha256": "642c4085f6af9565e39583e54a9d7a5d9e6b93dd8c8e9474aec8a892d6c7aa36",
+          "size": 79314655,
+          "url": "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-4.8.5-44.el7.src.rpm",
+          "version": "4.8.5"
+        },
+        {
+          "arch": "src",
+          "filename": "gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
+          "name": "gcc-libraries",
+          "official_checksum": "cf2a1d2c2e5a56eb2e495c2638e64769b73db07555e1f7ce34cbd9feff6891f5",
+          "official_checksum_type": "sha256",
+          "primary_sha256": "e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6",
+          "primary_url": "https://vault.centos.org/7.9.2009/os/Source/repodata/e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6-primary.xml.gz",
+          "release": "2.1.1.el7",
+          "repomd_sha256": "8dc202dc2d74ad04e824905eba4777e8fa5358f57983663b313ee2db2bf2129a",
+          "repository": "https://vault.centos.org/7.9.2009/os/Source/",
+          "sha256": "cf2a1d2c2e5a56eb2e495c2638e64769b73db07555e1f7ce34cbd9feff6891f5",
+          "size": 137336608,
+          "url": "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
+          "version": "8.3.1"
+        }
+      ],
+      "original_sha256": "b4b3c76241c29834da11089294eeb81562238a17255ed9e0418799483baf74e1"
+    },
+    "audit-gcc-materials/elf-comparison.json": {
+      "data": {
+        "originals": [
+          {
+            "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+            "path": "extracted/libgfortran.so.5.0.0",
+            "sections": {
+              ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+              ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+              ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+            },
+            "sha256": "83c28ebaf89c4072df0a9577a507212d5b8eca64fb4f3e462e0f8deb8de6dc23",
+            "size": 2626552
+          },
+          {
+            "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+            "path": "extracted/libquadmath.so.0.0.0",
+            "sections": {
+              ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+              ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+              ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+            },
+            "sha256": "2284e5833f5ea62b141499d32373fc207878c1778fe004b4867bc41d75086be2",
+            "size": 267504
+          }
+        ],
+        "rpms": [
+          {
+            "metadata": "libquadmath 8.5.0-28.el8_10.alma.1 x86_64\nSourceRPM: gcc-8.5.0-28.el8_10.alma.1.src.rpm\n",
+            "rpm": "libquadmath-8.5.0-28.el8_10.alma.1.x86_64.rpm"
+          },
+          {
+            "metadata": "libgfortran 8.5.0-28.el8_10.alma.1 x86_64\nSourceRPM: gcc-8.5.0-28.el8_10.alma.1.src.rpm\n",
+            "rpm": "libgfortran-8.5.0-28.el8_10.alma.1.x86_64.rpm"
+          }
+        ],
+        "wheel_libraries": [
+          {
+            "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+            "matching_originals": [
+              "extracted/libquadmath.so.0.0.0"
+            ],
+            "path": "libquadmath-2284e583.so.0.0.0",
+            "sections": {
+              ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+              ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+              ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+            },
+            "sha256": "a9307bbaa353623fa014e8b682d50c4629f5e5c7d61daa9a8652f7d165cd421a",
+            "size": 272193
+          },
+          {
+            "build_id": "5bbe74eb6855e0a2c043c0bec2f484bf3e9f14c0",
+            "matching_originals": [],
+            "path": "libgfortran-040039e1-0352e75f.so.5.0.0",
+            "sections": {
+              ".eh_frame": "8def5d334da3bf4350494645f1111042668d22a4cbc863a9c11e0c117fc374cf",
+              ".rodata": "ac4fb77497638a59b0fcdb3211ec95949697e4296732e246d45b401fbd459e2e",
+              ".text": "774dd2e9d04a30d4b1e68bac3fe0b023bf85a30388d90942c03c8cc2c57da790"
+            },
+            "sha256": "c6090048eccc763522c12ef016f81da6b627cb3a044f55cf0479a839c41c0980",
+            "size": 2833617
+          },
+          {
+            "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+            "matching_originals": [
+              "extracted/libgfortran.so.5.0.0"
+            ],
+            "path": "libgfortran-83c28eba-468e71e5.so.5.0.0",
+            "sections": {
+              ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+              ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+              ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+            },
+            "sha256": "a6a368328d02a5d8a149746f13f6268f8cc9192df5c18777b25c3c9b5ef52160",
+            "size": 2862249
+          },
+          {
+            "build_id": "549b4c82347785459571c79239872ad31509dcf4",
+            "matching_originals": [],
+            "path": "libquadmath-96973f99-934c22de.so.0.0.0",
+            "sections": {
+              ".eh_frame": "4817c8858fc0c63c86fed4884cc814bcc1edd42b9e926feafbfe5e25b5f818e8",
+              ".rodata": "e136180b0009974224ea550f3caadad87dfa57095c50427d0aa0d54e8be69d35",
+              ".text": "4dcdf3ba6ed0886a109161a4cdb6701252fb46496c77f1ac425951dfa6860458"
+            },
+            "sha256": "6ed5137f412781ad7863439fb543613f620b43c32b63292a0029246162f5bbc6",
+            "size": 250985
+          },
+          {
+            "build_id": "c1c5f8d61f17e5579c4e85718845b74e4b94116c",
+            "matching_originals": [
+              "extracted/libquadmath.so.0.0.0"
+            ],
+            "path": "libquadmath-2284e583-a9307bba.so.0.0.0",
+            "sections": {
+              ".eh_frame": "b271d4835ca05d14a8f6ea6dede040d73863495d42dad2f0a47eb2b18a0b6fa1",
+              ".rodata": "db684df2071208d9df9abb5a94a2ffd65a48fdc93a678792751ba1d5c18fe7b2",
+              ".text": "4425e7ca4dfe60074f61032f0f97cff167434f95c213057b269580de2002f140"
+            },
+            "sha256": "6bc3069003caec1f075be3c51ae8355332f081fa9465910c4b5724e7fe7d8ad4",
+            "size": 275553
+          },
+          {
+            "build_id": "04dbe32dceb80654422140fb7641f732065999c8",
+            "matching_originals": [
+              "extracted/libgfortran.so.5.0.0"
+            ],
+            "path": "libgfortran-83c28eba.so.5.0.0",
+            "sections": {
+              ".eh_frame": "f9f238a123e789bcbf58de65151cb36a3553b807785f9da11e0621aa38771c8a",
+              ".rodata": "80d0e692052fb23a9855230d9af7cb1bf8459fc38bdd258671957e1fa9349609",
+              ".text": "fd69c1360c73d6aa595bbe03bf9d11725de31f9f658fdd74ae11a8114fb0a784"
+            },
+            "sha256": "468e71e59e1d784821a76702e5ecd1e0dbcfc024499f74a552d1bea4b26f27ad",
+            "size": 2751569
+          }
+        ]
+      },
+      "original_sha256": "913fd852f97168d7b419c778298cdd3c3ae8ef161c55cc0dd870f09b25e11ad1"
+    },
+    "audit-gcc-materials/keys.json": {
+      "data": [
+        {
+          "filename": "RPM-GPG-KEY-AlmaLinux",
+          "sha256": "2cbe597b108cefbf571d8d430d238d0a7a6575eebf6c80649be5e10c323e7023",
+          "url": "https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux"
+        },
+        {
+          "filename": "RPM-GPG-KEY-CentOS-7",
+          "sha256": "8b48b04b336bd725b9e611c441c65456a4168083c4febc28e88828d8ec14827f",
+          "url": "https://vault.centos.org/7.9.2009/os/x86_64/RPM-GPG-KEY-CentOS-7"
+        }
+      ],
+      "original_sha256": "02f2450fcb067d0105e83f8c4d7888ff785b6879303b70938cf4556de5dd3cbf"
+    },
+    "audit-gcc-materials/signature-verification.json": {
+      "data": [
+        {
+          "output": "build/offline/cache/audit-gcc-materials/gcc-8.5.0-28.el8_10.alma.1.src.rpm: digests signatures OK\n",
+          "package": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+          "returncode": 0
+        },
+        {
+          "output": "build/offline/cache/audit-gcc-materials/libgfortran-8.5.0-28.el8_10.alma.1.x86_64.rpm: digests signatures OK\n",
+          "package": "libgfortran-8.5.0-28.el8_10.alma.1.x86_64.rpm",
+          "returncode": 0
+        },
+        {
+          "output": "build/offline/cache/audit-gcc-materials/libquadmath-8.5.0-28.el8_10.alma.1.x86_64.rpm: digests signatures OK\n",
+          "package": "libquadmath-8.5.0-28.el8_10.alma.1.x86_64.rpm",
+          "returncode": 0
+        },
+        {
+          "output": "build/offline/cache/audit-gcc-materials/centos/gcc-4.8.5-44.el7.src.rpm: digests signatures OK\n",
+          "package": "gcc-4.8.5-44.el7.src.rpm",
+          "returncode": 0
+        },
+        {
+          "output": "build/offline/cache/audit-gcc-materials/centos/gcc-libraries-8.3.1-2.1.1.el7.src.rpm: digests signatures OK\n",
+          "package": "gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
+          "returncode": 0
+        },
+        {
+          "output": "build/offline/cache/audit-gcc-materials/centos/libgfortran5-8.3.1-2.1.1.el7.x86_64.rpm: digests signatures OK\n",
+          "package": "libgfortran5-8.3.1-2.1.1.el7.x86_64.rpm",
+          "returncode": 0
+        },
+        {
+          "output": "build/offline/cache/audit-gcc-materials/centos/libquadmath-4.8.5-44.el7.x86_64.rpm: digests signatures OK\n",
+          "package": "libquadmath-4.8.5-44.el7.x86_64.rpm",
+          "returncode": 0
+        }
+      ],
+      "original_sha256": "0a95cc9b4bb4ea80ff5f09173259ea60a43d33212740e9cb6149ca0072c19c12"
+    },
+    "audit-gcc-materials/source-sources.json": {
+      "data": [
+        {
+          "arch": "src",
+          "filename": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+          "name": "gcc",
+          "official_checksum": "c94dbbd2cd6d5d01a5a6822ea18f8ce34942c25a80e17b4682d547d5e652dbd0",
+          "official_checksum_type": "sha256",
+          "primary_sha256": "e453794dab68fca47cd1038f114f16dfdee6cfc53d73e2dd47be3d9a73796340",
+          "primary_url": "https://repo.almalinux.org/vault/8.10/BaseOS/Source/repodata/e453794dab68fca47cd1038f114f16dfdee6cfc53d73e2dd47be3d9a73796340-primary.xml.gz",
+          "release": "28.el8_10.alma.1",
+          "repomd_sha256": "4de5c096afde1b6291f61f44f3ebb21a285de6dbf7f9a882597915c801a25081",
+          "repository": "https://repo.almalinux.org/vault/8.10/BaseOS/Source/",
+          "sha256": "c94dbbd2cd6d5d01a5a6822ea18f8ce34942c25a80e17b4682d547d5e652dbd0",
+          "size": 65715094,
+          "url": "https://repo.almalinux.org/vault/8.10/BaseOS/Source/Packages/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+          "version": "8.5.0"
+        }
+      ],
+      "original_sha256": "e4a04202701cb3248fb4bde8403b9bdaf4bb8629438923d1c5259d9c5ef99238"
+    },
+    "audit-sources/pybind11-license-range.json": {
+      "data": [
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-2.13.2",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-2.13.2.tar.gz",
+            "sha256": "f050e703fb596df2fa8cdbe1175c13856ec96d8dace878a642bcea3875356cfe",
+            "url": "https://files.pythonhosted.org/packages/f5/93/2432663146193e5df82583fd880a7a5f05750b954b85f59bbb9137c54fd1/pybind11-2.13.2.tar.gz"
+          },
+          "version": "2.13.2"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-2.13.3",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-2.13.3.tar.gz",
+            "sha256": "84b1314ca72397f79854161cf852466629dd374bb0efce0c6501d745699d9a43",
+            "url": "https://files.pythonhosted.org/packages/78/b7/789a3404d89bc2f22cb54447dfe9ad24d91a74dfe8586d7728fd75881bb2/pybind11-2.13.3.tar.gz"
+          },
+          "version": "2.13.3"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-2.13.4",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-2.13.4.tar.gz",
+            "sha256": "75a9e1f967d3cd3fd59f981eb39406f9de05e33a4dd8f5f18b8e29cae023e1d5",
+            "url": "https://files.pythonhosted.org/packages/94/f2/875f05b1618d8127823041b99035bb3edd2cbef6298c75736e5c0bb39b7f/pybind11-2.13.4.tar.gz"
+          },
+          "version": "2.13.4"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-2.13.5",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-2.13.5.tar.gz",
+            "sha256": "ae33f635322f9d9741abde0c5f348bf9373f6c22298883395e586cb43c55574e",
+            "url": "https://files.pythonhosted.org/packages/82/43/8595435c45a93d12475873f55eef0ce38b911e128376733d1ee6c833597c/pybind11-2.13.5.tar.gz"
+          },
+          "version": "2.13.5"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-2.13.6",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-2.13.6.tar.gz",
+            "sha256": "ba6af10348c12b24e92fa086b39cfba0eff619b61ac77c406167d813b096d39a",
+            "url": "https://files.pythonhosted.org/packages/d2/c1/72b9622fcb32ff98b054f724e213c7f70d6898baa714f4516288456ceaba/pybind11-2.13.6.tar.gz"
+          },
+          "version": "2.13.6"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-3.0.0",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-3.0.0.tar.gz",
+            "sha256": "c3f07bce3ada51c3e4b76badfa85df11688d12c46111f9d242bc5c9415af7862",
+            "url": "https://files.pythonhosted.org/packages/ef/83/698d120e257a116f2472c710932023ad779409adf2734d2e940f34eea2c5/pybind11-3.0.0.tar.gz"
+          },
+          "version": "3.0.0"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-3.0.1",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-3.0.1.tar.gz",
+            "sha256": "9c0f40056a016da59bab516efb523089139fcc6f2ba7e4930854c61efb932051",
+            "url": "https://files.pythonhosted.org/packages/2f/7b/a6d8dcb83c457e24a9df1e4d8fd5fb8034d4bbc62f3c324681e8a9ba57c2/pybind11-3.0.1.tar.gz"
+          },
+          "version": "3.0.1"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-3.0.2",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-3.0.2.tar.gz",
+            "sha256": "432f01aeb68e361a3a7fc7575c2c7f497595bf640f747acd909ff238dd766e06",
+            "url": "https://files.pythonhosted.org/packages/a5/98/9118a0659646f1628c592ef9bb48e0056efa6bf27c951fd12a178e0136fb/pybind11-3.0.2.tar.gz"
+          },
+          "version": "3.0.2"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-3.0.3",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-3.0.3.tar.gz",
+            "sha256": "00471cdb816882c484708bc5dde80815c8c11cea540ab2cc6410f5ddea434755",
+            "url": "https://files.pythonhosted.org/packages/41/50/b83d65efc1914681f5aded4ce37c703408a9bb74829f27f041560ca52ffb/pybind11-3.0.3.tar.gz"
+          },
+          "version": "3.0.3"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-3.0.4",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-3.0.4.tar.gz",
+            "sha256": "3286b59c8a774b9ee650169302dd5a4eedc30a8617905a0560dd8ee44775130c",
+            "url": "https://files.pythonhosted.org/packages/cc/f0/35145a3c3baffeef55d4b8324caa33abaa8fa56ab345ecd4b2211d09163e/pybind11-3.0.4.tar.gz"
+          },
+          "version": "3.0.4"
+        },
+        {
+          "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "name": "pybind11-3.1.0",
+          "scope": "license-body comparison; actual compilation version unknown",
+          "source": {
+            "filename": "pybind11-3.1.0.tar.gz",
+            "sha256": "a1cc06b524ab3edca51f8ad3895f9c4fa20b8b19283173dff4ae781449dc9639",
+            "url": "https://files.pythonhosted.org/packages/76/f3/95b0f40b31df41dbfe6bb0857419c9442c15839cbac4796f1c26ae0b6081/pybind11-3.1.0.tar.gz"
+          },
+          "version": "3.1.0"
+        }
+      ],
+      "original_sha256": "e378371339b1ae7908c2a554d8475d8d95104ef36d269cabed62237ac7678315"
+    },
+    "rust-upstream-release-recipe": {
+      "license_archive": {
+        "checksum_sha256": "692f9aac8d65bf43adc89cd530ae6d55eb8e2b6ca3b25ca34479ce7c873e3f93",
+        "checksum_url": "https://static.rust-lang.org/dist/2026-08-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz.sha256",
+        "filename": "rustc-nightly-x86_64-unknown-linux-gnu.tar.xz",
+        "materials": [
+          {
+            "filename": "COPYRIGHT-library-nightly-2026-08-01.html",
+            "sha256": "e566cc47cde2529b6ae2a71d92c3b153bf124b9455e5850dca791c4a018cfef4",
+            "size": 1512496,
+            "source_member": "rustc-nightly-x86_64-unknown-linux-gnu/rustc/share/doc/rust/COPYRIGHT-library.html"
+          }
+        ],
+        "sha256": "7e1584d825b435c06a13c5ce46bf5279b718e37057311499c52c39a0f5538341",
+        "size": 81444064,
+        "url": "https://static.rust-lang.org/dist/2026-08-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz",
+        "version": "nightly-2026-08-01"
+      },
+      "recipe_member": "orjson-3.12.0/.github/workflows/artifact.yaml",
+      "recipe_source_sha256": "25ec9c757f6b8ef7db50e50a5b7dbc22ee5c5c496de41dceef24a7eb75f4e10e",
+      "rust_toolchain": "nightly-2026-08-01"
+    }
+  },
+  "runtime": {
+    "components": [
+      {
+        "id": "cpython",
+        "licenses": [
+          "Python-2.0",
+          "CNRI-Python"
+        ],
+        "materials": [
+          "python/licenses/LICENSE.cpython.txt"
+        ],
+        "sources": [
+          "sources/db-6.0.19.tar.gz",
+          "sources/bzip2-1.0.8.tar.gz",
+          "sources/Python-3.12.14.tar.xz",
+          "sources/expat-2.8.4.tar.xz",
+          "sources/libX11-1.8.13.tar.gz",
+          "sources/libXau-1.0.12.tar.gz",
+          "sources/libedit-20240808-3.1.tar.gz",
+          "sources/libffi-3.4.8.tar.gz",
+          "sources/libxcb-1.17.0.tar.gz",
+          "sources/mpdecimal-4.0.0.tar.gz",
+          "sources/ncurses-6.5.tar.gz",
+          "sources/openssl-3.5.8.tar.gz",
+          "sources/sqlite-autoconf-3530100.tar.gz",
+          "sources/tcl9.0.4-src.tar.gz",
+          "sources/tk9.0.4-src.tar.gz",
+          "sources/xz-5.8.3.tar.gz",
+          "sources/zlib-1.3.2.tar.gz",
+          "sources/libuuid-1.0.3.tar.gz",
+          "sources/python-build-standalone-20260901.tar.gz",
+          "notices/REDISTRIBUTION.txt"
+        ]
+      },
+      {
+        "id": "runtime/static/bz2",
+        "kind": "static-library",
+        "licenses": [
+          "bzip2-1.0.6"
+        ],
+        "link": "bz2",
+        "materials": [
+          "python/licenses/LICENSE.bzip2.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/bzip2-1.0.8.tar.gz"
+        ],
+        "version": "1.0.8"
+      },
+      {
+        "id": "runtime/static/ffi",
+        "kind": "static-library",
+        "licenses": [
+          "MIT"
+        ],
+        "link": "ffi",
+        "materials": [
+          "python/licenses/LICENSE.libffi.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/libffi-3.4.8.tar.gz"
+        ],
+        "version": "3.4.8"
+      },
+      {
+        "id": "runtime/static/ncursesw",
+        "kind": "static-library",
+        "licenses": [
+          "X11"
+        ],
+        "link": "ncursesw",
+        "materials": [
+          "python/licenses/LICENSE.ncurses.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/ncurses-6.5.tar.gz"
+        ],
+        "version": "6.5"
+      },
+      {
+        "id": "runtime/static/panelw",
+        "kind": "static-library",
+        "licenses": [
+          "X11"
+        ],
+        "link": "panelw",
+        "materials": [
+          "python/licenses/LICENSE.ncurses.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/ncurses-6.5.tar.gz"
+        ],
+        "version": "6.5"
+      },
+      {
+        "id": "runtime/static/db",
+        "kind": "static-library",
+        "licenses": [
+          "Sleepycat"
+        ],
+        "link": "db",
+        "materials": [
+          "python/licenses/LICENSE.bdb.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "notices/REDISTRIBUTION.txt",
+          "sources/Python-3.12.14.tar.xz",
+          "sources/bzip2-1.0.8.tar.gz",
+          "sources/db-6.0.19.tar.gz",
+          "sources/expat-2.8.4.tar.xz",
+          "sources/libX11-1.8.13.tar.gz",
+          "sources/libXau-1.0.12.tar.gz",
+          "sources/libedit-20240808-3.1.tar.gz",
+          "sources/libffi-3.4.8.tar.gz",
+          "sources/libuuid-1.0.3.tar.gz",
+          "sources/libxcb-1.17.0.tar.gz",
+          "sources/mpdecimal-4.0.0.tar.gz",
+          "sources/ncurses-6.5.tar.gz",
+          "sources/openssl-3.5.8.tar.gz",
+          "sources/python-build-standalone-20260901.tar.gz",
+          "sources/sqlite-autoconf-3530100.tar.gz",
+          "sources/tcl9.0.4-src.tar.gz",
+          "sources/tk9.0.4-src.tar.gz",
+          "sources/xz-5.8.3.tar.gz",
+          "sources/zlib-1.3.2.tar.gz"
+        ],
+        "version": "6.0.19"
+      },
+      {
+        "id": "runtime/static/mpdec",
+        "kind": "static-library",
+        "licenses": [
+          "BSD-2-Clause"
+        ],
+        "link": "mpdec",
+        "materials": [
+          "python/licenses/LICENSE.mpdecimal.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/mpdecimal-4.0.0.tar.gz"
+        ],
+        "version": "4.0.0"
+      },
+      {
+        "id": "runtime/static/crypto",
+        "kind": "static-library",
+        "licenses": [
+          "Apache-2.0"
+        ],
+        "link": "crypto",
+        "materials": [
+          "python/licenses/LICENSE.openssl-3.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/openssl-3.5.8.tar.gz"
+        ],
+        "version": "3.5.8"
+      },
+      {
+        "id": "runtime/static/ssl",
+        "kind": "static-library",
+        "licenses": [
+          "Apache-2.0"
+        ],
+        "link": "ssl",
+        "materials": [
+          "python/licenses/LICENSE.openssl-3.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/openssl-3.5.8.tar.gz"
+        ],
+        "version": "3.5.8"
+      },
+      {
+        "id": "runtime/static/lzma",
+        "kind": "static-library",
+        "licenses": [
+          "0BSD"
+        ],
+        "link": "lzma",
+        "materials": [
+          "python/licenses/LICENSE.liblzma.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/xz-5.8.3.tar.gz"
+        ],
+        "version": "5.8.3"
+      },
+      {
+        "id": "runtime/static/sqlite3",
+        "kind": "static-library",
+        "licenses": [
+          "LicenseRef-SQLite-Public-Domain"
+        ],
+        "link": "sqlite3",
+        "materials": [
+          "python/licenses/LICENSE.sqlite.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/sqlite-autoconf-3530100.tar.gz"
+        ],
+        "version": "3530100"
+      },
+      {
+        "id": "runtime/static/z",
+        "kind": "static-library",
+        "licenses": [
+          "Zlib"
+        ],
+        "link": "z",
+        "materials": [
+          "python/licenses/LICENSE.zlib.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/zlib-1.3.2.tar.gz"
+        ],
+        "version": "1.3.2"
+      },
+      {
+        "id": "runtime/static/X11",
+        "kind": "static-library",
+        "licenses": [
+          "MIT"
+        ],
+        "link": "X11",
+        "materials": [
+          "python/licenses/LICENSE.libX11.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/libX11-1.8.13.tar.gz"
+        ],
+        "version": "1.8.13"
+      },
+      {
+        "id": "runtime/static/Xau",
+        "kind": "static-library",
+        "licenses": [
+          "MIT"
+        ],
+        "link": "Xau",
+        "materials": [
+          "python/licenses/LICENSE.libXau.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/libXau-1.0.12.tar.gz"
+        ],
+        "version": "1.0.12"
+      },
+      {
+        "id": "runtime/static/xcb",
+        "kind": "static-library",
+        "licenses": [
+          "MIT"
+        ],
+        "link": "xcb",
+        "materials": [
+          "python/licenses/LICENSE.libxcb.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/libxcb-1.17.0.tar.gz"
+        ],
+        "version": "1.17.0"
+      },
+      {
+        "id": "runtime/static/tclstub",
+        "kind": "static-library",
+        "licenses": [
+          "TCL"
+        ],
+        "link": "tclstub",
+        "materials": [
+          "python/licenses/LICENSE.tcl.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/tcl9.0.4-src.tar.gz"
+        ],
+        "version": "9.0.4"
+      },
+      {
+        "id": "runtime/static/tkstub",
+        "kind": "static-library",
+        "licenses": [
+          "TCL"
+        ],
+        "link": "tkstub",
+        "materials": [
+          "python/licenses/LICENSE.tcl.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/tk9.0.4-src.tar.gz"
+        ],
+        "version": "9.0.4"
+      },
+      {
+        "id": "runtime/static/uuid",
+        "kind": "static-library",
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "link": "uuid",
+        "materials": [
+          "python/licenses/LICENSE.libuuid.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/libuuid-1.0.3.tar.gz"
+        ],
+        "version": "1.0.3"
+      },
+      {
+        "id": "runtime/static/expat",
+        "kind": "static-library",
+        "licenses": [
+          "MIT"
+        ],
+        "link": "expat",
+        "materials": [
+          "python/licenses/LICENSE.expat.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/expat-2.8.4.tar.xz"
+        ],
+        "version": "2.8.4"
+      },
+      {
+        "id": "runtime/static/edit",
+        "kind": "static-library",
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "link": "edit",
+        "materials": [
+          "python/licenses/LICENSE.libedit.txt"
+        ],
+        "provenance": "PBS 20260901 downloads.py plus PYTHON.json static-link declaration",
+        "sources": [
+          "sources/libedit-20240808-3.1.tar.gz"
+        ],
+        "version": "20240808-3.1"
+      },
+      {
+        "id": "runtime/tcl",
+        "kind": "shared-library",
+        "licenses": [
+          "TCL"
+        ],
+        "materials": [
+          "python/licenses/LICENSE.tcl.txt"
+        ],
+        "sources": [
+          "sources/tcl9.0.4-src.tar.gz",
+          "sources/tk9.0.4-src.tar.gz"
+        ],
+        "version": "9.0.4"
+      },
+      {
+        "id": "pip",
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip-*.dist-info/licenses/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-cachecontrol",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-cachecontrol"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/cachecontrol/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-certifi",
+        "kind": "vendored-python",
+        "licenses": [
+          "MPL-2.0"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/certifi/*",
+          "notices/REDISTRIBUTION.txt"
+        ],
+        "provenance": "source form is present in the shipped runtime vendor directory"
+      },
+      {
+        "id": "pip-vendor-distlib",
+        "kind": "vendored-python",
+        "licenses": [
+          "Python-2.0"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/distlib/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-distro",
+        "kind": "vendored-python",
+        "licenses": [
+          "Apache-2.0"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/distro/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-idna",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-idna"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/idna/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-msgpack",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-msgpack"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/msgpack/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-packaging",
+        "kind": "vendored-python",
+        "licenses": [
+          "Apache-2.0 OR BSD-2-Clause"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/packaging/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-platformdirs",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-platformdirs"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/platformdirs/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-pygments",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-pygments"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/pygments/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-pyproject-hooks",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-pyproject-hooks"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/pyproject_hooks/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-requests",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-requests"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/requests/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-resolvelib",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-resolvelib"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/resolvelib/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-rich",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-rich"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/rich/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-setuptools",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-setuptools"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/pkg_resources/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-tomli",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-tomli"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/tomli/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-tomli-w",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-tomli-w"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/tomli_w/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-truststore",
+        "kind": "vendored-python",
+        "licenses": [
+          "LicenseRef-pip-vendor-truststore"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/truststore/*"
+        ]
+      },
+      {
+        "id": "pip-vendor-urllib3",
+        "kind": "vendored-python",
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "python/lib/python3.12/site-packages/pip/_vendor/urllib3/*"
+        ]
+      },
+      {
+        "id": "runtime/libz",
+        "kind": "shared-library",
+        "licenses": [
+          "Zlib"
+        ],
+        "materials": [
+          "python/licenses/LICENSE.libz-system.txt"
+        ],
+        "sources": [
+          "sources/zlib-1.2.11-26.el8.src.rpm"
+        ],
+        "version": "1.2.11-26.el8"
+      }
+    ]
+  },
+  "runtime_sha256": "52179f2ef920f94f60d81a7d430d8f6b82c898f06b10d14db00c3822067bfee8",
+  "schema_version": 1,
+  "sources": [
+    {
+      "metadata": {
+        "path": "audit-sources/ase-3.29.0.pypi.json",
+        "requested_at": "2026-09-19T10:08:07.101447+00:00",
+        "sha256": "f325f3449a496dd29239ba0672db2cf7136420ab114eb3ee82ec8661e0a0c5e6",
+        "url": "https://pypi.org/pypi/ase/3.29.0/json"
+      },
+      "name": "ase",
+      "size": 2466051,
+      "source": {
+        "filename": "ase-3.29.0.tar.gz",
+        "sha256": "ef4e2caa38169e3fbbc4164764a060d1877a6692519a4bed82521328eeb0d9aa",
+        "url": "https://files.pythonhosted.org/packages/aa/36/cfe17324ea701d2caa479f25b134c54aeb36998443fd88c13e4f1af06f52/ase-3.29.0.tar.gz"
+      },
+      "version": "3.29.0"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/bibtexparser-1.3.0.pypi.json",
+        "requested_at": "2026-09-19T10:08:06.534206+00:00",
+        "sha256": "ecd66391f6b79066c44ad258ef615e9ee99c900b63325dd99234b6304c8937b4",
+        "url": "https://pypi.org/pypi/bibtexparser/1.3.0/json"
+      },
+      "name": "bibtexparser",
+      "size": 51417,
+      "source": {
+        "filename": "bibtexparser-1.3.0.tar.gz",
+        "sha256": "971a0840700f5282d61b8c119cd4e208b8e546a91f9043ead4e440734fbf9f5e",
+        "url": "https://files.pythonhosted.org/packages/8e/bb/e1eb0ed3f3140a8628e87a7de394b4cbf6bf4a72bf8008798f3ad37edb0f/bibtexparser-1.3.0.tar.gz"
+      },
+      "version": "1.3.0"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/certifi-2026.7.22.pypi.json",
+        "requested_at": "2026-09-19T10:08:06.438532+00:00",
+        "sha256": "c6fe912677e373608eab51e324946005998faeb0fa999e6ddada24676e3556d3",
+        "url": "https://pypi.org/pypi/certifi/2026.7.22/json"
+      },
+      "name": "certifi",
+      "size": 138112,
+      "source": {
+        "filename": "certifi-2026.7.22.tar.gz",
+        "sha256": "741e2c3b351ddf169a738da9f2c048608ff7f2c5cc02f1ebc6b118bb090d5d55",
+        "url": "https://files.pythonhosted.org/packages/a3/c2/24167ea9858356b47a87a50d39908bfdb72ceeefe0041586e704e5376b3a/certifi-2026.7.22.tar.gz"
+      },
+      "version": "2026.7.22"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/charset-normalizer-3.5.1.pypi.json",
+        "requested_at": "2026-09-19T10:08:06.953831+00:00",
+        "sha256": "325955203764ef6e7ec5d01b69f776a5c7c2c96ca304e1e160109ea4b98fe850",
+        "url": "https://pypi.org/pypi/charset-normalizer/3.5.1/json"
+      },
+      "name": "charset-normalizer",
+      "size": 171764,
+      "source": {
+        "filename": "charset_normalizer-3.5.1.tar.gz",
+        "sha256": "6117b84ea48435e5356dc737f5121485c30920ba43375fa7b434fd753df0eac3",
+        "url": "https://files.pythonhosted.org/packages/e5/3f/143b048436775b0f76ac3eec145c019e8173ccc2885c8f20319b996d5e83/charset_normalizer-3.5.1.tar.gz"
+      },
+      "version": "3.5.1"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/contourpy-1.4.0.pypi.json",
+        "requested_at": "2026-09-19T10:08:09.127568+00:00",
+        "sha256": "38b45f9f0cc556a4b2621ae474419bff5ffeb0d01e3582579206af5ff8a5bd3b",
+        "url": "https://pypi.org/pypi/contourpy/1.4.0/json"
+      },
+      "name": "contourpy",
+      "size": 13323726,
+      "source": {
+        "filename": "contourpy-1.4.0.tar.gz",
+        "sha256": "20156f5a1ac4f8ce02656e39a61e82164a3d359796dc8026f75b062783d500e1",
+        "url": "https://files.pythonhosted.org/packages/83/5a/a55177dd22553a277388e8a1b3220e92de91bacb28356cdc73caa240121d/contourpy-1.4.0.tar.gz"
+      },
+      "version": "1.4.0"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/fonttools-4.65.0.pypi.json",
+        "requested_at": "2026-09-19T10:08:09.162938+00:00",
+        "sha256": "25331ecddac4bcc780aaa9af6e84e4d63f5c568e7d72fd38bd46423ef4d90877",
+        "url": "https://pypi.org/pypi/fonttools/4.65.0/json"
+      },
+      "name": "fonttools",
+      "size": 3674467,
+      "source": {
+        "filename": "fonttools-4.65.0.tar.gz",
+        "sha256": "762ba5431358d0dbd4a01982484a1d494fb267e91f974cdcf20b80eab8560f6f",
+        "url": "https://files.pythonhosted.org/packages/77/51/d63c7e52163ac14393a35bd14bd7c0da95f8f74be5d7cc988092f9965129/fonttools-4.65.0.tar.gz"
+      },
+      "version": "4.65.0"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/kiwisolver-1.5.1.pypi.json",
+        "requested_at": "2026-09-19T10:08:08.849335+00:00",
+        "sha256": "9b4053c476b6cd0da61e905cc5cdf4a7309dc0ce17809475e615c5444ade86fe",
+        "url": "https://pypi.org/pypi/kiwisolver/1.5.1/json"
+      },
+      "name": "kiwisolver",
+      "size": 104395,
+      "source": {
+        "filename": "kiwisolver-1.5.1.tar.gz",
+        "sha256": "f1303ef2eec81262a4b708c3e858afe58d7c75ad91c1c05266eda7673369859a",
+        "url": "https://files.pythonhosted.org/packages/ba/07/bd78e6a8fae171ea041ef5bba3ed21a003522fa088834b069b1909981f30/kiwisolver-1.5.1.tar.gz"
+      },
+      "version": "1.5.1"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/lxml-6.1.3.pypi.json",
+        "requested_at": "2026-09-19T10:08:09.480055+00:00",
+        "sha256": "1f03dafdc0bd6c308a1e69aff7caef27f6d7c586eadd34e02229703a8541fe61",
+        "url": "https://pypi.org/pypi/lxml/6.1.3/json"
+      },
+      "name": "lxml",
+      "size": 4211198,
+      "source": {
+        "filename": "lxml-6.1.3.tar.gz",
+        "sha256": "45222d94ddd511536f3b2f7d9deae3b2339b4ce0f075f1ca25703b07cad9dd21",
+        "url": "https://files.pythonhosted.org/packages/23/ad/28ecd7cb894d172f3c9c80a075eeeb2017ac62e3632cee05a5f9493547eb/lxml-6.1.3.tar.gz"
+      },
+      "version": "6.1.3"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/matplotlib-3.11.2.pypi.json",
+        "requested_at": "2026-09-19T10:08:12.706122+00:00",
+        "sha256": "5f75d7e3ecb136a2b41d647188dd25f670558870661e0f870aedc76643d20606",
+        "url": "https://pypi.org/pypi/matplotlib/3.11.2/json"
+      },
+      "name": "matplotlib",
+      "size": 32660610,
+      "source": {
+        "filename": "matplotlib-3.11.2.tar.gz",
+        "sha256": "cec596316640f2b394b8f0daa0ea61a8eae82d017b620b9f202befb972a59ea4",
+        "url": "https://files.pythonhosted.org/packages/e7/c8/9aa712a0afb882649424dd8de8ad9aa6235e796e84c6052e8f6dc1598d0d/matplotlib-3.11.2.tar.gz"
+      },
+      "version": "3.11.2"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/numpy-2.5.3.pypi.json",
+        "requested_at": "2026-09-19T10:08:12.084754+00:00",
+        "sha256": "497ade587d7c2cad83a918ca79b9776dbde9eddf4c0abddbfb637b27160e87a9",
+        "url": "https://pypi.org/pypi/numpy/2.5.3/json"
+      },
+      "name": "numpy",
+      "size": 20791231,
+      "source": {
+        "filename": "numpy-2.5.3.tar.gz",
+        "sha256": "df2d5874ff183595a4ba404edd04f6bd9b5505c1d7708573f6a6c17489a67563",
+        "url": "https://files.pythonhosted.org/packages/13/01/11703282db468b85f6f7b8c7f22d058de5970d5c7e60a3a8aaa313c3de36/numpy-2.5.3.tar.gz"
+      },
+      "version": "2.5.3"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/orjson-3.12.0.pypi.json",
+        "requested_at": "2026-09-19T10:08:11.656800+00:00",
+        "sha256": "fad73d1f6e83567c0a1380d127ef6dcb1e6b576eebc8e202f132708372be96b3",
+        "url": "https://pypi.org/pypi/orjson/3.12.0/json"
+      },
+      "name": "orjson",
+      "size": 4142915,
+      "source": {
+        "filename": "orjson-3.12.0.tar.gz",
+        "sha256": "d14203fb1aae2ad9b3d52f8a0e82aeb10197ef1c9bc61da7f358bd70b00123d5",
+        "url": "https://files.pythonhosted.org/packages/0f/f3/742fb1f62b825f2c010697eaf4e828004bc2a81e7e806666989c132c7c42/orjson-3.12.0.tar.gz"
+      },
+      "version": "3.12.0"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/palettable-3.3.3.pypi.json",
+        "requested_at": "2026-09-19T10:08:11.359272+00:00",
+        "sha256": "5279222e02fd3aaaeaa6ef21ff66f149a765c544d1d553c96140dae31cafcc49",
+        "url": "https://pypi.org/pypi/palettable/3.3.3/json"
+      },
+      "name": "palettable",
+      "size": 106639,
+      "source": {
+        "filename": "palettable-3.3.3.tar.gz",
+        "sha256": "094dd7d9a5fc1cca4854773e5c1fc6a315b33bd5b3a8f47064928facaf0490a8",
+        "url": "https://files.pythonhosted.org/packages/dc/3d/a5854d60850485bff12f28abfe0e17f503e866763bed61aed4990b604530/palettable-3.3.3.tar.gz"
+      },
+      "version": "3.3.3"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/pandas-3.0.6.pypi.json",
+        "requested_at": "2026-09-19T10:08:13.963630+00:00",
+        "sha256": "d8595df0e78f4374986befdcbaeff7bbf6020f30be5d3ad750f3190ecc186cbb",
+        "url": "https://pypi.org/pypi/pandas/3.0.6/json"
+      },
+      "name": "pandas",
+      "size": 4667686,
+      "source": {
+        "filename": "pandas-3.0.6.tar.gz",
+        "sha256": "66b07ef7315a31bfe1089cd3d71a7de781c9dca986762d0b4fe7c0ef17465d10",
+        "url": "https://files.pythonhosted.org/packages/e2/17/d7b106e05bfa642e8694451e7d3d759c6a241c5386a5d962e4f66c047e06/pandas-3.0.6.tar.gz"
+      },
+      "version": "3.0.6"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/pillow-12.3.0.pypi.json",
+        "requested_at": "2026-09-19T10:08:15.666959+00:00",
+        "sha256": "63159d6013cf20f98ff9caeb8b0b210b7f5877975587f4265397ffb0fd8c72a0",
+        "url": "https://pypi.org/pypi/pillow/12.3.0/json"
+      },
+      "name": "pillow",
+      "size": 47025035,
+      "source": {
+        "filename": "pillow-12.3.0.tar.gz",
+        "sha256": "3b8182a766685eaa002637e28b4ec8d6b18819a0c71f579bf0dbaa5830297cce",
+        "url": "https://files.pythonhosted.org/packages/1c/3d/bb7fca845737cf9d7dbde16ed1843984665ff2e0a518f5db43e77ec540b9/pillow-12.3.0.tar.gz"
+      },
+      "version": "12.3.0"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/pymatgen-core-2026.8.30.pypi.json",
+        "requested_at": "2026-09-19T10:08:14.493825+00:00",
+        "sha256": "517fe44bdb68538c3e67eb3a1e1ce6c9e54f730a50637b069028f89f0d6d7345",
+        "url": "https://pypi.org/pypi/pymatgen-core/2026.8.30/json"
+      },
+      "name": "pymatgen-core",
+      "size": 2602970,
+      "source": {
+        "filename": "pymatgen_core-2026.8.30.tar.gz",
+        "sha256": "2a06e4361b9be37b54614ade9eb27786641dd294a0d8096c135a9bc73b0d7597",
+        "url": "https://files.pythonhosted.org/packages/06/fa/8adb17586033ccfbf38252ed092a7c4e004e84e88dc6ab34f888b459403e/pymatgen_core-2026.8.30.tar.gz"
+      },
+      "version": "2026.8.30"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/scipy-1.18.1.pypi.json",
+        "requested_at": "2026-09-19T10:08:15.846883+00:00",
+        "sha256": "8fc6948fe40ecc069474738e18405af6cab47eefb2ddce5ac017bf342df5a470",
+        "url": "https://pypi.org/pypi/scipy/1.18.1/json"
+      },
+      "name": "scipy",
+      "size": 30781235,
+      "source": {
+        "filename": "scipy-1.18.1.tar.gz",
+        "sha256": "52c4b7422442aba924d03ad4019852b08a92e64ea187b933135687bfe2747307",
+        "url": "https://files.pythonhosted.org/packages/7e/74/66de6258867beb2ef08f35f9f2ac017a52cacd5081714d239ff1a442d458/scipy-1.18.1.tar.gz"
+      },
+      "version": "1.18.1"
+    },
+    {
+      "metadata": {
+        "path": "audit-sources/spglib-2.7.0.pypi.json",
+        "requested_at": "2026-09-19T10:08:18.628620+00:00",
+        "sha256": "ab121acebf6db0fe691dd48cc7b82a01822104564c0cdc8abb2f13cbc769e5e5",
+        "url": "https://pypi.org/pypi/spglib/2.7.0/json"
+      },
+      "name": "spglib",
+      "size": 2366134,
+      "source": {
+        "filename": "spglib-2.7.0.tar.gz",
+        "sha256": "c40907a42c9dc45572f46740bf95412f84fb0eda30267e31665d104a4bde6627",
+        "url": "https://files.pythonhosted.org/packages/a9/06/7964acb4c444191376bd87f91579475fbe7623ca943cce40cee8fb7f2c36/spglib-2.7.0.tar.gz"
+      },
+      "version": "2.7.0"
+    },
+    {
+      "name": "bdb",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 36541923,
+      "source": {
+        "filename": "db-6.0.19.tar.gz",
+        "sha256": "2917c28f60903908c2ca4587ded1363b812c4e830a5326aaa77c9879d13ae18e",
+        "url": "https://ftp.osuosl.org/pub/blfs/conglomeration/db/db-6.0.19.tar.gz"
+      },
+      "version": "6.0.19"
+    },
+    {
+      "name": "bzip2",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 810029,
+      "source": {
+        "filename": "bzip2-1.0.8.tar.gz",
+        "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
+        "url": "https://astral-sh.github.io/mirror/files/bzip2-1.0.8.tar.gz"
+      },
+      "version": "1.0.8"
+    },
+    {
+      "name": "cpython-3.12",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 20820300,
+      "source": {
+        "filename": "Python-3.12.14.tar.xz",
+        "sha256": "5c8462af5790baf43a321a1559dbe0db06d1be4300fb85fb53c40060668e548a",
+        "url": "https://www.python.org/ftp/python/3.12.14/Python-3.12.14.tar.xz"
+      },
+      "version": "3.12.14"
+    },
+    {
+      "name": "expat",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 519688,
+      "source": {
+        "filename": "expat-2.8.4.tar.xz",
+        "sha256": "656ae1cc8da3b4ea513bb4e254f33e6243938084c0ec6239da873376b09985a7",
+        "url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_4/expat-2.8.4.tar.xz"
+      },
+      "version": "2.8.4"
+    },
+    {
+      "name": "libX11",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 3217264,
+      "source": {
+        "filename": "libX11-1.8.13.tar.gz",
+        "sha256": "acf0e7cd7541110e6330ecb539441a2d53061f386ec7be6906dfde0de2598470",
+        "url": "https://www.x.org/releases/individual/lib/libX11-1.8.13.tar.gz"
+      },
+      "version": "1.8.13"
+    },
+    {
+      "name": "libXau",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 418722,
+      "source": {
+        "filename": "libXau-1.0.12.tar.gz",
+        "sha256": "2402dd938da4d0a332349ab3d3586606175e19cb32cb9fe013c19f1dc922dcee",
+        "url": "https://www.x.org/releases/individual/lib/libXau-1.0.12.tar.gz"
+      },
+      "version": "1.0.12"
+    },
+    {
+      "name": "libedit",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 538611,
+      "source": {
+        "filename": "libedit-20240808-3.1.tar.gz",
+        "sha256": "5f0573349d77c4a48967191cdd6634dd7aa5f6398c6a57fe037cc02696d6099f",
+        "url": "https://thrysoee.dk/editline/libedit-20240808-3.1.tar.gz"
+      },
+      "version": "20240808-3.1"
+    },
+    {
+      "name": "libffi",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 1397992,
+      "source": {
+        "filename": "libffi-3.4.8.tar.gz",
+        "sha256": "bc9842a18898bfacb0ed1252c4febcc7e78fa139fd27fdc7a3e30d9d9356119b",
+        "url": "https://github.com/libffi/libffi/releases/download/v3.4.8/libffi-3.4.8.tar.gz"
+      },
+      "version": "3.4.8"
+    },
+    {
+      "name": "libxcb",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 661593,
+      "source": {
+        "filename": "libxcb-1.17.0.tar.gz",
+        "sha256": "2c69287424c9e2128cb47ffe92171e10417041ec2963bceafb65cb3fcf8f0b85",
+        "url": "https://xcb.freedesktop.org/dist/libxcb-1.17.0.tar.gz"
+      },
+      "version": "1.17.0"
+    },
+    {
+      "name": "mpdecimal",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 315325,
+      "source": {
+        "filename": "mpdecimal-4.0.0.tar.gz",
+        "sha256": "942445c3245b22730fd41a67a7c5c231d11cb1b9936b9c0f76334fb7d0b4468c",
+        "url": "https://astral-sh.github.io/mirror/files/mpdecimal-4.0.0.tar.gz"
+      },
+      "version": "4.0.0"
+    },
+    {
+      "name": "ncurses",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 3688489,
+      "source": {
+        "filename": "ncurses-6.5.tar.gz",
+        "sha256": "136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6",
+        "url": "https://astral-sh.github.io/mirror/files/ncurses-6.5.tar.gz"
+      },
+      "version": "6.5"
+    },
+    {
+      "name": "openssl-3.5",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 53213818,
+      "source": {
+        "filename": "openssl-3.5.8.tar.gz",
+        "sha256": "a8f84a39918ec6415ce765d9b429d313ba97b8143169c172e734b9514464f5b2",
+        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.8/openssl-3.5.8.tar.gz"
+      },
+      "version": "3.5.8"
+    },
+    {
+      "name": "sqlite",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 3275272,
+      "source": {
+        "filename": "sqlite-autoconf-3530100.tar.gz",
+        "sha256": "83e6b2020a034e9a7ad4a72feea59e1ad52f162e09cbd26735a3ffb98359fc4f",
+        "url": "https://www.sqlite.org/2026/sqlite-autoconf-3530100.tar.gz"
+      },
+      "version": "3530100"
+    },
+    {
+      "name": "tcl",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 11866337,
+      "source": {
+        "filename": "tcl9.0.4-src.tar.gz",
+        "sha256": "d0aed49230bc02a65c1e0229e65f34590a4b037ec40d546f32573b467f7551ea",
+        "url": "https://prdownloads.sourceforge.net/tcl/tcl9.0.4-src.tar.gz"
+      },
+      "version": "9.0.4"
+    },
+    {
+      "name": "tk",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 4613019,
+      "source": {
+        "filename": "tk9.0.4-src.tar.gz",
+        "sha256": "d7a146d2917eb8b5cc95276dbf0e3d03c7464d2b19c1675357857c989301dbb4",
+        "url": "https://prdownloads.sourceforge.net/tcl/tk9.0.4-src.tar.gz"
+      },
+      "version": "9.0.4"
+    },
+    {
+      "name": "xz",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 2771455,
+      "source": {
+        "filename": "xz-5.8.3.tar.gz",
+        "sha256": "3d3a1b973af218114f4f889bbaa2f4c037deaae0c8e815eec381c3d546b974a0",
+        "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.3/xz-5.8.3.tar.gz"
+      },
+      "version": "5.8.3"
+    },
+    {
+      "name": "zlib",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 1502830,
+      "source": {
+        "filename": "zlib-1.3.2.tar.gz",
+        "sha256": "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+        "url": "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz"
+      },
+      "version": "1.3.2"
+    },
+    {
+      "name": "uuid",
+      "provenance": "python-build-standalone/20260901/pythonbuild/downloads.py",
+      "size": 318256,
+      "source": {
+        "filename": "libuuid-1.0.3.tar.gz",
+        "sha256": "46af3275291091009ad7f1b899de3d0cea0252737550e7919d17237997db5644",
+        "url": "https://sourceforge.net/projects/libuuid/files/libuuid-1.0.3.tar.gz"
+      },
+      "version": "1.0.3"
+    },
+    {
+      "name": "libxml2",
+      "provenance": "lxml-6.1.3/buildlibxml.py ARCHIVE_HASHES + actual compiled version probe",
+      "size": 2327580,
+      "source": {
+        "filename": "libxml2-2.14.6.tar.xz",
+        "sha256": "7ce458a0affeb83f0b55f1f4f9e0e55735dbfc1a9de124ee86fb4a66b597203a",
+        "url": "https://download.gnome.org/sources/libxml2/2.14/libxml2-2.14.6.tar.xz"
+      },
+      "version": "2.14.6"
+    },
+    {
+      "name": "libxslt",
+      "provenance": "lxml-6.1.3/buildlibxml.py ARCHIVE_HASHES + actual compiled version probe",
+      "size": 1518364,
+      "source": {
+        "filename": "libxslt-1.1.43.tar.xz",
+        "sha256": "5a3d6b383ca5afc235b171118e90f5ff6aa27e9fea3303065231a6d403f0183a",
+        "url": "https://download.gnome.org/sources/libxslt/1.1/libxslt-1.1.43.tar.xz"
+      },
+      "version": "1.1.43"
+    },
+    {
+      "name": "libiconv",
+      "provenance": "lxml-6.1.3/buildlibxml.py ARCHIVE_HASHES + actual compiled version probe",
+      "retrieval_urls": [
+        "https://ftp.wayne.edu/gnu/libiconv/libiconv-1.18.tar.gz",
+        "https://mirrors.ocf.berkeley.edu/gnu/libiconv/libiconv-1.18.tar.gz"
+      ],
+      "size": 5822590,
+      "source": {
+        "filename": "libiconv-1.18.tar.gz",
+        "sha256": "3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8",
+        "url": "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.18.tar.gz"
+      },
+      "version": "1.18"
+    },
+    {
+      "name": "SheenBidi-3.0.0",
+      "provenance": "matplotlib-3.11.2/subprojects/sheenbidi.wrap",
+      "size": 2619896,
+      "source": {
+        "filename": "sheenbidi-3.0.0.tar.gz",
+        "sha256": "86c56014034739ba39a24c23eb00323b0bf6f737354f665786015fca842af786",
+        "url": "https://github.com/Tehreer/SheenBidi/archive/refs/tags/v3.0.0/sheenbidi-3.0.0.tar.gz"
+      },
+      "version": "SheenBidi-3.0.0"
+    },
+    {
+      "name": "freetype-2.14.3",
+      "provenance": "matplotlib-3.11.2/subprojects/freetype2.wrap",
+      "retrieval_urls": [
+        "https://downloads.sourceforge.net/project/freetype/freetype2/2.14.3/freetype-2.14.3.tar.xz"
+      ],
+      "size": 2670220,
+      "source": {
+        "filename": "freetype-2.14.3.tar.xz",
+        "sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+        "url": "https://download.savannah.nongnu.org/releases/freetype/freetype-2.14.3.tar.xz"
+      },
+      "version": "freetype-2.14.3"
+    },
+    {
+      "name": "harfbuzz-14.1.0",
+      "provenance": "matplotlib-3.11.2/subprojects/harfbuzz.wrap",
+      "size": 19499908,
+      "source": {
+        "filename": "harfbuzz-14.1.0.tar.xz",
+        "sha256": "ee0eb3a1da2c5a28147f12dff55f6c7d60aeeeb29ac7ef334eabe84c8476c105",
+        "url": "https://github.com/harfbuzz/harfbuzz/releases/download/14.1.0/harfbuzz-14.1.0.tar.xz"
+      },
+      "version": "harfbuzz-14.1.0"
+    },
+    {
+      "name": "qhull-8.0.2",
+      "provenance": "matplotlib-3.11.2/subprojects/qhull.wrap",
+      "size": 1307301,
+      "source": {
+        "filename": "qhull-8.0.2.tar.gz",
+        "sha256": "8774e9a12c70b0180b95d6b0b563c5aa4bea8d5960c15e18ae3b6d2521d64f8b",
+        "url": "https://github.com/qhull/qhull/archive/v8.0.2/qhull-8.0.2.tar.gz"
+      },
+      "version": "qhull-8.0.2"
+    },
+    {
+      "name": "libraqm-0.10.5",
+      "provenance": "matplotlib-3.11.2/subprojects/libraqm.wrap",
+      "size": 301815,
+      "source": {
+        "filename": "libraqm-0.10.5.tar.gz",
+        "sha256": "7f3dd21b4b3bd28a36f2c911d31d91a9d69341697713923ef1aac65d56ebcafd",
+        "url": "https://github.com/HOST-Oman/libraqm/archive/v0.10.5/libraqm-0.10.5.tar.gz"
+      },
+      "version": "libraqm-0.10.5"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-2.13.2",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-2.13.2.tar.gz",
+        "sha256": "f050e703fb596df2fa8cdbe1175c13856ec96d8dace878a642bcea3875356cfe",
+        "url": "https://files.pythonhosted.org/packages/f5/93/2432663146193e5df82583fd880a7a5f05750b954b85f59bbb9137c54fd1/pybind11-2.13.2.tar.gz"
+      },
+      "version": "2.13.2"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-2.13.3",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-2.13.3.tar.gz",
+        "sha256": "84b1314ca72397f79854161cf852466629dd374bb0efce0c6501d745699d9a43",
+        "url": "https://files.pythonhosted.org/packages/78/b7/789a3404d89bc2f22cb54447dfe9ad24d91a74dfe8586d7728fd75881bb2/pybind11-2.13.3.tar.gz"
+      },
+      "version": "2.13.3"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-2.13.4",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-2.13.4.tar.gz",
+        "sha256": "75a9e1f967d3cd3fd59f981eb39406f9de05e33a4dd8f5f18b8e29cae023e1d5",
+        "url": "https://files.pythonhosted.org/packages/94/f2/875f05b1618d8127823041b99035bb3edd2cbef6298c75736e5c0bb39b7f/pybind11-2.13.4.tar.gz"
+      },
+      "version": "2.13.4"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-2.13.5",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-2.13.5.tar.gz",
+        "sha256": "ae33f635322f9d9741abde0c5f348bf9373f6c22298883395e586cb43c55574e",
+        "url": "https://files.pythonhosted.org/packages/82/43/8595435c45a93d12475873f55eef0ce38b911e128376733d1ee6c833597c/pybind11-2.13.5.tar.gz"
+      },
+      "version": "2.13.5"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-2.13.6",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-2.13.6.tar.gz",
+        "sha256": "ba6af10348c12b24e92fa086b39cfba0eff619b61ac77c406167d813b096d39a",
+        "url": "https://files.pythonhosted.org/packages/d2/c1/72b9622fcb32ff98b054f724e213c7f70d6898baa714f4516288456ceaba/pybind11-2.13.6.tar.gz"
+      },
+      "version": "2.13.6"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-3.0.0",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-3.0.0.tar.gz",
+        "sha256": "c3f07bce3ada51c3e4b76badfa85df11688d12c46111f9d242bc5c9415af7862",
+        "url": "https://files.pythonhosted.org/packages/ef/83/698d120e257a116f2472c710932023ad779409adf2734d2e940f34eea2c5/pybind11-3.0.0.tar.gz"
+      },
+      "version": "3.0.0"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-3.0.1",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-3.0.1.tar.gz",
+        "sha256": "9c0f40056a016da59bab516efb523089139fcc6f2ba7e4930854c61efb932051",
+        "url": "https://files.pythonhosted.org/packages/2f/7b/a6d8dcb83c457e24a9df1e4d8fd5fb8034d4bbc62f3c324681e8a9ba57c2/pybind11-3.0.1.tar.gz"
+      },
+      "version": "3.0.1"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-3.0.2",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-3.0.2.tar.gz",
+        "sha256": "432f01aeb68e361a3a7fc7575c2c7f497595bf640f747acd909ff238dd766e06",
+        "url": "https://files.pythonhosted.org/packages/a5/98/9118a0659646f1628c592ef9bb48e0056efa6bf27c951fd12a178e0136fb/pybind11-3.0.2.tar.gz"
+      },
+      "version": "3.0.2"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-3.0.3",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-3.0.3.tar.gz",
+        "sha256": "00471cdb816882c484708bc5dde80815c8c11cea540ab2cc6410f5ddea434755",
+        "url": "https://files.pythonhosted.org/packages/41/50/b83d65efc1914681f5aded4ce37c703408a9bb74829f27f041560ca52ffb/pybind11-3.0.3.tar.gz"
+      },
+      "version": "3.0.3"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-3.0.4",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-3.0.4.tar.gz",
+        "sha256": "3286b59c8a774b9ee650169302dd5a4eedc30a8617905a0560dd8ee44775130c",
+        "url": "https://files.pythonhosted.org/packages/cc/f0/35145a3c3baffeef55d4b8324caa33abaa8fa56ab345ecd4b2211d09163e/pybind11-3.0.4.tar.gz"
+      },
+      "version": "3.0.4"
+    },
+    {
+      "license_sha256": "83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+      "name": "pybind11-3.1.0",
+      "scope": "license-body comparison; actual compilation version unknown",
+      "source": {
+        "filename": "pybind11-3.1.0.tar.gz",
+        "sha256": "a1cc06b524ab3edca51f8ad3895f9c4fa20b8b19283173dff4ae781449dc9639",
+        "url": "https://files.pythonhosted.org/packages/76/f3/95b0f40b31df41dbfe6bb0857419c9442c15839cbac4796f1c26ae0b6081/pybind11-3.1.0.tar.gz"
+      },
+      "version": "3.1.0"
+    },
+    {
+      "name": "python-build-standalone",
+      "size": 441917,
+      "source": {
+        "filename": "python-build-standalone-20260901.tar.gz",
+        "sha256": "bf4776e7bdb751a58fa6879d280b678f60b955b62b19ec98a32903fd82cee1c6",
+        "url": "https://github.com/astral-sh/python-build-standalone/archive/refs/tags/20260901.tar.gz"
+      },
+      "version": "20260901"
+    },
+    {
+      "archive_kind": "rpm",
+      "name": "gcc-8.5.0",
+      "provenance": {
+        "arch": "src",
+        "filename": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+        "name": "gcc",
+        "official_checksum": "c94dbbd2cd6d5d01a5a6822ea18f8ce34942c25a80e17b4682d547d5e652dbd0",
+        "official_checksum_type": "sha256",
+        "primary_sha256": "e453794dab68fca47cd1038f114f16dfdee6cfc53d73e2dd47be3d9a73796340",
+        "primary_url": "https://repo.almalinux.org/vault/8.10/BaseOS/Source/repodata/e453794dab68fca47cd1038f114f16dfdee6cfc53d73e2dd47be3d9a73796340-primary.xml.gz",
+        "release": "28.el8_10.alma.1",
+        "repomd_sha256": "4de5c096afde1b6291f61f44f3ebb21a285de6dbf7f9a882597915c801a25081",
+        "repository": "https://repo.almalinux.org/vault/8.10/BaseOS/Source/",
+        "sha256": "c94dbbd2cd6d5d01a5a6822ea18f8ce34942c25a80e17b4682d547d5e652dbd0",
+        "size": 65715094,
+        "url": "https://repo.almalinux.org/vault/8.10/BaseOS/Source/Packages/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+        "version": "8.5.0"
+      },
+      "size": 65715094,
+      "source": {
+        "filename": "gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+        "sha256": "c94dbbd2cd6d5d01a5a6822ea18f8ce34942c25a80e17b4682d547d5e652dbd0",
+        "url": "https://repo.almalinux.org/vault/8.10/BaseOS/Source/Packages/gcc-8.5.0-28.el8_10.alma.1.src.rpm"
+      },
+      "version": "8.5.0-28.el8_10.alma.1"
+    },
+    {
+      "archive_kind": "rpm",
+      "name": "gcc-4.8.5",
+      "provenance": {
+        "arch": "src",
+        "filename": "gcc-4.8.5-44.el7.src.rpm",
+        "name": "gcc",
+        "official_checksum": "642c4085f6af9565e39583e54a9d7a5d9e6b93dd8c8e9474aec8a892d6c7aa36",
+        "official_checksum_type": "sha256",
+        "primary_sha256": "e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6",
+        "primary_url": "https://vault.centos.org/7.9.2009/os/Source/repodata/e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6-primary.xml.gz",
+        "release": "44.el7",
+        "repomd_sha256": "8dc202dc2d74ad04e824905eba4777e8fa5358f57983663b313ee2db2bf2129a",
+        "repository": "https://vault.centos.org/7.9.2009/os/Source/",
+        "sha256": "642c4085f6af9565e39583e54a9d7a5d9e6b93dd8c8e9474aec8a892d6c7aa36",
+        "size": 79314655,
+        "url": "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-4.8.5-44.el7.src.rpm",
+        "version": "4.8.5"
+      },
+      "size": 79314655,
+      "source": {
+        "filename": "gcc-4.8.5-44.el7.src.rpm",
+        "sha256": "642c4085f6af9565e39583e54a9d7a5d9e6b93dd8c8e9474aec8a892d6c7aa36",
+        "url": "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-4.8.5-44.el7.src.rpm"
+      },
+      "version": "4.8.5-44.el7"
+    },
+    {
+      "archive_kind": "rpm",
+      "name": "gcc-libraries-8.3.1",
+      "provenance": {
+        "arch": "src",
+        "filename": "gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
+        "name": "gcc-libraries",
+        "official_checksum": "cf2a1d2c2e5a56eb2e495c2638e64769b73db07555e1f7ce34cbd9feff6891f5",
+        "official_checksum_type": "sha256",
+        "primary_sha256": "e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6",
+        "primary_url": "https://vault.centos.org/7.9.2009/os/Source/repodata/e9ed33ce5da5e899a647de4849b8981c89f179d0b2c39f6294e2f257deedc3b6-primary.xml.gz",
+        "release": "2.1.1.el7",
+        "repomd_sha256": "8dc202dc2d74ad04e824905eba4777e8fa5358f57983663b313ee2db2bf2129a",
+        "repository": "https://vault.centos.org/7.9.2009/os/Source/",
+        "sha256": "cf2a1d2c2e5a56eb2e495c2638e64769b73db07555e1f7ce34cbd9feff6891f5",
+        "size": 137336608,
+        "url": "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
+        "version": "8.3.1"
+      },
+      "size": 137336608,
+      "source": {
+        "filename": "gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
+        "sha256": "cf2a1d2c2e5a56eb2e495c2638e64769b73db07555e1f7ce34cbd9feff6891f5",
+        "url": "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-libraries-8.3.1-2.1.1.el7.src.rpm"
+      },
+      "version": "8.3.1-2.1.1.el7"
+    },
+    {
+      "archive_kind": "rpm",
+      "name": "runtime-libz",
+      "size": 565972,
+      "source": {
+        "filename": "zlib-1.2.11-26.el8.src.rpm",
+        "sha256": "3c5e940e2d084840b1eab18a58148e45bcb9ebbf4acd924f857b821c188349d9",
+        "url": "https://download.rockylinux.org/pub/rocky/8/BaseOS/source/tree/Packages/z/zlib-1.2.11-26.el8.src.rpm"
+      },
+      "version": "1.2.11-26.el8"
+    },
+    {
+      "deliver_archive": false,
+      "license_members": [
+        "rustc-nightly-x86_64-unknown-linux-gnu/rustc/share/doc/rust/COPYRIGHT-library.html"
+      ],
+      "name": "rust-stdlib",
+      "provenance": {
+        "checksum_sha256": "692f9aac8d65bf43adc89cd530ae6d55eb8e2b6ca3b25ca34479ce7c873e3f93",
+        "checksum_url": "https://static.rust-lang.org/dist/2026-08-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz.sha256"
+      },
+      "size": 81444064,
+      "source": {
+        "filename": "rustc-nightly-x86_64-unknown-linux-gnu.tar.xz",
+        "sha256": "7e1584d825b435c06a13c5ce46bf5279b718e37057311499c52c39a0f5538341",
+        "url": "https://static.rust-lang.org/dist/2026-08-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz"
+      },
+      "version": "nightly-2026-08-01"
+    },
+    {
+      "additional_members": [
+        "orjson-3.12.0/.github/workflows/artifact.yaml"
+      ],
+      "name": "orjson-release-recipe",
+      "source": {
+        "filename": "orjson-3.12.0-release-recipe.tar.gz",
+        "sha256": "25ec9c757f6b8ef7db50e50a5b7dbc22ee5c5c496de41dceef24a7eb75f4e10e",
+        "url": "https://github.com/ijl/orjson/archive/refs/tags/3.12.0.tar.gz"
+      },
+      "version": "3.12.0"
+    },
+    {
+      "name": "pillow-zlib-ng",
+      "provenance": "Pillow 12.3.0 features.version_feature(\"zlib_ng\") reports 2.3.3; exact official source tag",
+      "source": {
+        "filename": "zlib-ng-2.3.3.tar.gz",
+        "sha256": "f9c65aa9c852eb8255b636fd9f07ce1c406f061ec19a2e7d508b318ca0c907d1",
+        "url": "https://codeload.github.com/zlib-ng/zlib-ng/tar.gz/refs/tags/2.3.3"
+      },
+      "version": "2.3.3"
+    }
+  ],
+  "wheels": {
+    "ase-3.29.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LGPL-2.1-or-later"
+        ],
+        "materials": [
+          "ase-3.29.0.dist-info/licenses/LICENSE"
+        ],
+        "sources": [
+          "sources/ase-3.29.0.tar.gz"
+        ]
+      },
+      "sha256": "7b9dd103f007810339c24acfee2f6b677c0c48443b21d3c98e52959246cf4ebf"
+    },
+    "bibtexparser-1.3.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "source-licenses/bibtexparser/*"
+        ],
+        "provenance": "same-version COPYING explicitly permits BSD option",
+        "sources": [
+          "sources/bibtexparser-1.3.0.tar.gz"
+        ]
+      },
+      "sha256": "d2886789566f2ecbecb5f44309d36ed96162530f29f0b0c07df11630adf17632"
+    },
+    "certifi-2026.7.22-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MPL-2.0"
+        ],
+        "materials": [
+          "certifi-2026.7.22.dist-info/licenses/LICENSE"
+        ],
+        "sources": [
+          "sources/certifi-2026.7.22.tar.gz"
+        ]
+      },
+      "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
+    },
+    "charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "source-component/charset_normalizer-3.5.1/data",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-9e9147d30fd7cf9a"
+          ],
+          "materials": [
+            "source-licenses/charset-normalizer/charset_normalizer-3.5.1/data/NOTICE.md"
+          ],
+          "sources": [
+            "sources/charset_normalizer-3.5.1.tar.gz"
+          ]
+        }
+      ],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "charset_normalizer-3.5.1.dist-info/licenses/LICENSE"
+        ],
+        "sources": [
+          "sources/charset_normalizer-3.5.1.tar.gz"
+        ]
+      },
+      "sha256": "b9af956078716df40d985fb0dfeb2c2120c5ca92ba4ff4b388acfd01cdc14d08"
+    },
+    "cloudpickle-3.1.2-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "cloudpickle-3.1.2.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a"
+    },
+    "contourpy-1.4.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "pybind11",
+          "kind": "compiled-header",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "limitations": [
+            "actual compilation version not exposed by upstream wheel"
+          ],
+          "materials": [
+            "source-licenses/pybind11-*/*/LICENSE"
+          ],
+          "provenance": "same-version sdist build requirement; 11 releases 2.13.2..3.1.0 have identical full body 83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "version": "unknown"
+        }
+      ],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "contourpy-1.4.0.dist-info/licenses/LICENSE"
+        ],
+        "sources": [
+          "sources/contourpy-1.4.0.tar.gz"
+        ]
+      },
+      "sha256": "875f42444c9cf48d56f724f2637e60d0f73b3b12c9041e1484580a233edf9591"
+    },
+    "cycler-0.12.1-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-cycler"
+        ],
+        "materials": [
+          "cycler-0.12.1.dist-info/LICENSE"
+        ]
+      },
+      "sha256": "85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30"
+    },
+    "fonttools-4.65.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "fonttools-4.65.0.dist-info/licenses/LICENSE",
+          "fonttools-4.65.0.dist-info/licenses/LICENSE.external"
+        ],
+        "sources": [
+          "sources/fonttools-4.65.0.tar.gz"
+        ]
+      },
+      "sha256": "05595385ae99f4b9626cebb973bf171b8fe38a8f40708e6e42abba0ed7537778"
+    },
+    "idna-3.20-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "idna-3.20.dist-info/licenses/LICENSE.md"
+        ]
+      },
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
+    },
+    "joblib-1.6.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "joblib-1.6.0.dist-info/licenses/LICENSE.txt"
+        ]
+      },
+      "sha256": "3dbbf9f6e4b592a2357b854608e980fe6390d131d7a82f011a377ef2ebef7aba"
+    },
+    "kiwisolver-1.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-kiwisolver"
+        ],
+        "materials": [
+          "kiwisolver-1.5.1.dist-info/licenses/LICENSE"
+        ],
+        "sources": [
+          "sources/kiwisolver-1.5.1.tar.gz"
+        ]
+      },
+      "sha256": "34633ecf50d16187ab8e5528b7a2530f2feb4e23f300db4672538b51cfc5cd38"
+    },
+    "lxml-6.1.3-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "zlib",
+          "licenses": [
+            "Zlib"
+          ],
+          "materials": [
+            "source-licenses/zlib/*",
+            "lxml-6.1.3.dist-info/licenses/LICENSE.txt",
+            "lxml-6.1.3.dist-info/licenses/LICENSES.txt"
+          ],
+          "sources": [
+            "sources/zlib-1.3.2.tar.gz",
+            "sources/lxml-6.1.3.tar.gz",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "1.3.2"
+        },
+        {
+          "id": "iconv",
+          "licenses": [
+            "LGPL-2.1-only"
+          ],
+          "materials": [
+            "source-licenses/libiconv/*",
+            "lxml-6.1.3.dist-info/licenses/LICENSE.txt",
+            "lxml-6.1.3.dist-info/licenses/LICENSES.txt"
+          ],
+          "sources": [
+            "sources/libiconv-1.18.tar.gz",
+            "sources/lxml-6.1.3.tar.gz",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "1.18"
+        },
+        {
+          "id": "libxml2",
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "source-licenses/libxml2/*",
+            "lxml-6.1.3.dist-info/licenses/LICENSE.txt",
+            "lxml-6.1.3.dist-info/licenses/LICENSES.txt"
+          ],
+          "sources": [
+            "sources/libxml2-2.14.6.tar.xz",
+            "sources/lxml-6.1.3.tar.gz",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "2.14.6"
+        },
+        {
+          "id": "libxslt",
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "source-licenses/libxslt/*",
+            "lxml-6.1.3.dist-info/licenses/LICENSE.txt",
+            "lxml-6.1.3.dist-info/licenses/LICENSES.txt"
+          ],
+          "sources": [
+            "sources/libxslt-1.1.43.tar.xz",
+            "sources/lxml-6.1.3.tar.gz",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "1.1.43"
+        },
+        {
+          "id": "libexslt",
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "source-licenses/libxslt/*",
+            "lxml-6.1.3.dist-info/licenses/LICENSE.txt",
+            "lxml-6.1.3.dist-info/licenses/LICENSES.txt"
+          ],
+          "sources": [
+            "sources/libxslt-1.1.43.tar.xz",
+            "sources/lxml-6.1.3.tar.gz",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "1.1.43"
+        }
+      ],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "lxml-6.1.3.dist-info/licenses/LICENSE.txt",
+          "lxml-6.1.3.dist-info/licenses/LICENSES.txt"
+        ],
+        "sources": [
+          "sources/lxml-6.1.3.tar.gz"
+        ]
+      },
+      "sha256": "909f4e927bb051f7740d6367285fc60cdcfdaf0258c2dba4ff5ba7eadadc250c"
+    },
+    "matplotlib-3.11.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "FreeType",
+          "licenses": [
+            "FTL"
+          ],
+          "materials": [
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_STIX",
+            "matplotlib-3.11.2.dist-info/LICENSE",
+            "source-licenses/freetype-2.14.3/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/harfbuzz-14.1.0/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/libraqm-0.10.5/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/qhull-8.0.2/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/SheenBidi-3.0.0/*",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "sources": [
+            "sources/freetype-2.14.3.tar.xz"
+          ]
+        },
+        {
+          "id": "HarfBuzz",
+          "licenses": [
+            "MIT-Modern-Variant"
+          ],
+          "materials": [
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_STIX",
+            "matplotlib-3.11.2.dist-info/LICENSE",
+            "source-licenses/freetype-2.14.3/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/harfbuzz-14.1.0/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/libraqm-0.10.5/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/qhull-8.0.2/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/SheenBidi-3.0.0/*",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "sources": [
+            "sources/harfbuzz-14.1.0.tar.xz"
+          ]
+        },
+        {
+          "id": "libraqm",
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_STIX",
+            "matplotlib-3.11.2.dist-info/LICENSE",
+            "source-licenses/freetype-2.14.3/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/harfbuzz-14.1.0/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/libraqm-0.10.5/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/qhull-8.0.2/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/SheenBidi-3.0.0/*",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "sources": [
+            "sources/libraqm-0.10.5.tar.gz"
+          ]
+        },
+        {
+          "id": "QHull",
+          "licenses": [
+            "Qhull"
+          ],
+          "materials": [
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_STIX",
+            "matplotlib-3.11.2.dist-info/LICENSE",
+            "source-licenses/freetype-2.14.3/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/harfbuzz-14.1.0/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/libraqm-0.10.5/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/qhull-8.0.2/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/SheenBidi-3.0.0/*",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "sources": [
+            "sources/qhull-8.0.2.tar.gz"
+          ]
+        },
+        {
+          "id": "SheenBidi",
+          "licenses": [
+            "Apache-2.0"
+          ],
+          "materials": [
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+            "matplotlib/mpl-data/fonts/ttf/LICENSE_STIX",
+            "matplotlib-3.11.2.dist-info/LICENSE",
+            "source-licenses/freetype-2.14.3/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/harfbuzz-14.1.0/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/libraqm-0.10.5/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/qhull-8.0.2/*",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/SheenBidi-3.0.0/*",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "sources": [
+            "sources/sheenbidi-3.0.0.tar.gz"
+          ]
+        },
+        {
+          "id": "pybind11",
+          "kind": "compiled-header",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "limitations": [
+            "actual compilation version not exposed by upstream wheel"
+          ],
+          "materials": [
+            "source-licenses/pybind11-*/*/LICENSE"
+          ],
+          "provenance": "same-version sdist build requirement; 11 releases 2.13.2..3.1.0 have identical full body 83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "version": "unknown"
+        },
+        {
+          "id": "source-component/matplotlib-3.11.2/LICENSE",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-8a5117424c73fafb",
+            "LicenseRef-2e1c01911323948d",
+            "LicenseRef-5b4734585621dd81",
+            "LicenseRef-f762d1cf5a43e48f",
+            "LicenseRef-0a4ccfb5a1f493fe",
+            "LicenseRef-c743c90a65fb7c29",
+            "LicenseRef-d24c594eb7d0132d",
+            "LicenseRef-6dbf1e7142c7c5ff",
+            "LicenseRef-989c9edc7e94f1ad",
+            "LicenseRef-fc5e75db539e1f32",
+            "LicenseRef-934b3e3646d8d9d3",
+            "LicenseRef-7508d35613cb9823",
+            "LicenseRef-29cdcadf138fa886",
+            "LicenseRef-5aad9727bafd9445",
+            "LicenseRef-f6096201478650ab"
+          ],
+          "materials": [
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_AMSFONTS",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_BAKOMA",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_COLORBREWER",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_COURIERTEN",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_FREETYPE",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_HARFBUZZ",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_JSXTOOLS_RESIZE_OBSERVER",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_LAST_RESORT_FONT",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_LIBRAQM",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_QT4_EDITOR",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_SHEENBIDI",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_SOLARIZED",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_STIX",
+            "source-licenses/matplotlib/matplotlib-3.11.2/LICENSE/LICENSE_YORICK"
+          ],
+          "sources": [
+            "sources/matplotlib-3.11.2.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/matplotlib-3.11.2/extern/agg24-svn/src",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-f4226595fc09dc5c"
+          ],
+          "materials": [
+            "source-licenses/matplotlib/matplotlib-3.11.2/extern/agg24-svn/src/copying"
+          ],
+          "sources": [
+            "sources/matplotlib-3.11.2.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/matplotlib-3.11.2/lib/matplotlib/mpl-data/fonts/ttf",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-c5a075b2bd3e28c9",
+            "LicenseRef-d4feb7173a78d4df"
+          ],
+          "materials": [
+            "source-licenses/matplotlib/matplotlib-3.11.2/lib/matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+            "source-licenses/matplotlib/matplotlib-3.11.2/lib/matplotlib/mpl-data/fonts/ttf/LICENSE_STIX"
+          ],
+          "sources": [
+            "sources/matplotlib-3.11.2.tar.gz"
+          ]
+        }
+      ],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-matplotlib"
+        ],
+        "materials": [
+          "matplotlib/mpl-data/fonts/ttf/LICENSE_DEJAVU",
+          "matplotlib/mpl-data/fonts/ttf/LICENSE_STIX",
+          "matplotlib-3.11.2.dist-info/LICENSE",
+          "source-licenses/freetype-2.14.3/*",
+          "notices/REDISTRIBUTION.txt",
+          "source-licenses/harfbuzz-14.1.0/*",
+          "notices/REDISTRIBUTION.txt",
+          "source-licenses/libraqm-0.10.5/*",
+          "notices/REDISTRIBUTION.txt",
+          "source-licenses/qhull-8.0.2/*",
+          "notices/REDISTRIBUTION.txt",
+          "source-licenses/SheenBidi-3.0.0/*",
+          "notices/REDISTRIBUTION.txt"
+        ],
+        "sources": [
+          "sources/matplotlib-3.11.2.tar.gz"
+        ]
+      },
+      "sha256": "df4f7784aca81a94f254c0a2767d592ee25f407e488f5fa7203e51093fb6ca27"
+    },
+    "monty-2026.7.16-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-monty"
+        ],
+        "materials": [
+          "monty-2026.7.16.dist-info/licenses/LICENSE.rst"
+        ]
+      },
+      "sha256": "fadd48f18135128a6042d7efe80e301d5658178d441cb1e80a7d6624bd8e114d"
+    },
+    "mpmath-1.3.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD"
+        ],
+        "materials": [
+          "mpmath-1.3.0.dist-info/LICENSE"
+        ]
+      },
+      "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"
+    },
+    "narwhals-2.26.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "narwhals-2.26.0.dist-info/licenses/LICENSE.md"
+        ]
+      },
+      "sha256": "29326d74f107c347fd1009bd58e38d9f7c7c5b51e6de97bc93dbc325d9038b54"
+    },
+    "networkx-3.6.1-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "networkx-3.6.1.dist-info/licenses/LICENSE.txt"
+        ]
+      },
+      "sha256": "d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"
+    },
+    "numpy-2.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "OpenBLAS-LAPACK",
+          "licenses": [
+            "BSD-3-Clause",
+            "BSD-3-Clause-Open-MPI"
+          ],
+          "materials": [
+            "numpy/_core/include/numpy/random/LICENSE.txt",
+            "numpy/ma/LICENSE",
+            "numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_build_utils/tempita",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-074f25dc29d40c3f"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_build_utils/tempita/LICENSE.txt"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_core/include/numpy/libdivide",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-5b5e62ac2991323c"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_core/include/numpy/libdivide/LICENSE.txt"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_core/src/common/pythoncapi-compat",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-9da28d8155a1db28"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_core/src/common/pythoncapi-compat/COPYING"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_core/src/highway",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-5f9aa7aa46b98ad7"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_core/src/highway/LICENSE"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_core/src/highway/debian",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-ed934734154a521f"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_core/src/highway/debian/copyright"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_core/src/multiarray",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-824693155c0f0320"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_core/src/multiarray/dragon4_LICENSE.txt"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_core/src/npysort/x86-simd-sort",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-3a6ea2d47d02153f"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/_core/src/umath/svml",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-cc2ee66a93e8e94d"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/_core/src/umath/svml/LICENSE"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/fft/pocketfft",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-c0f74614644396a7"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/fft/pocketfft/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/linalg/lapack_lite",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-99f0b9a8dcc9b2da"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/linalg/lapack_lite/LICENSE.txt"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/ma",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-d55685cb71b3f198"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/ma/LICENSE"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/random",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-376d2db3a9c4fecf"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/random/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/random/src/distributions",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-66885728f9389a9c"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/random/src/distributions/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/random/src/mt19937",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-40e6d9e8ac05f4ce"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/random/src/mt19937/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/random/src/pcg64",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-0d894f3bdf4fc894"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/random/src/pcg64/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/random/src/philox",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-77440d2ba9fafd25"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/random/src/philox/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/random/src/sfc64",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-9491e21845d87e9e"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/random/src/sfc64/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/numpy-2.5.3/numpy/random/src/splitmix64",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-009b6111da735535"
+          ],
+          "materials": [
+            "source-licenses/numpy/numpy-2.5.3/numpy/random/src/splitmix64/LICENSE.md"
+          ],
+          "sources": [
+            "sources/numpy-2.5.3.tar.gz"
+          ]
+        }
+      ],
+      "native": [
+        {
+          "licenses": [
+            "BSD-3-Clause AND BSD-3-Clause-Open-MPI"
+          ],
+          "materials": [
+            "numpy/_core/include/numpy/random/LICENSE.txt",
+            "numpy/ma/LICENSE",
+            "numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+          ],
+          "pattern": "numpy.libs/libscipy_openblas*.so*"
+        },
+        {
+          "binary_sha256": "a6a368328d02a5d8a149746f13f6268f8cc9192df5c18777b25c3c9b5ef52160",
+          "licenses": [
+            "GPL-3.0-or-later WITH GCC-exception-3.1"
+          ],
+          "materials": [
+            "numpy/_core/include/numpy/random/LICENSE.txt",
+            "numpy/ma/LICENSE",
+            "numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+          ],
+          "pattern": "numpy.libs/libgfortran-83c28eba-468e71e5.so.5.0.0",
+          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "sources": [
+            "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "8.5.0-28.el8_10.alma.1"
+        },
+        {
+          "binary_sha256": "6bc3069003caec1f075be3c51ae8355332f081fa9465910c4b5724e7fe7d8ad4",
+          "licenses": [
+            "LGPL-2.1-or-later"
+          ],
+          "materials": [
+            "numpy/_core/include/numpy/random/LICENSE.txt",
+            "numpy/ma/LICENSE",
+            "numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
+            "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
+            "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+          ],
+          "pattern": "numpy.libs/libquadmath-2284e583-a9307bba.so.0.0.0",
+          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "sources": [
+            "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "8.5.0-28.el8_10.alma.1"
+        }
+      ],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0"
+        ],
+        "materials": [
+          "numpy/_core/include/numpy/random/LICENSE.txt",
+          "numpy/ma/LICENSE",
+          "numpy/random/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/LICENSE.txt",
+          "numpy-2.5.3.dist-info/licenses/numpy/_core/include/numpy/libdivide/LICENSE.txt",
+          "numpy-2.5.3.dist-info/licenses/numpy/_core/src/common/pythoncapi-compat/COPYING",
+          "numpy-2.5.3.dist-info/licenses/numpy/_core/src/highway/LICENSE",
+          "numpy-2.5.3.dist-info/licenses/numpy/_core/src/multiarray/dragon4_LICENSE.txt",
+          "numpy-2.5.3.dist-info/licenses/numpy/_core/src/npysort/x86-simd-sort/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/_core/src/umath/svml/LICENSE",
+          "numpy-2.5.3.dist-info/licenses/numpy/fft/pocketfft/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/linalg/lapack_lite/LICENSE.txt",
+          "numpy-2.5.3.dist-info/licenses/numpy/ma/LICENSE",
+          "numpy-2.5.3.dist-info/licenses/numpy/random/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/random/src/distributions/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/random/src/mt19937/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/random/src/pcg64/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/random/src/philox/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/random/src/sfc64/LICENSE.md",
+          "numpy-2.5.3.dist-info/licenses/numpy/random/src/splitmix64/LICENSE.md"
+        ],
+        "sources": [
+          "sources/numpy-2.5.3.tar.gz"
+        ]
+      },
+      "sha256": "b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3"
+    },
+    "orjson-3.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/associative-cache-3.0.1",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-e39c869ce0c36baf",
+            "LicenseRef-a082a80ff2a6011e"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/associative-cache-3.0.1/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/associative-cache-3.0.1/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/bytecount-0.6.9",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-342edd9ad83810af",
+            "LicenseRef-6ed91b8c8e03e82f"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/bytecount-0.6.9/LICENSE.Apache2",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/bytecount-0.6.9/LICENSE.MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/cc-1.4.3",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-5171eeb444700e0a",
+            "LicenseRef-8ec81bb3f3ca241b"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/cc-1.4.3/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/cc-1.4.3/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/cfg-if-1.0.4",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-84fd7c5bc08aee17",
+            "LicenseRef-acbdfae81e274b8e"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/cfg-if-1.0.4/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/cfg-if-1.0.4/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/encoding_rs-0.8.35",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-fd5237d1d28ffd08",
+            "LicenseRef-a0b3680d0d36193c",
+            "LicenseRef-bd38f628f38e53c2",
+            "LicenseRef-f1637b30ac042a83"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/encoding_rs-0.8.35/COPYRIGHT",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/encoding_rs-0.8.35/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/encoding_rs-0.8.35/LICENSE-MIT",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/encoding_rs-0.8.35/LICENSE-WHATWG"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/find-msvc-tools-0.1.11",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-056b42134fada35f",
+            "LicenseRef-316d341a97394678"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/find-msvc-tools-0.1.11/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/find-msvc-tools-0.1.11/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/gimli-0.34.0",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-d6ccf36eb931130c",
+            "LicenseRef-500459d48a16396a"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/gimli-0.34.0/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/gimli-0.34.0/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/itoap-1.0.1",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-88430b86adc931de"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/itoap-1.0.1/LICENSE"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/jiff-core-0.1.0",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-83c55481af374e7b",
+            "LicenseRef-ce780b9baf366b97",
+            "LicenseRef-cb2bd7722a34c854"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/jiff-core-0.1.0/COPYING",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/jiff-core-0.1.0/LICENSE-MIT",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/jiff-core-0.1.0/UNLICENSE"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/libc-0.2.189",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-6f6ad7f3b1071643",
+            "LicenseRef-dac881f8d2225e89"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/libc-0.2.189/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/libc-0.2.189/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/no-panic-0.1.37",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-7a0b857376db6622",
+            "LicenseRef-d02eb11cdc3560fc"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/no-panic-0.1.37/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/no-panic-0.1.37/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/once_cell-1.21.4",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-286e6f7e465598c4",
+            "LicenseRef-f967659eac785c94"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/once_cell-1.21.4/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/once_cell-1.21.4/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/proc-macro2-1.0.107",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-3d9f3c44d22b4bb3",
+            "LicenseRef-07e858abb4c9f5a9"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/proc-macro2-1.0.107/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/proc-macro2-1.0.107/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/pyo3-build-config-0.28.3",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-a45327ac42fc18c2",
+            "LicenseRef-d099202b5ab7a446"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/pyo3-build-config-0.28.3/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/pyo3-build-config-0.28.3/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/pyo3-ffi-0.28.3",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-742d7d4ee6ef9586",
+            "LicenseRef-ffcf65ede2bd67b0"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/pyo3-ffi-0.28.3/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/pyo3-ffi-0.28.3/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/quote-1.0.47",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-52471866741f4d04",
+            "LicenseRef-ae052e6e6d49ca39"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/quote-1.0.47/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/quote-1.0.47/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/shlex-2.0.1",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-b0d32abd358b0f83",
+            "LicenseRef-50370097ed1db760"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/shlex-2.0.1/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/shlex-2.0.1/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/simdutf8-0.1.5",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-44041dbdc30c0819",
+            "LicenseRef-73552b3c9319bce2"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/simdutf8-0.1.5/LICENSE-Apache",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/simdutf8-0.1.5/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/syn-3.0.3",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-4f1235b3203a7403",
+            "LicenseRef-ec6afe07be59aea3"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/syn-3.0.3/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/syn-3.0.3/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/target-lexicon-0.13.5",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-51ec38f5eeb81897"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/target-lexicon-0.13.5/LICENSE"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/unicode-ident-1.0.24",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-4a610e9828c936d3",
+            "LicenseRef-bdd7248845b1ee5a",
+            "LicenseRef-d9a92740b918eb62"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/unicode-ident-1.0.24/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/unicode-ident-1.0.24/LICENSE-MIT",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/unicode-ident-1.0.24/LICENSE-UNICODE"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/unwinding-0.2.10",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-d66fc81385dfa771",
+            "LicenseRef-6bf8df454a8689a1"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/unwinding-0.2.10/LICENSE-APACHE",
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/unwinding-0.2.10/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/xxhash-rust-0.8.18",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-d878560472a30337"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/xxhash-rust-0.8.18/LICENSE"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/orjson-3.12.0/include/cargo/zmij-1.0.23",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-814da40816079b8e"
+          ],
+          "materials": [
+            "source-licenses/orjson/orjson-3.12.0/include/cargo/zmij-1.0.23/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/orjson-3.12.0.tar.gz"
+          ]
+        },
+        {
+          "id": "Rust-standard-library",
+          "kind": "compiled-runtime",
+          "licenses": [
+            "LicenseRef-Rust-standard-library"
+          ],
+          "limitations": [
+            "stripped wheel does not independently expose a compiler version"
+          ],
+          "materials": [
+            "source-licenses/rust-stdlib/*"
+          ],
+          "provenance": "Official same-version release workflow artifact.yaml pins this nightly for Linux; exact official rustc archive yields complete COPYRIGHT-library.html",
+          "sources": [
+            "sources/orjson-3.12.0-release-recipe.tar.gz"
+          ],
+          "version": "nightly-2026-08-01 (upstream release recipe)"
+        }
+      ],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MPL-2.0 AND (Apache-2.0 OR MIT)"
+        ],
+        "materials": [
+          "orjson-3.12.0.dist-info/licenses/LICENSE-APACHE",
+          "orjson-3.12.0.dist-info/licenses/LICENSE-MIT",
+          "orjson-3.12.0.dist-info/licenses/LICENSE-MPL-2.0"
+        ],
+        "sources": [
+          "sources/orjson-3.12.0.tar.gz"
+        ]
+      },
+      "sha256": "1192a7021b6d071aaf909864f6e924d6a2675ca360485b972b8401749311750b"
+    },
+    "packaging-26.3-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "Apache-2.0 OR BSD-2-Clause"
+        ],
+        "materials": [
+          "packaging-26.3.dist-info/licenses/LICENSE",
+          "packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+          "packaging-26.3.dist-info/licenses/LICENSE.BSD"
+        ]
+      },
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+    },
+    "palettable-3.3.3-py2.py3-none-any.whl": {
+      "embedded": [
+        {
+          "id": "source-component/palettable-3.3.3/palettable/colorbrewer/data",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-1a1398724bddcbab"
+          ],
+          "materials": [
+            "source-licenses/palettable/palettable-3.3.3/palettable/colorbrewer/data/colorbrewer_licence.txt"
+          ],
+          "sources": [
+            "sources/palettable-3.3.3.tar.gz"
+          ]
+        }
+      ],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "source-licenses/palettable/*"
+        ],
+        "sources": [
+          "sources/palettable-3.3.3.tar.gz"
+        ]
+      },
+      "sha256": "74e9e7d7fe5a9be065e02397558ed1777b2df0b793a6f4ce1a5ee74f74fb0caa"
+    },
+    "pandas-3.0.6-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "source-component/pandas-3.0.6/LICENSES",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-250aedc5a98e549c",
+            "LicenseRef-3a5468178224a822",
+            "LicenseRef-bda7c1c08bbe56a4",
+            "LicenseRef-3773c8faa5c52c85",
+            "LicenseRef-d958450f96b4ca3d",
+            "LicenseRef-c4176930831a9b3b",
+            "LicenseRef-8420a79023020940",
+            "LicenseRef-d17f4509c572146a",
+            "LicenseRef-6ff67207ef123ae8",
+            "LicenseRef-bbcf46c5ca0a9a83",
+            "LicenseRef-80d2cc0a38ba0fa7",
+            "LicenseRef-f155e7708363a37f"
+          ],
+          "materials": [
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/BOTTLENECK_LICENCE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/DATEUTIL_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/HAVEN_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/KLIB_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/MUSL_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/NUMPY_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/PACKAGING_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/PSF_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/PYPERCLIP_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/PYUPGRADE_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/SAS7BDAT_LICENSE",
+            "source-licenses/pandas/pandas-3.0.6/LICENSES/ULTRAJSON_LICENSE"
+          ],
+          "sources": [
+            "sources/pandas-3.0.6.tar.gz"
+          ]
+        }
+      ],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-pandas"
+        ],
+        "materials": [
+          "pandas-3.0.6.dist-info/LICENSE"
+        ],
+        "sources": [
+          "sources/pandas-3.0.6.tar.gz"
+        ]
+      },
+      "sha256": "0704044b676496b8350e023b09f174a26772456c974a2b11c36bebb558c9490d"
+    },
+    "pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "AOM",
+          "licenses": [
+            "BSD-2-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ]
+        },
+        {
+          "id": "DAV1D",
+          "licenses": [
+            "BSD-2-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ]
+        },
+        {
+          "id": "LIBYUV",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ]
+        },
+        {
+          "id": "RAQM",
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ]
+        },
+        {
+          "id": "TCL_TK",
+          "licenses": [
+            "TCL"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ]
+        },
+        {
+          "id": "BZIP2",
+          "licenses": [
+            "bzip2-1.0.6"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ]
+        },
+        {
+          "id": "ZLIB",
+          "licenses": [
+            "Zlib"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ]
+        },
+        {
+          "id": "fribidi-shim",
+          "licenses": [
+            "LGPL-2.1-or-later"
+          ],
+          "materials": [
+            "source-licenses/ase/*/COPYING.LESSER",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "provenance": "wheel pillow-12.3.0.cdx.json identifies shipped shim; same-version sdist contains both source files",
+          "sources": [
+            "sources/pillow-12.3.0.tar.gz"
+          ],
+          "version": "Pillow 12.3.0 vendored source"
+        },
+        {
+          "id": "source-component/pillow-12.3.0/src/thirdparty/raqm",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-d444945847d000a9",
+            "LicenseRef-23cdf78d362c6dd5"
+          ],
+          "materials": [
+            "source-licenses/pillow/pillow-12.3.0/src/thirdparty/raqm/AUTHORS",
+            "source-licenses/pillow/pillow-12.3.0/src/thirdparty/raqm/COPYING"
+          ],
+          "sources": [
+            "sources/pillow-12.3.0.tar.gz"
+          ]
+        },
+        {
+          "id": "zlib-ng",
+          "licenses": [
+            "Zlib"
+          ],
+          "materials": [
+            "source-licenses/pillow-zlib-ng/*/LICENSE.md"
+          ],
+          "provenance": "Pillow 12.3.0 wheel runtime features.version_feature(\"zlib_ng\")",
+          "sources": [
+            "sources/zlib-ng-2.3.3.tar.gz"
+          ],
+          "version": "2.3.3"
+        }
+      ],
+      "native": [
+        {
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libXau*.so*"
+        },
+        {
+          "licenses": [
+            "BSD-2-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libavif*.so*"
+        },
+        {
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libbrotli*.so*"
+        },
+        {
+          "licenses": [
+            "FTL"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libfreetype*.so*"
+        },
+        {
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libharfbuzz*.so*"
+        },
+        {
+          "licenses": [
+            "IJG AND BSD-3-Clause AND Zlib"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libjpeg*.so*"
+        },
+        {
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/liblcms2*.so*"
+        },
+        {
+          "licenses": [
+            "0BSD"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt",
+            "source-licenses/xz/*"
+          ],
+          "pattern": "pillow.libs/liblzma*.so*",
+          "provenance": "ELF library SONAME filename 5.8.3; matching upstream source body supersedes Pillow outdated public-domain summary",
+          "sources": [
+            "sources/xz-5.8.3.tar.gz"
+          ],
+          "version": "5.8.3"
+        },
+        {
+          "licenses": [
+            "BSD-2-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libopenjp2*.so*"
+        },
+        {
+          "licenses": [
+            "Libpng"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libpng16*.so*"
+        },
+        {
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libsharpyuv*.so*"
+        },
+        {
+          "licenses": [
+            "libtiff"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libtiff*.so*"
+        },
+        {
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libwebp*.so*"
+        },
+        {
+          "licenses": [
+            "MIT"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libxcb*.so*"
+        },
+        {
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "materials": [
+            "pillow-12.3.0.dist-info/licenses/LICENSE",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "pattern": "pillow.libs/libzstd*.so*"
+        }
+      ],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT-CMU"
+        ],
+        "materials": [
+          "pillow-12.3.0.dist-info/licenses/LICENSE",
+          "notices/REDISTRIBUTION.txt"
+        ],
+        "sources": [
+          "sources/pillow-12.3.0.tar.gz"
+        ]
+      },
+      "sha256": "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91"
+    },
+    "plotly-7.1.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "plotly/labextension/static/third-party-licenses.json",
+          "plotly-7.1.0.data/data/share/jupyter/labextensions/jupyterlab-plotly/static/third-party-licenses.json",
+          "plotly-7.1.0.dist-info/licenses/LICENSE.txt"
+        ]
+      },
+      "sha256": "dbb7fa18afce40d0a8e80d1bf162eceb3faa0ce5a77fe741ad09a74cf78f53f3"
+    },
+    "pymatgen-2026.5.4-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "pymatgen-2026.5.4.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "7815cd4310c6d5a465b0da14a1633479cf61366676e62764db17f7e2a20d1974"
+    },
+    "pymatgen_core-2026.8.30-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "pymatgen_core-2026.8.30.dist-info/licenses/LICENSE"
+        ],
+        "sources": [
+          "sources/pymatgen_core-2026.8.30.tar.gz"
+        ]
+      },
+      "sha256": "36aad3ee6ca438ce05aed9ef62eb8bd7fb6ff7b15cc3254e0df1edb45c9028a6"
+    },
+    "pyparsing-3.3.2-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "pyparsing-3.3.2.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "850ba148bd908d7e2411587e247a1e4f0327839c40e2e5e6d05a007ecc69911d"
+    },
+    "python_dateutil-2.9.0.post0-py2.py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "Dual License"
+        ],
+        "materials": [
+          "python_dateutil-2.9.0.post0.dist-info/LICENSE"
+        ]
+      },
+      "sha256": "a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"
+    },
+    "qbox-0.1.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-qbox"
+        ],
+        "materials": [
+          "qbox-0.1.0.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "ef8b193fd9187f63726dc29b7b2655fdaaad10c26c4d9d093668ae59ad5d77b1"
+    },
+    "requests-2.34.2-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "Apache-2.0"
+        ],
+        "materials": [
+          "requests-2.34.2.dist-info/licenses/LICENSE",
+          "requests-2.34.2.dist-info/licenses/NOTICE"
+        ]
+      },
+      "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0"
+    },
+    "ruamel_yaml-0.19.1-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "ruamel_yaml-0.19.1.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "27592957fedf6e0b62f281e96effd28043345e0e66001f97683aa9a40c667c93"
+    },
+    "scipy-1.18.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "OpenBLAS-LAPACK",
+          "licenses": [
+            "BSD-3-Clause",
+            "BSD-3-Clause-Open-MPI"
+          ],
+          "materials": [
+            "scipy/_lib/_uarray/LICENSE",
+            "scipy/fft/_duccfft/LICENSE.md",
+            "scipy/integrate/LICENSE_DOP",
+            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
+            "scipy-1.18.1.dist-info/LICENSE.txt"
+          ]
+        },
+        {
+          "id": "pybind11",
+          "kind": "compiled-header",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "limitations": [
+            "actual compilation version not exposed by upstream wheel"
+          ],
+          "materials": [
+            "source-licenses/pybind11-*/*/LICENSE"
+          ],
+          "provenance": "same-version sdist build requirement; 11 releases 2.13.2..3.1.0 have identical full body 83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "version": "unknown"
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/_build_utils/tempita",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-c6cb157481d0b564"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/_build_utils/tempita/LICENSE.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/_external/packaging_version/src",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-5c494675757c52e2"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/_external/packaging_version/src/LICENSE.BSD"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/_lib/_uarray",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-53b10c52163f1cd1"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/_lib/_uarray/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/fft/_duccfft",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-16253ef379ee0ede"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/fft/_duccfft/LICENSE.md"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/integrate/src",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-fbe808710d3f3c7e"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/integrate/src/LICENSE_DOP"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/io/_fast_matrix_market",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-f70ef52ce4dd8677"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/io/_fast_matrix_market/LICENSE.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/io/_fast_matrix_market/fast_matrix_market/dependencies/fast_float",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-012f841ed8ead251"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/io/_fast_matrix_market/fast_matrix_market/dependencies/fast_float/LICENSE-MIT"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/io/_fast_matrix_market/fast_matrix_market/dependencies/ryu",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-c3cb51686904e8d9"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/io/_fast_matrix_market/fast_matrix_market/dependencies/ryu/LICENSE-Boost"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/ndimage",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-9fd1810b7f045c51"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/ndimage/LICENSE.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/optimize/_direct",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-d5ccae0fae73f3f0",
+            "LicenseRef-e6c109f21ba95c0d"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/optimize/_direct/AUTHORS",
+            "source-licenses/scipy/scipy-1.18.1/scipy/optimize/_direct/COPYING"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/optimize/tnc",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-65645b75795d95c3"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/optimize/tnc/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/sparse/linalg/_dsolve/SuperLU",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-2d86e286e28c8498"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/sparse/linalg/_dsolve/SuperLU/License.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/sparse/linalg/_eigen/arpack/arnaud",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-14dea0ec21956f6c",
+            "LicenseRef-ddd4e167b2cd8ef0"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/sparse/linalg/_eigen/arpack/arnaud/ARPACK_LICENSE.txt",
+            "source-licenses/scipy/scipy-1.18.1/scipy/sparse/linalg/_eigen/arpack/arnaud/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/sparse/linalg/_propack/PROPACK",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-54c06b4c13626c33",
+            "LicenseRef-89279e5aa39d2a93"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/sparse/linalg/_propack/PROPACK/LICENSE",
+            "source-licenses/scipy/scipy-1.18.1/scipy/sparse/linalg/_propack/PROPACK/PROPACK_LICENSE.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/spatial",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-5627926fc45515ab"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/spatial/COPYING_QHULL.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/scipy/stats/biasedurn",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-7811e55c9432ee63"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/scipy/stats/biasedurn/license.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/array_api_compat/array_api_compat",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-45df9211062d48be"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/array_api_compat/array_api_compat/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/array_api_extra",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-1cb7f92351b5e630"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/array_api_extra/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/boost_math/math",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-4277bc3e491e56c3"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/boost_math/math/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/cobyqa/.github/workflows",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-c2d1d24d227e34d6"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/cobyqa/.github/workflows/license.yml"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/cobyqa",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-b4982e3eba1b879f"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/cobyqa/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/duccfft",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-499f2bc1b182e8ed"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/duccfft/LICENSE.md"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/highs",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-2560ea66ce9b85e3",
+            "LicenseRef-b65f62fb1fb48add"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/highs/AUTHORS",
+            "source-licenses/scipy/scipy-1.18.1/subprojects/highs/LICENSE.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/highs/extern",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-9191ef776f03de61"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/highs/extern/LICENCE_1_0.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/highs/extern/filereaderlp",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-3519308e5658c0b1"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/highs/extern/filereaderlp/LICENSE"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/highs/extern/pdqsort",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-26f58c5c228f9f19"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/highs/extern/pdqsort/license.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/pyprima/pyprima",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-181fd0e143d0b3c7"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/pyprima/pyprima/LICENCE.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/qhull_r/libqhull_r",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-66cfc5a254dd7857"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/qhull_r/libqhull_r/COPYING.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/unuran",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-daf06ce9312d3dce"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/unuran/license.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        },
+        {
+          "id": "source-component/scipy-1.18.1/subprojects/xsf",
+          "kind": "source-declared-component",
+          "licenses": [
+            "LicenseRef-7ab0b3952bdeaa95",
+            "LicenseRef-a2da8e9d764bfab1"
+          ],
+          "materials": [
+            "source-licenses/scipy/scipy-1.18.1/subprojects/xsf/LICENSE",
+            "source-licenses/scipy/scipy-1.18.1/subprojects/xsf/LICENSES_bundled.txt"
+          ],
+          "sources": [
+            "sources/scipy-1.18.1.tar.gz"
+          ]
+        }
+      ],
+      "native": [
+        {
+          "licenses": [
+            "BSD-3-Clause AND BSD-3-Clause-Open-MPI"
+          ],
+          "materials": [
+            "scipy/_lib/_uarray/LICENSE",
+            "scipy/fft/_duccfft/LICENSE.md",
+            "scipy/integrate/LICENSE_DOP",
+            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
+            "scipy-1.18.1.dist-info/LICENSE.txt"
+          ],
+          "pattern": "scipy.libs/libscipy_openblas*.so*"
+        },
+        {
+          "binary_sha256": "c6090048eccc763522c12ef016f81da6b627cb3a044f55cf0479a839c41c0980",
+          "licenses": [
+            "GPL-3.0-or-later WITH GCC-exception-3.1"
+          ],
+          "materials": [
+            "scipy/_lib/_uarray/LICENSE",
+            "scipy/fft/_duccfft/LICENSE.md",
+            "scipy/integrate/LICENSE_DOP",
+            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
+            "scipy-1.18.1.dist-info/LICENSE.txt"
+          ],
+          "pattern": "scipy.libs/libgfortran-040039e1-0352e75f.so.5.0.0",
+          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "sources": [
+            "sources/gcc-libraries-8.3.1-2.1.1.el7.src.rpm",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "8.3.1-2.1.1.el7"
+        },
+        {
+          "binary_sha256": "468e71e59e1d784821a76702e5ecd1e0dbcfc024499f74a552d1bea4b26f27ad",
+          "licenses": [
+            "GPL-3.0-or-later WITH GCC-exception-3.1"
+          ],
+          "materials": [
+            "scipy/_lib/_uarray/LICENSE",
+            "scipy/fft/_duccfft/LICENSE.md",
+            "scipy/integrate/LICENSE_DOP",
+            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
+            "scipy-1.18.1.dist-info/LICENSE.txt"
+          ],
+          "pattern": "scipy.libs/libgfortran-83c28eba.so.5.0.0",
+          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "sources": [
+            "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "8.5.0-28.el8_10.alma.1"
+        },
+        {
+          "binary_sha256": "a9307bbaa353623fa014e8b682d50c4629f5e5c7d61daa9a8652f7d165cd421a",
+          "licenses": [
+            "LGPL-2.1-or-later"
+          ],
+          "materials": [
+            "scipy/_lib/_uarray/LICENSE",
+            "scipy/fft/_duccfft/LICENSE.md",
+            "scipy/integrate/LICENSE_DOP",
+            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
+            "scipy-1.18.1.dist-info/LICENSE.txt"
+          ],
+          "pattern": "scipy.libs/libquadmath-2284e583.so.0.0.0",
+          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "sources": [
+            "sources/gcc-8.5.0-28.el8_10.alma.1.src.rpm",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "8.5.0-28.el8_10.alma.1"
+        },
+        {
+          "binary_sha256": "6ed5137f412781ad7863439fb543613f620b43c32b63292a0029246162f5bbc6",
+          "licenses": [
+            "LGPL-2.1-or-later"
+          ],
+          "materials": [
+            "scipy/_lib/_uarray/LICENSE",
+            "scipy/fft/_duccfft/LICENSE.md",
+            "scipy/integrate/LICENSE_DOP",
+            "scipy/spatial/qhull_src/COPYING_QHULL.txt",
+            "scipy-1.18.1.dist-info/LICENSE.txt"
+          ],
+          "pattern": "scipy.libs/libquadmath-96973f99-934c22de.so.0.0.0",
+          "provenance": "audit-gcc-materials build-id + .text/.rodata/.eh_frame exact RPM comparisons; two source families preserved",
+          "sources": [
+            "sources/gcc-4.8.5-44.el7.src.rpm",
+            "notices/REDISTRIBUTION.txt"
+          ],
+          "version": "4.8.5-44.el7"
+        }
+      ],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-scipy"
+        ],
+        "materials": [
+          "scipy/_lib/_uarray/LICENSE",
+          "scipy/fft/_duccfft/LICENSE.md",
+          "scipy/integrate/LICENSE_DOP",
+          "scipy/spatial/qhull_src/COPYING_QHULL.txt",
+          "scipy-1.18.1.dist-info/LICENSE.txt"
+        ],
+        "sources": [
+          "sources/scipy-1.18.1.tar.gz"
+        ]
+      },
+      "sha256": "f55fa87b6c612ecd6b058f167c53231b1d14e412efe361d3d6e38b3631c73218"
+    },
+    "seekpath-2.2.1-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "LicenseRef-seekpath"
+        ],
+        "materials": [
+          "seekpath-2.2.1.dist-info/licenses/LICENSE.txt"
+        ]
+      },
+      "sha256": "6351c89dd0f58d5d85dba2d63134cd036d57c777baf2bfb9b5b70ff84fa9b8c1"
+    },
+    "six-1.17.0-py2.py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "six-1.17.0.dist-info/LICENSE"
+        ]
+      },
+      "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"
+    },
+    "spglib-2.7.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+      "embedded": [
+        {
+          "id": "pybind11",
+          "kind": "compiled-header",
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "limitations": [
+            "actual compilation version not exposed by upstream wheel"
+          ],
+          "materials": [
+            "source-licenses/pybind11-*/*/LICENSE"
+          ],
+          "provenance": "same-version sdist build requirement; 11 releases 2.13.2..3.1.0 have identical full body 83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb",
+          "version": "unknown"
+        }
+      ],
+      "native": [
+        {
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "materials": [
+            "spglib-2.7.0.dist-info/licenses/COPYING"
+          ],
+          "pattern": "spglib/lib64/libsymspg.so*",
+          "sources": [
+            "sources/spglib-2.7.0.tar.gz"
+          ],
+          "version": "2.7.0"
+        }
+      ],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "materials": [
+          "spglib-2.7.0.dist-info/licenses/COPYING"
+        ],
+        "sources": [
+          "sources/spglib-2.7.0.tar.gz"
+        ]
+      },
+      "sha256": "6913906fd9108e7bb2ce06a810513a95a82d801530f10230979bf3427bb7e771"
+    },
+    "sympy-1.14.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "BSD"
+        ],
+        "materials": [
+          "sympy/parsing/latex/LICENSE.txt",
+          "sympy-1.14.0.dist-info/licenses/AUTHORS",
+          "sympy-1.14.0.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"
+    },
+    "tabulate-0.10.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "tabulate-0.10.0.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "f0b0622e567335c8fabaaa659f1b33bcb6ddfe2e496071b743aa113f8774f2d3"
+    },
+    "tqdm-4.70.1-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MPL-2.0 AND MIT"
+        ],
+        "materials": [
+          "tqdm-4.70.1.dist-info/licenses/LICENCE"
+        ]
+      },
+      "sha256": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73"
+    },
+    "typing_extensions-4.16.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "PSF-2.0"
+        ],
+        "materials": [
+          "typing_extensions-4.16.0.dist-info/licenses/LICENSE"
+        ]
+      },
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+    },
+    "uncertainties-3.2.3-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "Revised BSD License"
+        ],
+        "materials": [
+          "uncertainties-3.2.3.dist-info/licenses/LICENSE.txt"
+        ]
+      },
+      "sha256": "313353900d8f88b283c9bad81e7d2b2d3d4bcc330cbace35403faaed7e78890a"
+    },
+    "urllib3-2.8.0-py3-none-any.whl": {
+      "embedded": [],
+      "native": [],
+      "native_review_complete": true,
+      "package": {
+        "licenses": [
+          "MIT"
+        ],
+        "materials": [
+          "urllib3-2.8.0.dist-info/licenses/LICENSE.txt"
+        ]
+      },
+      "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
+    }
+  }
+}

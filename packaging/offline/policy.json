@@ -59,6 +59,46 @@
       "wheel",
       "packaging",
       "auditwheel"
-    ]
+    ],
+    "native_repairs": {
+      "runtime_upstream_sha256": "936c246dfdbbfa7cb22dd01814a21f582a892689fae96b06071a5e433baffa22",
+      "patchelf": {
+        "kind": "patchelf",
+        "source": {
+          "url": "https://files.pythonhosted.org/packages/e7/03/afd9bdd2ba5f96997196109f25dadbe5141bc6e70dffd85f3f84cc85d69c/patchelf-0.19.1.0-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.musllinux_1_1_x86_64.whl",
+          "filename": "patchelf-0.19.1.0-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.musllinux_1_1_x86_64.whl",
+          "sha256": "a8f6331ccf40c345507279f755f4a38c2cb00b9efda746fd43c17713cce0aba4"
+        },
+        "size": 549422,
+        "metadata": {
+          "url": "https://pypi.org/pypi/patchelf/0.19.1.0/json",
+          "sha256": "a3fa500158f4a3b1e60138178b025ab2b09ed789f6b63d761dc93113c30ca562"
+        },
+        "member": "patchelf-0.19.1.0.data/scripts/patchelf",
+        "binary_sha256": "7fdf9652d68729dc0ae202e30c2df71b957e89c19d0ab044d2a6f5441f767679"
+      },
+      "zlib_rpm": {
+        "kind": "rpm",
+        "source": {
+          "url": "https://download.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os/Packages/z/zlib-1.2.11-26.el8.x86_64.rpm",
+          "filename": "zlib-1.2.11-26.el8.x86_64.rpm",
+          "sha256": "84465251ea8790b3d8a1c30bdfc8f11711ffe9060becb7335e1b50f4277c5162"
+        },
+        "size": 104888,
+        "library_member": "usr/lib64/libz.so.1.2.11",
+        "library_sha256": "1394e19b91f0539753efa937708cf6d156b25073ed43ebdf7bd436ac4ce5838f",
+        "license_member": "usr/share/licenses/zlib/README",
+        "license_sha256": "7960b6b1cc63e619abb77acaea5427159605afee8c8b362664f4effc7d7f7d15"
+      },
+      "zlib_srpm": {
+        "kind": "srpm",
+        "source": {
+          "url": "https://download.rockylinux.org/pub/rocky/8/BaseOS/source/tree/Packages/z/zlib-1.2.11-26.el8.src.rpm",
+          "filename": "zlib-1.2.11-26.el8.src.rpm",
+          "sha256": "3c5e940e2d084840b1eab18a58148e45bcb9ebbf4acd924f857b821c188349d9"
+        },
+        "size": 565972
+      }
+    }
   }
 }
