@@ -388,5 +388,106 @@ verify_release() {
         self.assertTrue((self.prefix/'releases'/RID).is_dir())
         self.assertEqual(os.readlink(self.prefix/'current'),'releases/old')
 
+    def test_concurrent_command_directory_never_receives_nested_link(self):
+        for as_symlink in [False, True]:
+            with self.subTest(symlink=as_symlink):
+                if self.bindir.exists(): shutil.rmtree(self.bindir)
+                outside=self.root/('foreign-link-target' if as_symlink else 'unused')
+                if as_symlink:
+                    outside.mkdir(); (outside/'sentinel').write_text('foreign bytes')
+                override=r'''ln() {
+                    if [[ "${@: -1}" == "$bin_dir/qbox" ]]; then
+                        ''' + ('command ln -s -- "$prefix/../foreign-link-target" "$bin_dir/qbox"' if as_symlink else 'mkdir -- "$bin_dir/qbox"; printf "foreign bytes" > "$bin_dir/qbox/sentinel"') + r'''
+                    fi
+                    command ln "$@"
+                }'''
+                result=self.run_transaction(extra=override)
+                self.assertNotEqual(result.returncode,0)
+                foreign=outside if as_symlink else self.bindir/'qbox'
+                self.assertEqual((foreign/'sentinel').read_text(),'foreign bytes')
+                self.assertEqual(sorted(p.name for p in foreign.iterdir()),['sentinel'])
+                self.assertFalse(self.prefix.exists())
+                self.assertEqual(hashlib.sha256(self.sentinel.read_bytes()).hexdigest(),self.sentinel_sha)
+
+    def test_signal_immediately_after_command_link_creation_allows_retry(self):
+        for signal_name,status in [('INT',130),('TERM',143)]:
+            with self.subTest(signal=signal_name):
+                if self.prefix.exists(): shutil.rmtree(self.prefix)
+                if self.bindir.exists(): shutil.rmtree(self.bindir)
+                override=r'''ln() {
+                    command ln "$@" || return
+                    if [[ "${@: -1}" == "$bin_dir/qbox" ]]; then
+                        kill -''' + signal_name + r''' "$transaction_pid"
+                    fi
+                }'''
+                result=self.run_transaction(extra=override)
+                self.assertEqual(result.returncode,status,result.stderr)
+                self.assertFalse((self.bindir/'qbox').is_symlink())
+                self.assertFalse(self.prefix.exists())
+                retry=self.run_transaction()
+                self.assertEqual(retry.returncode,0,retry.stderr)
+                shutil.rmtree(self.prefix);shutil.rmtree(self.bindir)
+
+    def test_signal_during_command_identity_recording_allows_retry(self):
+        for signal_name,status in [('INT',130),('TERM',143)]:
+            with self.subTest(signal=signal_name):
+                if self.prefix.exists(): shutil.rmtree(self.prefix)
+                if self.bindir.exists(): shutil.rmtree(self.bindir)
+                override=r'''stat() {
+                    command stat "$@" || return
+                    if [[ "${@: -1}" == "$bin_dir/qbox" && "$bin_created" == 1 && -z "$bin_identity" ]]; then
+                        kill -''' + signal_name + r''' "$transaction_pid"
+                    fi
+                }'''
+                result=self.run_transaction(extra=override)
+                self.assertEqual(result.returncode,status,result.stderr)
+                self.assertFalse((self.bindir/'qbox').is_symlink())
+                self.assertFalse(self.prefix.exists())
+                retry=self.run_transaction()
+                self.assertEqual(retry.returncode,0,retry.stderr)
+                shutil.rmtree(self.prefix);shutil.rmtree(self.bindir)
+
+    def test_signal_after_command_ownership_recording_allows_retry(self):
+        for signal_name,status in [('INT',130),('TERM',143)]:
+            with self.subTest(signal=signal_name):
+                if self.prefix.exists(): shutil.rmtree(self.prefix)
+                if self.bindir.exists(): shutil.rmtree(self.bindir)
+                override=r'''eval "$(declare -f prepare_bin_link | sed '1s/prepare_bin_link/real_prepare_bin_link/')"
+prepare_bin_link() {
+    real_prepare_bin_link || return
+    kill -''' + signal_name + r''' "$transaction_pid"
+}'''
+                result=self.run_transaction(extra=override)
+                self.assertEqual(result.returncode,status,result.stderr)
+                self.assertFalse((self.bindir/'qbox').is_symlink())
+                self.assertFalse(self.prefix.exists())
+                retry=self.run_transaction()
+                self.assertEqual(retry.returncode,0,retry.stderr)
+                shutil.rmtree(self.prefix);shutil.rmtree(self.bindir)
+
+
+    def test_process_group_signal_during_command_link_creation_allows_retry(self):
+        for signal_name,status in [('INT',130),('TERM',143)]:
+            with self.subTest(signal=signal_name):
+                if self.prefix.exists(): shutil.rmtree(self.prefix)
+                if self.bindir.exists(): shutil.rmtree(self.bindir)
+                # The outer harness stays alive to report main's conventional
+                # status; main and ln still receive the actual group signal.
+                override=r'''trap ':' INT TERM
+ln() {
+    command ln "$@" || return
+    if [[ "${@: -1}" == "$bin_dir/qbox" ]]; then
+        kill -''' + signal_name + r''' -- "-$$"
+    fi
+}'''
+                args=['/bin/bash','--noprofile','--norc','-c',self.script(extra=override),'test',str(self.bundle),str(self.prefix),str(self.bindir),str(self.log),'']
+                result=subprocess.run(args,env=ENV,text=True,capture_output=True,start_new_session=True,timeout=20)
+                self.assertEqual(result.returncode,status,result.stderr)
+                self.assertFalse((self.bindir/'qbox').is_symlink())
+                self.assertFalse(self.prefix.exists())
+                retry=self.run_transaction()
+                self.assertEqual(retry.returncode,0,retry.stderr)
+                shutil.rmtree(self.prefix);shutil.rmtree(self.bindir)
+
 
 if __name__ == '__main__': unittest.main()

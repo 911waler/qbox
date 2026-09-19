@@ -468,9 +468,22 @@ prepare_bin_link() {
     check_bin_target || return 1
     create_owned_directories "$bin_dir" || return 1
     if [[ ! -e "$bin_dir/qbox" && ! -L "$bin_dir/qbox" ]]; then
-        ln -s -- "$prefix/current/bin/qbox" "$bin_dir/qbox" || { qbox_error '命令目录被其他安装占用'; return 1; }
-        bin_created=1
-        bin_identity=$(stat -c '%d:%i' -- "$bin_dir/qbox") || return 1
+        # Defer catchable signals until the visible link has its ownership record.
+        # The bounded child commands ignore the same process-group signal, so ln
+        # cannot be interrupted after creating a link but before reporting success.
+        local pending_signal=0 link_status=0
+        trap '(( pending_signal )) || pending_signal=130' INT
+        trap '(( pending_signal )) || pending_signal=143' TERM
+        if ( trap '' INT TERM; ln -sT -- "$prefix/current/bin/qbox" "$bin_dir/qbox" ); then
+            bin_created=1
+            bin_identity=$(trap '' INT TERM; stat -c '%d:%i' -- "$bin_dir/qbox") || link_status=1
+        else
+            link_status=1
+        fi
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
+        (( pending_signal == 0 )) || exit "$pending_signal"
+        (( link_status == 0 )) || { qbox_error '命令链接创建或归属记录失败'; return 1; }
     fi
 }
 
