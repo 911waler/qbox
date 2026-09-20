@@ -104,6 +104,49 @@ Python/venv/pip；Rocky 镜像使用 `/usr/bin/python3.11`。镜像构建 Docker
 本文及验收使用解释器绝对路径。
 
 
+## 审查后补充验收
+
+审查指出旧验收脚本的 Python `assert` 会被优化模式删除，而且独立系统命令目录缺少
+防替换证明。验收脚本现已将全部必要检查改为显式 `require()` / `AcceptanceFailure`，
+包括实际命令退出码、文件/目录权限、容器边界和最终结果判定；嵌入 Python 脚本也没有
+可被优化删除的断言。七项针对性测试在普通及 `-O` 模式下通过，其中以 `-O` 和
+`PYTHONOPTIMIZE=1` 分别证明非预期成功/失败不能绕过检查，外层还拒绝失败、缺失及重复结果。
+
+针对新增目录检查，用以下明确限定范围的补充命令在相同四个镜像中各新装一次；
+它不代替前述完整矩阵，也不重新宣称完整矩阵是在优化模式下跑完的：
+
+```bash
+python -O tests/installer/run-acceptance.py \
+  --archive build/lightweight/task3-dist/qbox-0.1.0-linux-installer.tar.gz \
+  --image qbox-lightweight-test:ubuntu22 \
+  --output build/lightweight/acceptance/new-ubuntu22-supplement \
+  --checks command-directory
+```
+
+补充范围为 `/opt/lab qbox` 与独立 `/opt/共享 commands`，验证命令目录及完整父目录链
+归 root 且无组/其他用户写权限。alice/bob 分别真实尝试创建文件、`os.replace` 替换
+qbox 和删除 qbox；每次必须得到 `PermissionError`，入口 inode/SHA 必须保持不变。
+同时故意将命令目录和 `/opt` 改成可写，证明检查能拒绝，再恢复权限并完成正常工作流。
+这些变动只在一次性容器内发生。脚本的默认完整验收也已调用同一目录检查。
+
+| 平台 | Python | 宿主/容器优化级别 | 普通账号修改拒绝 | 目录/祖先篡改检测 | 结果 |
+|---|---|---|---|---|---|
+| ubuntu22 | 3.10.12 | 1 / 1 | 6 / 6 | 2 / 2 | 通过 |
+| ubuntu24 | 3.12.3 | 1 / 1 | 6 / 6 | 2 / 2 | 通过 |
+| rocky9 | 3.11.13 | 1 / 1 | 6 / 6 | 2 / 2 | 通过 |
+| rocky8 | 3.11.13 | 1 / 1 | 6 / 6 | 2 / 2 | 通过 |
+
+四次补充命令均退出 0；各执行一次新安装、一次复用及两组真实用户工作流。
+证据位于 `build/lightweight/acceptance/<platform>-review1/`，汇总为
+`review1-summary.json`。逐项核对了镜像 ID、归档 SHA256 和 wheel SHA256，全部与
+原完整矩阵一致。四次运行的验收脚本 SHA256 均为
+`64d37c5484abc656cdcec4c82aff028e695a8b1ba219d14264408150bfa52a8c`。
+
+
+已知的次要限制：输出目录仍应选择全新路径；孤立的旧 `result.json` 在缺少
+`commands.jsonl` 时可能被覆盖，该审查项留待最终审查处理。本次所有补充运行均使用
+此前不存在的新目录，既有完整矩阵及失败尝试证据均保留。
+
 ## 安装与 PATH
 
 先核对旁边的 SHA256 文件，解压后进入 `qbox-0.1.0-linux-installer/`。
