@@ -8,37 +8,44 @@ PDOS, phonon, molecular-dynamics, and convergence-scan tasks.
 
 ## Installation (recommended)
 
-The default distribution is a lightweight wheel. Supply your own Python 3.10+
-and scientific dependencies, with Bash 4.4+ and the Linux command-line tools
-used by your workflows. Create a virtual environment and install a local wheel:
+Use the same lightweight `qbox-<version>-linux-installer.tar.gz` for personal
+and administrator installations. Supply Python 3.10+ with venv/pip support,
+Bash 4.4+ and network access for scientific dependencies. Verify the downloaded
+archive's `.sha256`, extract it, and enter its directory:
 
 ```bash
-python3 -m venv "$HOME/.venvs/qbox"
-source "$HOME/.venvs/qbox/bin/activate"
-python -m pip install './qbox-0.1.0-py3-none-any.whl[analysis,structure]'
-python -m qbox.install
-deactivate
-export PATH="$HOME/.local/bin:$PATH"
-qbox --help
+# Normal account: default $HOME/.local/share/qbox/bin/qbox
+bash install.sh --user
+
+# Custom prefix: command becomes $HOME/software/qbox/bin/qbox
+bash install.sh --user --prefix "$HOME/software/qbox" --python /absolute/path/to/python3
+
+# Administrator: default /opt/qbox/bin/qbox
+sudo bash install.sh --system
 ```
 
-The one-time `qbox.install` step binds `~/.local/bin/qbox` to this Python environment.
-Add `export PATH="$HOME/.local/bin:$PATH"` once to `~/.bashrc` if needed. New terminals
-can then run `qbox` directly without activating Python. Existing commands are never
-overwritten; `--bin-dir` selects another directory. This command pins its own Python
-even if `QBOX_PYTHON` was set elsewhere. Keep the environment at its installed path.
+Choose `--user` or `--system` explicitly. The installer creates a dedicated
+fixed-path venv, installs the bundled qbox wheel plus analysis/structure
+scientific dependencies, verifies workflows, and publishes `<prefix>/bin/qbox`.
+It prints a shell-quoted PATH line and, for administrators, a `/etc/profile.d/`
+example. Apply that PATH setting once; new terminals can run qbox without
+activating Python. No shell files are changed automatically. `command -v qbox`
+checks which command is selected. Keep the venv and its underlying Python in place.
 
-Run the install command from the directory containing the downloaded wheel.
-pip downloads the scientific dependencies. An existing Conda or other Python
-3.10+ environment also works. See the [installation guide](docs/installation.md)
-for Ubuntu/Rocky preparation, dependency checks, source installation and removal.
-qbox does not replace the system Python.
+An optional `--bin-dir PATH` selects a separate command directory. Existing
+unrelated entries are never overwritten. For an existing self-managed Python
+environment, the original `python -m qbox.install --bin-dir PATH` remains
+available after installing the local wheel. See the [installation guide](docs/installation.md)
+and [bundled guide](packaging/lightweight/README.zh-CN.md) for both modes,
+Python preparation, PATH, verification, upgrades and ownership-checked removal.
+The installer does not replace system Python or run apt/dnf. Checksums detect
+corruption; they are not signatures or proof of origin.
 
 QE, MPI, Multiwfn, unfold.x and pseudopotentials are external. The repository's
 [optional Multiwfn download](third_party/Multiwfn/README.md) contains an original
-ZIP, its license and checksum. Download and extract it separately, then set
-`QBOX_MULTIWFN_HOME`. It is excluded from qbox wheels and source distributions
-(sdists), and is never installed automatically.
+ZIP, license and checksum. Download and extract it separately, then set
+`QBOX_MULTIWFN_HOME`. It is excluded from every qbox installation archive,
+wheel and sdist, and is never installed automatically.
 
 ## Complete offline bundle (optional)
 
@@ -58,8 +65,15 @@ python -m pip install '.[analysis,structure]'
 python -m qbox.install
 ```
 
-Maintainers can build a lightweight wheel with
-`python -m pip wheel --no-deps . -w dist/lightweight`.
+Maintainers can build the wheel and unified installer with:
+
+```bash
+python -m pip wheel --no-deps . -w dist/lightweight
+python tools/build-lightweight-installer.py --wheel dist/lightweight/qbox-0.1.0-py3-none-any.whl --output dist/lightweight
+```
+
+The builder reads the version from wheel metadata and emits a deterministic
+installer archive and its `.sha256` file; differing existing outputs are rejected.
 The `analysis` and `structure` extras select analysis and structure dependencies.
 Ordinary installation preserves `QBOX_PYTHON` / `QBOX_SHARED_ROOT`; offline mode
 uses its private interpreter.

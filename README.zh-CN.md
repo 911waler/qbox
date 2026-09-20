@@ -6,33 +6,38 @@ qbox 是一个用于准备、运行和后处理 Quantum ESPRESSO 工作流的命
 
 ## 安装（推荐）
 
-默认使用轻量 wheel 安装包，Python 和科学计算依赖由用户环境提供。
-需要 Python 3.10+、Bash 4.4+ 及工作流使用的 Linux 命令行工具。
-推荐创建独立虚拟环境，再安装下载到本地的 qbox wheel：
+同一 `qbox-<版本>-linux-installer.tar.gz` 支持个人与管理员安装。预先准备 Python 3.10+
+（含 venv/pip）、Bash 4.4+，首次安装需联网下载科学依赖。用随包 `.sha256` 校验归档，
+解压并进入安装包目录后执行：
 
 ```bash
-python3 -m venv "$HOME/.venvs/qbox"
-source "$HOME/.venvs/qbox/bin/activate"
-python -m pip install './qbox-0.1.0-py3-none-any.whl[analysis,structure]'
-python -m qbox.install
-deactivate
-export PATH="$HOME/.local/bin:$PATH"
-qbox --help
+# 普通账号；默认入口 $HOME/.local/share/qbox/bin/qbox
+bash install.sh --user
+
+# 自定义总目录；入口随之为 $HOME/software/qbox/bin/qbox
+bash install.sh --user --prefix "$HOME/software/qbox" --python /absolute/path/to/python3
+
+# 管理员；默认入口 /opt/qbox/bin/qbox
+sudo bash install.sh --system
 ```
 
-`python -m qbox.install` 只需执行一次，将 `~/.local/bin/qbox` 绑定到该 Python 环境。
-若 PATH 尚未包含该目录，将 `export PATH="$HOME/.local/bin:$PATH"` 添加到 `~/.bashrc` 一次。
-以后新开终端直接输入 `qbox`，无需激活环境或设置 `QBOX_PYTHON`。已有同名命令不会被覆盖，
-可用 `--bin-dir` 选择其他目录；固定启动器优先使用其绑定的 Python。请保留环境的安装路径。
+必须明确选择 `--user` 或 `--system`。安装器创建固定路径的专用 venv，安装包内 qbox
+wheel 和 analysis / structure 科学依赖，验证后发布 `<prefix>/bin/qbox`。
+按输出设置一次 PATH 后，新终端可直接运行 qbox，无需激活 Python；使用
+`command -v qbox` 检查命令选择。管理员还会获得 `/etc/profile.d/` 配置示例。
+不会自动修改 shell 文件；请保留 venv 及底层 Python，不要在安装后移动它们。
 
-在 wheel 所在目录运行安装命令；pip 会联网获取科学依赖。已有 Conda 或其他
-Python 3.10+ 环境也可以使用。Ubuntu / Rocky 的准备命令、依赖检查、源码安装
-和卸载见[安装指南](docs/installation.md)。qbox 不会替换系统 Python。
+高级选项 `--bin-dir PATH` 可分离命令目录；已有无关入口不会被覆盖。
+自行维护 Python 环境时，安装本地 wheel 后仍可使用原来的
+`python -m qbox.install --bin-dir PATH`。两种模式、Python 准备、PATH、检查、升级及
+核对归属后卸载的方法见[安装指南](docs/installation.md)和
+[随包指南](packaging/lightweight/README.zh-CN.md)。安装器不替换系统 Python、不执行
+apt/dnf。SHA256 是完整性检查，不是签名认证。
 
-QE、MPI、Multiwfn、unfold.x 和赝势需单独提供。
-源码仓库的 [Multiwfn 独立下载目录](third_party/Multiwfn/README.md)保存了可选原始
-压缩包、许可证和校验值；用户自行下载、解压并配置 `QBOX_MULTIWFN_HOME`。
-该目录不进入 qbox wheel 或源码发行包（sdist），也不会自动安装。
+QE、MPI、Multiwfn、unfold.x 和赝势需单独准备。源码仓库的
+[独立 Multiwfn 下载材料](third_party/Multiwfn/README.md)提供原始 ZIP、许可证及校验值。
+单独下载解压后设置 `QBOX_MULTIWFN_HOME`；它不进入任何 qbox 安装归档、wheel 或 sdist，
+也不会自动安装。
 
 ## 完整离线包（可选）
 
@@ -52,7 +57,14 @@ python -m pip install '.[analysis,structure]'
 python -m qbox.install
 ```
 
-维护者用 `python -m pip wheel --no-deps . -w dist/lightweight` 构建轻量 wheel。
+维护者构建 wheel 和统一轻量安装包：
+
+```bash
+python -m pip wheel --no-deps . -w dist/lightweight
+python tools/build-lightweight-installer.py --wheel dist/lightweight/qbox-0.1.0-py3-none-any.whl --output dist/lightweight
+```
+
+构建器从 wheel 元数据读取版本，输出确定性归档及 `.sha256`；同名已有产物内容不同时拒绝覆盖。
 analysis / structure extras 分别选择分析和结构处理依赖。
 普通安装保留 `QBOX_PYTHON` / `QBOX_SHARED_ROOT` 配置；离线安装固定使用私有解释器。
 
