@@ -16,9 +16,17 @@ used by your workflows. Create a virtual environment and install a local wheel:
 python3 -m venv "$HOME/.venvs/qbox"
 source "$HOME/.venvs/qbox/bin/activate"
 python -m pip install './qbox-0.1.0-py3-none-any.whl[analysis,structure]'
-export QBOX_PYTHON="$VIRTUAL_ENV/bin/python"
+python -m qbox.install
+deactivate
+export PATH="$HOME/.local/bin:$PATH"
 qbox --help
 ```
+
+The one-time `qbox.install` step binds `~/.local/bin/qbox` to this Python environment.
+Add `export PATH="$HOME/.local/bin:$PATH"` once to `~/.bashrc` if needed. New terminals
+can then run `qbox` directly without activating Python. Existing commands are never
+overwritten; `--bin-dir` selects another directory. This command pins its own Python
+even if `QBOX_PYTHON` was set elsewhere. Keep the environment at its installed path.
 
 Run the install command from the directory containing the downloaded wheel.
 pip downloads the scientific dependencies. An existing Conda or other Python
@@ -47,6 +55,7 @@ From a complete checkout in your activated Python environment:
 
 ```bash
 python -m pip install '.[analysis,structure]'
+python -m qbox.install
 ```
 
 Maintainers can build a lightweight wheel with

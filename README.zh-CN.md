@@ -14,9 +14,16 @@ qbox 是一个用于准备、运行和后处理 Quantum ESPRESSO 工作流的命
 python3 -m venv "$HOME/.venvs/qbox"
 source "$HOME/.venvs/qbox/bin/activate"
 python -m pip install './qbox-0.1.0-py3-none-any.whl[analysis,structure]'
-export QBOX_PYTHON="$VIRTUAL_ENV/bin/python"
+python -m qbox.install
+deactivate
+export PATH="$HOME/.local/bin:$PATH"
 qbox --help
 ```
+
+`python -m qbox.install` 只需执行一次，将 `~/.local/bin/qbox` 绑定到该 Python 环境。
+若 PATH 尚未包含该目录，将 `export PATH="$HOME/.local/bin:$PATH"` 添加到 `~/.bashrc` 一次。
+以后新开终端直接输入 `qbox`，无需激活环境或设置 `QBOX_PYTHON`。已有同名命令不会被覆盖，
+可用 `--bin-dir` 选择其他目录；固定启动器优先使用其绑定的 Python。请保留环境的安装路径。
 
 在 wheel 所在目录运行安装命令；pip 会联网获取科学依赖。已有 Conda 或其他
 Python 3.10+ 环境也可以使用。Ubuntu / Rocky 的准备命令、依赖检查、源码安装
@@ -42,6 +49,7 @@ QE、MPI、Multiwfn、unfold.x 和赝势需单独提供。
 
 ```bash
 python -m pip install '.[analysis,structure]'
+python -m qbox.install
 ```
 
 维护者用 `python -m pip wheel --no-deps . -w dist/lightweight` 构建轻量 wheel。

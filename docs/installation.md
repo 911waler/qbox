@@ -70,13 +70,44 @@ python -m pip install '.[analysis,structure]'
 如依赖均已由用户准备，才使用 `--no-deps`，然后执行下面的完整检查。
 不要使用 `sudo pip` 把这些依赖装入系统 Python。
 
-## 3. 选择解释器并检查
+## 3. 安装固定启动命令（只需一次）
 
-每次进入所选 Python 环境后，将 qbox 的解释器设为该环境的 Python；这也会覆盖
-旧的 `QBOX_SHARED_ROOT` 所推导的 Python 路径。已有明确的 `QBOX_PYTHON` 设置则按需保留。
+安装 wheel 或源码包后，在同一个 Python 环境执行：
 
 ```bash
-export QBOX_PYTHON="$(python -c 'import sys; print(sys.executable)')"
+python -m qbox.install
+```
+
+默认创建 `~/.local/bin/qbox`，固定使用执行这一步的 Python 环境，包括科学依赖。
+启动时会在 qbox 子进程中设置 `QBOX_PYTHON`，覆盖旧值及共享目录推导的解释器；
+不会激活环境、全局注入虚拟环境 PATH，或更改 QE/MPI 的库路径。
+已有文件、目录或符号链接会报冲突；相同环境生成的同一启动器可重复安装。
+不要直接覆盖完整离线版的命令；保留它或使用 `--bin-dir "$HOME/bin"` 等另一目录。
+
+venv 用户现在可以执行 `deactivate`；Conda 用户执行 `conda deactivate`。
+对当前终端设置一次 PATH：
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+hash -r
+command -v qbox
+qbox --help
+```
+
+若 `~/.bashrc` 尚未设置该 PATH，把上述 export 行加入一次，新开交互式 Bash 终端
+即可直接运行 `qbox`。其他 shell 使用对应配置文件。安装命令只打印说明，不自动改写配置。
+`command -v qbox` 应显示刚创建的命令；仍激活的环境、别名或其他同名命令可能影响选择。
+集群作业脚本通常不读取 `~/.bashrc`，可直接调用 `"$HOME/.local/bin/qbox"`。
+
+请勿移动或删除所绑定的 Python 环境。原地升级 qbox 不需重新生成启动器；更换环境时，
+检查旧 `~/.local/bin/qbox` 确实是此启动器后自行移除，再用新环境运行 `python -m qbox.install`。
+缺失解释器时启动器会给出修复提示。
+
+## 4. 检查依赖与工作流环境
+
+下面的 Python 检查使用安装时的环境（激活它，或使用其 Python 绝对路径）：
+
+```bash
 python -c 'import sys; assert sys.version_info >= (3, 10); import numpy, scipy, matplotlib, seekpath, ase; from pymatgen.core import Structure; print("Python / scientific dependencies OK")'
 python -m pip check
 qbox --version
@@ -84,10 +115,10 @@ qbox --help
 qbox --list
 ```
 
-以上检查不启动 QE/MPI 计算。把激活环境与 `QBOX_PYTHON` 配置放入自己的作业脚本；
-使用 Lmod 管理 QE/MPI 时照常加载对应模块。qbox 不提供 QE、赝势或 MPI 的自动安装。
+以上检查不启动 QE/MPI 计算。固定命令不需要激活 Python；使用 Lmod 管理 QE/MPI 时，
+仍按任务需要在终端或作业脚本中加载对应模块。qbox 不提供 QE、赝势或 MPI 的自动安装。
 
-## 4. 单独安装 Multiwfn（按需）
+## 5. 单独安装 Multiwfn（按需）
 
 源码仓库中提供 `third_party/Multiwfn/Multiwfn_3.8_dev_bin_Linux.zip`、校验值及说明。
 见[独立下载说明](../third_party/Multiwfn/README.md)。它不在 wheel 或 sdist 内；
@@ -107,8 +138,9 @@ test -x "$QBOX_MULTIWFN_HOME/Multiwfn"
 ## 升级、卸载和离线使用
 
 升级时激活同一环境，再用 `python -m pip install --upgrade './新文件名.whl[analysis,structure]'`
-安装实际下载的新 wheel。卸载使用 `python -m pip uninstall qbox`；科学依赖和手动安装的
-Multiwfn 会保留。用户计算文件不受影响。
+安装实际下载的新 wheel。卸载使用该环境的 `python -m pip uninstall qbox`，再检查并移除
+自己创建的固定启动器（默认 `~/.local/bin/qbox`）；不要删除其他安装提供的同名命令。
+科学依赖和手动安装的 Multiwfn 会保留。用户计算文件不受影响。
 
 完全断网并且没有预先准备 Python/依赖的机器，可以选择完整离线发行包。
 其指南在完整源码仓库的 `packaging/offline/README.zh-CN.md`；已验收离线包的记录
