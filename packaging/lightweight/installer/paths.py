@@ -10,6 +10,7 @@ or system-wide access.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 from dataclasses import dataclass
 import os
 from pathlib import Path
@@ -119,7 +120,7 @@ def _validate_overlap(prefix: Path, bin_dir: Path) -> None:
             f"{bin_dir}"
         )
 
-    for name in ("venv", "releases", "current"):
+    for name in ("venv", "releases", "current", ".install-lock", ".qbox-install.json"):
         reserved = _canonical(prefix / name)
         if _is_within(entry, reserved):
             raise ValueError(
@@ -156,16 +157,6 @@ def _validate_user_destination(path: Path) -> None:
         )
 
 
-def _components(path: Path):
-    """Yield absolute path components from root through *path*."""
-
-    current = Path(path.anchor)
-    yield current
-    for part in path.parts[1:]:
-        current /= part
-        yield current
-
-
 def _system_mode_error(path: Path, mode: int, reason: str) -> OSError:
     return OSError(
         f"system path ancestor {path} has unsafe mode "
@@ -177,10 +168,18 @@ def _validate_system_chain(
     path: Path, *, require_leaf: bool = False, directory_leaf: bool = False,
     python_leaf: bool = False
 ) -> None:
-    """Validate existing lexical components of a root-managed shared path."""
+    """Validate every component, including each intermediate symlink expansion.
 
+    Resolve one component at a time: collapsing a link target with resolve() or
+    normpath() would hide writable intermediate directories (including before ..).
+    Keep this traversal separate from the selected interpreter's lexical identity.
+    """
+
+    pending = deque(path.parts[1:])
+    component = Path(path.anchor)
     saw_leaf = False
-    for component in _components(path):
+    links = 0
+    while True:
         try:
             info = _stat_path(component, follow_symlinks=False)
         except FileNotFoundError:
@@ -188,7 +187,7 @@ def _validate_system_chain(
         except OSError as error:
             raise OSError(f"cannot inspect system path {component}: {error}") from error
 
-        saw_leaf = component == path
+        leaf = not pending
         mode = info.st_mode
         if info.st_uid != 0:
             raise OSError(
@@ -196,10 +195,16 @@ def _validate_system_chain(
                 "expected uid 0"
             )
         if stat.S_ISLNK(mode):
+            links += 1
+            if links > 40:
+                raise OSError(f"too many symlink expansions in system path: {path}")
+            target = Path(os.readlink(component))
+            pending.extendleft(reversed(target.parts[1:] if target.is_absolute() else target.parts))
+            component = Path(target.anchor) if target.is_absolute() else component.parent
             continue
-        if component == path and directory_leaf and not stat.S_ISDIR(mode):
+        if leaf and directory_leaf and not stat.S_ISDIR(mode):
             raise ValueError(f"system destination must be a directory: {component}")
-        if component != path and not stat.S_ISDIR(mode):
+        if not leaf and not stat.S_ISDIR(mode):
             raise ValueError(f"system path ancestor is not a directory: {component}")
         if mode & stat.S_IWGRP:
             raise _system_mode_error(component, mode, "group-writable")
@@ -216,6 +221,12 @@ def _validate_system_chain(
                     f"Python interpreter resolved target {component} must be "
                     "executable by other users"
                 )
+
+        if leaf:
+            saw_leaf = True
+            break
+        part = pending.popleft()
+        component = component.parent if part == ".." else component / part
 
     if require_leaf and not saw_leaf:
         raise ValueError(f"required system path does not exist: {path}")
@@ -257,7 +268,7 @@ def validate_paths(options: InstallOptions) -> None:
     _validate_option_path(options.bin_dir, label="bin directory")
     _validate_option_path(options.python, label="Python interpreter")
     _validate_overlap(options.prefix, options.bin_dir)
-    resolved_python = _validate_python(options.python)
+    _validate_python(options.python)
 
     if options.mode == "user":
         _validate_user_destination(options.prefix)
@@ -266,10 +277,4 @@ def validate_paths(options: InstallOptions) -> None:
 
     for destination in (options.prefix, options.bin_dir):
         _validate_system_chain(destination, directory_leaf=True)
-        resolved_destination = _canonical(destination)
-        if resolved_destination != destination:
-            _validate_system_chain(resolved_destination, directory_leaf=True)
-    _validate_system_chain(options.python, require_leaf=True)
-    _validate_system_chain(
-        resolved_python, require_leaf=True, python_leaf=True
-    )
+    _validate_system_chain(options.python, require_leaf=True, python_leaf=True)

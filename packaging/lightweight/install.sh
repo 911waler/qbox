@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Keep arguments intact, including spaces, quotes and non-ASCII paths.
 set -euo pipefail
-original_args=("$@")
+parsed_args=()
 python_command=python3
 show_help=false
 mode_seen=false
@@ -18,7 +18,7 @@ while (($#)); do
         --user|--system)
             [[ "$1" == "$option" ]] || fail "unrecognized argument: $1"
             [[ "$mode_seen" == false ]] || fail 'installation mode may be selected only once'
-            mode_seen=true; shift ;;
+            mode_seen=true; parsed_args+=("$option"); shift ;;
         --prefix|--bin-dir|--python)
             case "$option" in
                 --prefix) seen=$prefix_seen; prefix_seen=true ;;
@@ -35,7 +35,11 @@ while (($#)); do
             fi
             [[ -n "${value//[[:space:]]/}" ]] || fail "$option path must not be empty"
             [[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || fail "$option path must not contain a line break"
-            [[ "$option" != --python ]] || python_command=$value ;;
+            if [[ "$option" == --python ]]; then
+                python_command=$value
+            else
+                parsed_args+=("$option" "$value")
+            fi ;;
         *) fail "unrecognized argument: $1" ;;
     esac
 done
@@ -61,4 +65,4 @@ if [[ "$script_path" == */* ]]; then
     cd -- "${script_path%/*}"
 fi
 # -E/-s ignore caller Python settings; -B keeps the verified bundle unchanged.
-exec "$python_path" -E -s -B -m installer "${original_args[@]}"
+exec "$python_path" -E -s -B -m installer "${parsed_args[@]}" --python "$python_path"

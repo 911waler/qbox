@@ -132,6 +132,48 @@ class ValidatePathsTests(unittest.TestCase):
             ):
                 validate_paths(self.options(prefix, bin_dir))
 
+    def test_metadata_and_lock_command_directories_are_reserved(self):
+        for name in (".install-lock", ".install-lock/nested", ".qbox-install.json",
+                     ".qbox-install.json/nested"):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "reserved"):
+                validate_paths(self.options(self.base / "qbox", self.base / "qbox" / name))
+        self.assertFalse((self.base / "qbox").exists())
+
+    def test_system_checks_every_symlink_expansion(self):
+        safe, bridge, target = (self.base / name for name in ("safe", "bridge", "target"))
+        for directory in (safe, bridge, target):
+            directory.mkdir()
+            directory.chmod(0o755)
+        (safe / "alias").symlink_to("../bridge/hop")
+        (bridge / "hop").symlink_to("../target")
+        (target / "python").symlink_to("/usr/bin/python3")
+        real_stat = os.stat
+
+        def root_stat(path, *, follow_symlinks=True):
+            path = Path(path)
+            info = real_stat(path, follow_symlinks=follow_symlinks)
+            mode = stat.S_IFDIR | 0o755 if path in (Path("/tmp"), self.base) else info.st_mode
+            return SimpleNamespace(st_uid=0, st_mode=mode)
+
+        variants = (
+            self.options(safe / "alias/qbox", mode="system", python="/usr/bin/python3"),
+            self.options(target / "qbox", safe / "alias/commands", mode="system", python="/usr/bin/python3"),
+            self.options(target / "qbox", mode="system", python=safe / "alias/python"),
+        )
+        with mock.patch("installer.paths._stat_path", side_effect=root_stat):
+            for options in variants:
+                with self.subTest(options=options):
+                    bridge.chmod(0o777)
+                    with self.assertRaisesRegex(OSError, "bridge.*writable"):
+                        validate_paths(options)
+                    bridge.chmod(0o755)
+                    validate_paths(options)
+                    self.assertEqual(options.python, options.python.absolute())
+            (bridge / "hop").unlink()
+            (bridge / "hop").symlink_to("../safe/alias")
+            with self.assertRaises((OSError, ValueError)):
+                validate_paths(variants[0])
+
     def test_overlap_uses_components_instead_of_string_prefixes(self):
         validate_paths(
             self.options(self.base / "qbox", self.base / "qbox-other/bin")

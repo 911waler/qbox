@@ -296,7 +296,22 @@ def _validate(options: InstallOptions) -> None:
 
 
 def install(options: InstallOptions, *, wheel: Path, wheel_sha256: str) -> Path:
-    """Install a local wheel with scientific extras and return its ready command."""
+    """Install a local wheel with scientific extras and return its ready command.
+
+    The CLI owns this process: constrain all system transaction creation, including
+    inherited venv/ensurepip/pip subprocesses, before any files or commands exist.
+    Restore the caller's mask on reuse, failure and interruption as well as success.
+    """
+    if options.mode != "system":
+        return _install(options, wheel=wheel, wheel_sha256=wheel_sha256)
+    previous_mask = os.umask(0o022)
+    try:
+        return _install(options, wheel=wheel, wheel_sha256=wheel_sha256)
+    finally:
+        os.umask(previous_mask)
+
+
+def _install(options: InstallOptions, *, wheel: Path, wheel_sha256: str) -> Path:
     _validate(options)
     if _digest(wheel) != wheel_sha256:
         raise ValueError(f"wheel SHA256 digest mismatch: {wheel}")

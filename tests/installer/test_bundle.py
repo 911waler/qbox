@@ -217,6 +217,20 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(profile.read_text(), 'existing profile')
         self.assertEqual(profile.stat().st_mode & 0o777, 0o600)
 
+    def test_bare_python_name_uses_path_selection_not_cwd(self):
+        selected_dir = self.work / "python commands"
+        selected_dir.mkdir()
+        selected = selected_dir / "chosen-python"
+        selected.symlink_to(self.python)
+        local = self.work / "chosen-python"
+        local.write_text("#!/bin/sh\nexit 91\n")
+        local.chmod(0o755)
+        result = self.run_cli('--user', '--prefix', str(self.prefix), '--python=chosen-python',
+                             env=dict(os.environ, PATH=str(selected_dir) + ':' + os.environ['PATH']))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        record = json.loads((self.prefix / '.qbox-install.json').read_text())
+        self.assertEqual(record['python'], str(selected))
+
     def test_extracted_bundle_installs_with_real_pip_and_preserves_relative_paths(self):
         python_alias = self.work / "python 中文's"
         python_alias.symlink_to(self.python)

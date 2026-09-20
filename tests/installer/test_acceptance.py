@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+from unittest import mock
 import unittest
 
 
@@ -18,6 +20,24 @@ class AcceptanceHarnessTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
+
+    def test_orphan_result_is_preserved_before_docker(self):
+        module = self.load_harness()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = root / "archive"
+            archive.write_bytes(b"placeholder")
+            output = root / "evidence"
+            output.mkdir()
+            result = output / "result.json"
+            result.write_bytes(b"previous evidence")
+            with mock.patch.object(sys, "argv", ["acceptance", "--archive", str(archive),
+                    "--image", "unused", "--output", str(output)]), \
+                    mock.patch.object(module.subprocess, "run", side_effect=AssertionError("Docker must not run")):
+                with self.assertRaises(FileExistsError):
+                    module.main()
+            self.assertEqual(result.read_bytes(), b"previous evidence")
+            self.assertFalse((output / "commands.jsonl").exists())
 
     def test_failed_command_is_recorded_and_rejected(self):
         module = self.load_harness()

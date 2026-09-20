@@ -177,8 +177,18 @@ def inside():
         recorder.emit({'type': 'dependency_downloads', 'files': {p.name: sha(p) for p in sorted(Path('/wheels').iterdir())}})
         case('genuine network dependency download; alice exists before install; bob absent')
 
+        if checks == 'full':
+            recorder.run([python, *(['-O'] if sys.flags.optimize else []), '-B',
+                          '/system-creation-test.py', '-v'],
+                         env=dict(os.environ, PYTHONPATH=str(root)))
+            case('safe system creation before venv/ensurepip under umask 000 and 077; caller mask and parents preserved')
+
         def install(user, options, prefix, bin_dir=None):
-            result = run_as(user, installer + options + ['--python', python])
+            command = installer + options + ['--python', Path(python).name]
+            if user == 'root':
+                mask = '077' if prefix == '/opt/科学 qbox' else '000'
+                command = ['sh', '-c', 'umask ' + mask + '; exec "$@"', 'sh', *command]
+            result = run_as(user, command)
             prefix = Path(prefix)
             entry = Path(bin_dir or prefix / 'bin') / 'qbox'
             require(entry.is_file(), 'Acceptance check failed: entry.is_file()')
@@ -308,6 +318,23 @@ def inside():
             require('travers' in result.stderr, "Acceptance check failed: 'travers' in result.stderr")
             require(not Path('/opt/rejected-python').exists(), "Acceptance check failed: not Path('/opt/rejected-python').exists()")
             case('actual inaccessible prefix/interpreter and writable system ancestor rejected')
+            chain = Path('/opt/symlink-check')
+            for name in ('safe', 'bridge', 'target'):
+                (chain / name).mkdir(parents=True)
+            (chain / 'bridge').chmod(0o777)
+            (chain / 'safe/alias').symlink_to('../bridge/hop')
+            (chain / 'bridge/hop').symlink_to('../target')
+            (chain / 'target/python').symlink_to(python)
+            rejected = [
+                ['--prefix', str(chain / 'safe/alias/qbox'), '--python', python],
+                ['--prefix', '/opt/rejected-chain-bin', '--bin-dir', str(chain / 'safe/alias/bin'), '--python', python],
+                ['--prefix', '/opt/rejected-chain-python', '--python', str(chain / 'safe/alias/python')],
+            ]
+            for options in rejected:
+                result = run_as('root', installer + ['--system', *options], failure=True)
+                require('bridge' in result.stderr and 'writable' in result.stderr, 'Unsafe intermediate symlink ancestry accepted')
+                require(not Path(options[1]).exists(), 'Rejected chain created prefix')
+            case('two-hop writable intermediate rejected for prefix, bin-dir and Python')
             default = Path('/usr/bin/python3')
             if default.exists():
                 version = recorder.run([str(default), '-c', 'import sys; print(sys.version_info[:2])']).stdout.strip()
@@ -335,14 +362,15 @@ def main():
                         help='command-directory runs one fresh external-bin system install as supplemental evidence')
     args = parser.parse_args()
     archive = args.archive.resolve(strict=True)
-    args.output.mkdir(parents=True, exist_ok=True)
+    args.output.mkdir(parents=True, exist_ok=False)
     log_path = args.output / 'commands.jsonl'
     # Do not overwrite evidence from a previous run.
     with log_path.open('x', encoding='utf-8') as log:
         recorder = Recorder(log)
         info = {'archive': str(archive), 'archive_sha256': sha(archive), 'archive_size': archive.stat().st_size,
                 'image': args.image, 'harness_sha256': sha(__file__), 'checks': args.checks,
-                'python_optimize': sys.flags.optimize, 'status': 'failed'}
+                'python_optimize': sys.flags.optimize,
+                'creation_probe_sha256': sha(Path(__file__).with_name('test_system_creation.py')), 'status': 'failed'}
         name = 'qbox-acceptance-' + uuid.uuid4().hex[:12]
         try:
             inspected = recorder.run(['docker', 'image', 'inspect', args.image])
@@ -355,6 +383,7 @@ def main():
                        '-e', 'QBOX_ACCEPTANCE_CHECKS=' + args.checks,
                        '--mount', f'type=bind,source={archive},target=/input/installer.tar.gz,readonly',
                        '--mount', f'type=bind,source={Path(__file__).resolve()},target=/run-acceptance.py,readonly',
+                       '--mount', f'type=bind,source={Path(__file__).with_name("test_system_creation.py").resolve()},target=/system-creation-test.py,readonly',
                        args.image, python, *(['-O'] if sys.flags.optimize else []), '/run-acceptance.py', '--inside']
             process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             # Container events are streamed to disk so interruption retains evidence.
