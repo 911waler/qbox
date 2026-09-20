@@ -3,7 +3,8 @@
 ## 用户目标与已确认范围
 
 同一轻量安装包同时服务个人用户和管理员。安装完成后直接输入 `qbox`，无需激活
-Python 环境。两种模式均可独立选择程序安装目录和命令入口目录。Multiwfn 继续作为
+Python 环境。两种模式默认只指定总安装目录 `--prefix`，入口自动位于 `<prefix>/bin/qbox`；
+`--bin-dir` 仅作为需要分离命令目录时的可选覆盖参数。Multiwfn 继续作为
 源码仓库中的独立下载文件，不进入任何 qbox 安装包，不自动安装。
 
 本设计扩展现有 wheel 和固定 Python 启动器，保持科学算法、任务编号及 QE/MPI 调用方式。
@@ -26,30 +27,29 @@ Python 环境。两种模式均可独立选择程序安装目录和命令入口�
 # 个人默认路径
 bash install.sh --user
 
-# 个人自定义路径；最终命令为 $HOME/bin/qbox
+# 个人自定义总目录；最终命令为 $HOME/software/qbox/bin/qbox
 bash install.sh --user \
   --prefix "$HOME/software/qbox" \
-  --bin-dir "$HOME/bin" \
   --python /absolute/path/to/python3
 
 # 管理员默认路径
 sudo bash install.sh --system
 
-# 管理员自定义路径；最终命令为 /opt/lab/bin/qbox
+# 管理员自定义总目录；最终命令为 /opt/lab/apps/qbox/bin/qbox
 sudo bash install.sh --system \
   --prefix /opt/lab/apps/qbox \
-  --bin-dir /opt/lab/bin \
   --python /usr/bin/python3.11
 ```
 
 - `--user` 与 `--system` 互斥，必须明确选择一个；避免误判 sudo 下的 HOME。
-- `--user` 默认 prefix 为 `$HOME/.local/share/qbox`，bin-dir 为 `$HOME/.local/bin`。
-- `--system` 默认 prefix 为 `/opt/qbox`，bin-dir 为 `/usr/local/bin`，要求有效 UID 0。
+- `--user` 默认 prefix 为 `$HOME/.local/share/qbox`，默认入口为 `$HOME/.local/share/qbox/bin/qbox`。
+- `--system` 默认 prefix 为 `/opt/qbox`，默认入口为 `/opt/qbox/bin/qbox`，要求有效 UID 0。
 - root 运行 `--user` 时拒绝并说明应使用普通账号或显式 `--system`。
 - `--python` 可选，缺省检查 PATH 中的 python3，版本不足时要求明确选择合适解释器。
-- `--prefix` 与 `--bin-dir` 互相独立；最终入口始终为 `<bin-dir>/qbox`，不增加改名功能。
+- 未给出 `--bin-dir` 时，在解析最终 prefix 后令 bin-dir 为 `<prefix>/bin`，与参数顺序无关。
+  显式 `--bin-dir` 才覆盖此默认值；最终入口始终为 `<bin-dir>/qbox`，不增加改名功能。
 - 解析绝对路径并支持空格/中文；拒绝空值、根目录和会覆盖受管理内部文件的路径关系。
-  可允许安全的 `<prefix>/bin`；拒绝把 prefix 放入 bin-dir、入口放进 venv/releases/current。
+  支持默认的 `<prefix>/bin`；拒绝把 prefix 放入 bin-dir、入口放进 venv/releases/current。
 - `--help` 无副作用；任何既有、非本安装所有的文件、目录或符号链接都不得覆盖。
 
 ## 程序和 Python 环境
@@ -70,7 +70,8 @@ Python venv 不可通过创建后移动目录来发布：环境需在最终固�
 ## 命令发现与 PATH
 
 安装器总是输出入口绝对路径和针对所选 bin-dir 的 PATH 配置，提示用 `command -v qbox`
-检查实际选中命令。自定义 bin-dir 不自动成为所有用户的 PATH。
+检查实际选中命令。默认的 `<prefix>/bin` 和自定义 bin-dir 都不保证已在 PATH 中；
+默认安装不在 `/usr/local/bin` 或 `~/.local/bin` 另建入口。需要设置一次所选目录的 PATH。
 
 个人模式给出 shell 配置指引；系统模式同时给出管理员在 `/etc/profile.d/` 统一配置的
 准确示例，供新老用户登录时采用。安装器不静默改写现有 shell 配置；用户已有别名或
@@ -98,7 +99,9 @@ Python venv 不可通过创建后移动目录来发布：环境需在最终固�
 ## 验收
 
 1. 从同一发行归档运行个人和管理员模式，核验所用 qbox wheel 身份一致。
-2. 默认路径、自定义 prefix、独立 bin-dir、中文/空格路径均能安装并运行真实工作流样例。
+2. 两种模式下，仅指定 prefix 时入口必须生成于 `<prefix>/bin/qbox`；显式 bin-dir 覆盖
+   默认值且不受参数顺序影响。默认路径、自定义 prefix、独立 bin-dir、中文/空格路径均
+   能安装并运行真实工作流样例。
 3. 新 shell 未激活 Python 且旧 QBOX_PYTHON 指向别处时，入口仍使用绑定环境。
 4. 隔离测试系统中由 root 安装，至少两个普通账号（含安装后新建账号）可运行；它们不能
    修改共享程序，且缓存/输出分别属于各自用户。不得在当前生产主机创建测试账号或部署软件。
