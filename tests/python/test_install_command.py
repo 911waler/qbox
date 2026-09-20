@@ -58,6 +58,19 @@ class InstallCommandTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual((directory/'qbox').stat().st_ino, inode)
 
+    def test_no_reuse_preserves_even_identical_existing_command(self):
+        directory = self.base / 'exclusive'
+        self.assertEqual(self.run_install(directory).returncode, 0)
+        entry = directory / 'qbox'
+        content, inode = entry.read_bytes(), entry.stat().st_ino
+        result = subprocess.run([str(self.python), '-m', 'qbox.install',
+                                 '--bin-dir', str(directory), '--no-reuse'],
+                                cwd=self.base, env=self.env, text=True, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('already exists', result.stderr)
+        self.assertEqual(entry.read_bytes(), content)
+        self.assertEqual(entry.stat().st_ino, inode)
+
     def test_foreign_file_and_symlinks_are_preserved(self):
         for kind in ('file', 'symlink', 'dangling', 'directory'):
             with self.subTest(kind=kind):

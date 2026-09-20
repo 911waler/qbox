@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 
-def install_command(bin_dir):
+def install_command(bin_dir, *, reuse=True):
     # Do not resolve symlinks: venv/bin/python must retain its environment identity.
     python = os.path.abspath(sys.executable)
     content = (
@@ -30,7 +30,7 @@ def install_command(bin_dir):
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / 'qbox'
     if target.is_symlink() or target.exists():
-        if (not target.is_symlink() and target.is_file()
+        if (reuse and not target.is_symlink() and target.is_file()
                 and target.read_text(encoding='utf-8', errors='replace') == content
                 and os.access(target, os.X_OK)):
             return target
@@ -53,11 +53,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bin-dir', default=str(Path.home() / '.local/bin'),
                         help='command directory (default: ~/.local/bin)')
+    parser.add_argument('--no-reuse', action='store_true',
+                        help='require a new command name, even for identical content')
     args = parser.parse_args(argv)
     if os.environ.get('_QBOX_OFFLINE_ROOT'):
         parser.exit(1, 'qbox: the complete offline installation already provides its own command.\n')
     try:
-        target = install_command(args.bin_dir)
+        target = install_command(args.bin_dir, reuse=not args.no_reuse)
     except OSError as error:
         parser.exit(1, f'qbox: cannot install command: {error}\n')
     print(f'qbox command: {target}\nPython environment: {sys.executable}')
