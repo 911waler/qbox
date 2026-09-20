@@ -5,14 +5,14 @@
 
 ## 冻结产物
 
-- 安装包：`qbox-0.1.0-linux-installer.tar.gz`，213068 字节。
-- 安装包 SHA256：`0e81786f9124dff9516fc11de88795b59827364d69b0df48207e10370d201788`。
+- 安装包：`qbox-0.1.0-linux-installer.tar.gz`，213420 字节。
+- 安装包 SHA256：`4951ed252af4e2af4993ae4c5b32f6a1b0f75dd9aca831646da59740ee439c4a`。
 - 包内 wheel：`qbox-0.1.0-py3-none-any.whl`。
 - wheel SHA256：`6b4f741fa0672a175c6d7e85b802401b9dfb7a0cceac41a54476b5fd6311c015`。
-- 本地目录：`build/lightweight/task3-dist/`（安装包及 `.sha256`）、
+- 本地目录：`build/lightweight/final-fix-dist-a/`（安装包及 `.sha256`）、
   `build/lightweight/task3-wheel/`（wheel）。
-- 使用相同 wheel 分别构建到 `build/lightweight/task4-dist-a/` 与
-  `build/lightweight/task4-dist-b/`，两份归档与上述冻结文件逐字节相同。
+- 使用相同 wheel 分别构建到 `build/lightweight/final-fix-dist-a/` 与
+  `build/lightweight/final-fix-dist-b/`，两份归档与上述冻结文件逐字节相同。
   本验收文档不在安装包内，不影响包内容。
 
 包中只有安装器、qbox wheel、许可、中文指南和校验清单；没有 Multiwfn、Python、
@@ -25,36 +25,38 @@
 在准备好 Docker 镜像后，从仓库根目录运行：
 
 ```bash
-python tests/installer/run-acceptance.py \
-  --archive build/lightweight/task3-dist/qbox-0.1.0-linux-installer.tar.gz \
+python -O tests/installer/run-acceptance.py \
+  --archive build/lightweight/final-fix-dist-a/qbox-0.1.0-linux-installer.tar.gz \
   --image qbox-lightweight-test:ubuntu22 \
   --output build/lightweight/acceptance/new-ubuntu22-run
 ```
 
-输出目录必须是新目录，避免覆盖旧证据。镜像需包含 Bash、useradd、runuser 和所选
+输出目录必须是不存在的新目录；脚本使用独占创建，已有目录即在启动 Docker 前拒绝，
+包括仅有孤立 `result.json` 的目录。镜像需包含 Bash、useradd、runuser 和所选
 Python/venv/pip；Rocky 镜像使用 `/usr/bin/python3.11`。镜像构建 Dockerfile、
 联网 apt/dnf 日志及解释器检查保存在 `build/lightweight/acceptance-images/`。
 测试通过返回 0，缺环境、任何非预期非零退出或断言失败均不能计为通过。
 
-脚本只将归档与自身以只读方式挂入一次性容器；不挂载宿主 Python 或依赖目录。
+脚本只将归档、验收脚本及创建期权限探针以只读方式挂入一次性容器；不挂载宿主 Python 或依赖目录。
 容器内先用真实 pip 联网构建各平台 wheel 缓存，再以该缓存完成六种安装及重跑验证，
 缓存不进入交付包。每条命令的 argv、stdout、stderr、退出码和耗时写入
 `commands.jsonl`，其中保存 wheel 缓存哈希、每次安装记录及完整依赖版本。
-`result.json` 保存归档身份、镜像 ID/digest、验收脚本哈希和最终结果。
+`result.json` 保存归档身份、镜像 ID/digest、验收脚本及权限探针哈希和最终结果。
 账号和 root 安装均发生在容器内，未在宿主创建账号或安装到 `/opt`、`/usr/local`。
 
 ## 实测平台及结果
 
 所有四个平台均使用相同冻结归档；每个平台六次新安装、三次完整匹配复用、九组真实
-用户工作流均通过。Ubuntu 各 15 组、Rocky 9 共 16 组、Rocky 8 共 15 组场景通过，
-所有四次宿主验收命令均退出 0。
+用户工作流均通过。Ubuntu 各 17 组、Rocky 9 共 18 组、Rocky 8 共 17 组场景通过，
+所有四次宿主验收命令均退出 0。此次完整矩阵的宿主与容器均开启 Python `-O`，
+全部必要验收检查仍执行。
 
 | 容器系统 | Python / 解释器 | 个人三种路径 | 管理员三种路径、双账号 | 证据目录（`build/lightweight/acceptance/` 下） |
 |---|---|---|---|---|
-| Ubuntu 22.04.5 | 3.10.12 / `/usr/bin/python3` | 通过 | 通过 | `ubuntu22-final/` |
-| Ubuntu 24.04.4 | 3.12.3 / `/usr/bin/python3` | 通过 | 通过 | `ubuntu24-final/` |
-| Rocky 9.8 | 3.11.13 / `/usr/bin/python3.11` | 通过 | 通过 | `rocky9-final2/` |
-| Rocky 8.10 | 3.11.13 / `/usr/bin/python3.11` | 通过 | 通过 | `rocky8-final2/` |
+| Ubuntu 22.04.5 | 3.10.12 / `/usr/bin/python3` | 通过 | 通过 | `ubuntu22-final-fix/` |
+| Ubuntu 24.04.4 | 3.12.3 / `/usr/bin/python3` | 通过 | 通过 | `ubuntu24-final-fix/` |
+| Rocky 9.8 | 3.11.13 / `/usr/bin/python3.11` | 通过 | 通过 | `rocky9-final-fix/` |
+| Rocky 8.10 | 3.11.13 / `/usr/bin/python3.11` | 通过 | 通过 | `rocky8-final-fix/` |
 
 镜像 ID（对应的完整 RepoDigest 也保存在各 `result.json`）：
 
@@ -80,6 +82,16 @@ Python/venv/pip；Rocky 镜像使用 `/usr/bin/python3.11`。镜像构建 Docker
 - Rocky 9 的旧默认 Python 3.9 被明确拒绝，选择 `/usr/bin/python3.11` 后全部通过。
   Rocky 8 镜像未提供 `/usr/bin/python3`，验收明确选择 Python 3.11。
 
+新矩阵还验证了本轮审查修正：
+
+- 在实际 root 容器中，分别设置调用者 umask 为 000 与 077；执行 venv/ensurepip
+  前检查有效创建掩码、锁及安装记录权限，执行真实 venv 后、pip 前检查生成权限。
+  故意停止事务后验证调用者 umask 恢复，既有 0711 父目录未被 chmod。
+- 完整系统安装与重装分别使用 000/077，两个普通账号仍可运行而不可修改；
+  每次安装均用裸解释器名从 PATH 选择，另有真实 bundle 回归验证不会选中工作目录同名文件。
+- 实际建立两跳符号链接，prefix、bin-dir、Python 经可写中间目录时均在创建 prefix 前拒绝。
+  单元测试另外覆盖安全相对多跳、循环、保留解释器路径身份，以及锁/元数据路径冲突。
+
 科学依赖实际解析版本如下；完整版本及缓存文件 SHA 在命令日志中：
 
 | 平台 | NumPy | SciPy | Matplotlib | pymatgen | ASE | seekpath |
@@ -89,31 +101,35 @@ Python/venv/pip；Rocky 镜像使用 `/usr/bin/python3.11`。镜像构建 Docker
 | Rocky 9.8 | 2.4.6 | 1.17.1 | 3.11.2 | 2026.5.4 | 3.29.0 | 2.2.1 |
 | Rocky 8.10 | 2.4.6 | 1.17.1 | 3.11.2 | 2026.5.4 | 3.29.0 | 2.2.1 |
 
-其余验证：50 项安装器测试、241 项 shell 检查、54 项 Python 测试及
+其余验证：58 项安装器测试（宿主跳过 1 项仅限 root 容器的探针，四个平台均实际运行通过）、
+8 项优化模式验收脚本测试、241 项 shell 检查、54 项 Python 测试及
 `tools/verify-wheel.py` 全部通过。已有事务测试覆盖 pip 失败、缺 venv 预检、
 中断、并发发布、冲突保留及重装校验。没有改动离线共用代码，也没有重复历史离线 VM 验收。
 
 实测范围与限制：这是 x86_64 Docker 用户空间验收，共享宿主内核；不等同于冷启动 VM、
 其他架构或所有 Linux 发行版验证。没有执行 QE/MPI 计算或 Multiwfn。依赖来自当日索引，
-以后解析版本可能变化；轻量包没有固定/携带这些科学依赖。初轮 Ubuntu 24 测试缓存
-保留 sdist 却缺构建依赖、Rocky 缓存构建缺 `bdist_wheel`，均是验收缓存准备问题：
-已改为联网 `pip wheel --use-pep517`，保留失败及人工停止的早期记录，只有上述完成的
-四次运行用于通过结论。Ubuntu 完成运行使用相同缓存构建命令但未显式加
-`--use-pep517`；其实际构建成功，两个脚本快照及 SHA 保存在证据目录中。
-安装器/交付包未为此改动。此前记录的裸程序名 `--python python3.11` 解析限制仍保留，
-本文及验收使用解释器绝对路径。
+以后解析版本可能变化；轻量包没有固定/携带这些科学依赖。
+本轮使用同一份最终验收脚本，所有平台均执行联网 `pip wheel --use-pep517`。
+汇总证据是 `build/lightweight/acceptance/final-fix-summary.json`；回归及构建日志位于
+`build/lightweight/final-fix-evidence/`。此前已有构建警告没有改变，未扩展修正范围。
+
+旧归档 SHA256 `0e81786f9124dff9516fc11de88795b59827364d69b0df48207e10370d201788`
+及其 `task3-dist/`、`task4-dist-a/`、`task4-dist-b/` 均保留。旧完整矩阵
+`ubuntu22-final/`、`ubuntu24-final/`、`rocky9-final2/`、`rocky8-final2/` 与失败/停止尝试
+只作为旧归档历史证据，不作为新归档验证结果。
 
 
-## 审查后补充验收
+## 旧归档的审查后补充验收（历史证据）
 
+本节仅对应上述旧 SHA256，不替代本轮新归档的完整四平台矩阵。
 审查指出旧验收脚本的 Python `assert` 会被优化模式删除，而且独立系统命令目录缺少
 防替换证明。验收脚本现已将全部必要检查改为显式 `require()` / `AcceptanceFailure`，
 包括实际命令退出码、文件/目录权限、容器边界和最终结果判定；嵌入 Python 脚本也没有
 可被优化删除的断言。七项针对性测试在普通及 `-O` 模式下通过，其中以 `-O` 和
 `PYTHONOPTIMIZE=1` 分别证明非预期成功/失败不能绕过检查，外层还拒绝失败、缺失及重复结果。
 
-针对新增目录检查，用以下明确限定范围的补充命令在相同四个镜像中各新装一次；
-它不代替前述完整矩阵，也不重新宣称完整矩阵是在优化模式下跑完的：
+当时针对新增目录检查，用以下限定范围的补充命令在相同四个镜像中各新装一次；
+它不代替旧归档的完整矩阵，也不改变旧完整矩阵未使用优化模式的事实：
 
 ```bash
 python -O tests/installer/run-acceptance.py \
@@ -143,9 +159,8 @@ qbox 和删除 qbox；每次必须得到 `PermissionError`，入口 inode/SHA �
 `64d37c5484abc656cdcec4c82aff028e695a8b1ba219d14264408150bfa52a8c`。
 
 
-已知的次要限制：输出目录仍应选择全新路径；孤立的旧 `result.json` 在缺少
-`commands.jsonl` 时可能被覆盖，该审查项留待最终审查处理。本次所有补充运行均使用
-此前不存在的新目录，既有完整矩阵及失败尝试证据均保留。
+本轮已修复裸 Python 名称解析、孤立旧结果文件保护和安装元数据目录重叠；
+历史补充运行均使用当时不存在的新目录，原有证据未被覆盖。
 
 ## 安装与 PATH
 
