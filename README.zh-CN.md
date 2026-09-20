@@ -4,34 +4,49 @@
 
 qbox 是一个用于准备、运行和后处理 Quantum ESPRESSO 工作流的命令行工具包，支持常见的 SCF、结构弛豫、NSCF、能带、PDOS、声子、分子动力学和收敛性扫描任务。
 
-## 正式离线安装
+## 安装（推荐）
 
-正式用户交付形式是完整的 `qbox-0.1.0-linux-x86_64-offline.tar.gz` 及 SHA256 文件。
-包内包含独立 CPython 3.12 和所有科学 Python 运行依赖。要求 x86_64 Linux、
-glibc 2.28+、Bash 4.4+、GNU coreutils、grep、sed、系统 awk、tar、gzip。
-无需系统 Python、编译器、sudo 或网络；QE、MPI、Multiwfn、unfold.x 和赝势需自行提供。
+默认使用轻量 wheel 安装包，Python 和科学计算依赖由用户环境提供。
+需要 Python 3.10+、Bash 4.4+ 及工作流使用的 Linux 命令行工具。
+推荐创建独立虚拟环境，再安装下载到本地的 qbox wheel：
 
 ```bash
-sha256sum -c qbox-0.1.0-linux-x86_64-offline.tar.gz.sha256
-mkdir unpacked
-tar -xzf qbox-0.1.0-linux-x86_64-offline.tar.gz -C unpacked
-bash unpacked/install.sh
-export PATH="$HOME/.local/bin:$PATH"
+python3 -m venv "$HOME/.venvs/qbox"
+source "$HOME/.venvs/qbox/bin/activate"
+python -m pip install './qbox-0.1.0-py3-none-any.whl[analysis,structure]'
+export QBOX_PYTHON="$VIRTUAL_ENV/bin/python"
 qbox --help
 ```
 
-自定义空格路径、只读安装、自检、遗留锁、手工回退及卸载详见
-[随包指南](packaging/offline/README.zh-CN.md)。平台支持仅以
-[实际验收记录](docs/releases/offline-validation.md)为准。
-基础 CPU 兼容采用 GENERIC BLAS，性能可能低于本机优化环境。
+在 wheel 所在目录运行安装命令；pip 会联网获取科学依赖。已有 Conda 或其他
+Python 3.10+ 环境也可以使用。Ubuntu / Rocky 的准备命令、依赖检查、源码安装
+和卸载见[安装指南](docs/installation.md)。qbox 不会替换系统 Python。
 
-## 源码与 wheel 开发模式
+QE、MPI、Multiwfn、unfold.x 和赝势需单独提供。
+源码仓库的 [Multiwfn 独立下载目录](third_party/Multiwfn/README.md)保存了可选原始
+压缩包、许可证和校验值；用户自行下载、解压并配置 `QBOX_MULTIWFN_HOME`。
+该目录不进入 qbox wheel 或源码发行包（sdist），也不会自动安装。
 
-完整源码或普通 wheel 使用开发者自行管理的 Python 3.10+ 环境；可用
-`python -m pip wheel --no-deps . -w dist` 构建本地 wheel，依赖另行准备。
-analysis / structure extras 选择科学依赖；单个 wheel 不是完整离线包。
-源码/wheel 模式保留 QBOX_PYTHON / QBOX_SHARED_ROOT 契约；离线模式固定使用
-私有解释器并拒绝冲突 QBOX_PYTHON。不要将私有 Python/库路径全局加入环境变量。
+## 完整离线包（可选）
+
+断网且没有适用 Python 环境时，可选用
+`qbox-0.1.0-linux-x86_64-offline.tar.gz` 及 SHA256 文件。
+它包含私有 CPython 3.12 和固定科学依赖，因此体积明显更大；仍不包含 Multiwfn。
+安装、回滚和卸载见[离线指南](packaging/offline/README.zh-CN.md)，平台验收范围见
+[实际验收记录](docs/releases/offline-validation.md)。这些记录只适用于所记录的
+离线归档，不代表任意外部 Python 环境已经通过相同验收。
+
+## 源码安装与构建
+
+在完整仓库根目录、已激活的 Python 环境中执行：
+
+```bash
+python -m pip install '.[analysis,structure]'
+```
+
+维护者用 `python -m pip wheel --no-deps . -w dist/lightweight` 构建轻量 wheel。
+analysis / structure extras 分别选择分析和结构处理依赖。
+普通安装保留 `QBOX_PYTHON` / `QBOX_SHARED_ROOT` 配置；离线安装固定使用私有解释器。
 
 ## 配置
 
@@ -119,3 +134,5 @@ QBOX_PYTHON=/path/to/python3 bash tests/run.sh
 ## 许可证
 
 qbox 采用 MIT 许可证发布，详见 [`LICENSE`](LICENSE)。
+
+单独提供的 Multiwfn 下载材料遵循其原始许可证，不属于 qbox 的 MIT 授权范围。

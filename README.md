@@ -6,39 +6,54 @@ qbox is a command-line toolkit for preparing, running, and post-processing
 Quantum ESPRESSO workflows. It supports common SCF, relaxation, NSCF, band,
 PDOS, phonon, molecular-dynamics, and convergence-scan tasks.
 
-## Offline installation (normal users)
+## Installation (recommended)
 
-The supported delivery format is the complete `qbox-0.1.0-linux-x86_64-offline.tar.gz`
-with its SHA256 file. It includes a private CPython 3.12 and all scientific Python
-runtime dependencies. Requires x86_64 Linux, glibc 2.28+, Bash 4.4+, GNU coreutils,
-grep, sed, system awk, tar and gzip. No system Python, compiler, sudo or network is
-needed. QE, MPI, Multiwfn, unfold.x and pseudopotentials remain external.
+The default distribution is a lightweight wheel. Supply your own Python 3.10+
+and scientific dependencies, with Bash 4.4+ and the Linux command-line tools
+used by your workflows. Create a virtual environment and install a local wheel:
 
 ```bash
-sha256sum -c qbox-0.1.0-linux-x86_64-offline.tar.gz.sha256
-mkdir unpacked
-tar -xzf qbox-0.1.0-linux-x86_64-offline.tar.gz -C unpacked
-bash unpacked/install.sh
-export PATH="$HOME/.local/bin:$PATH"
+python3 -m venv "$HOME/.venvs/qbox"
+source "$HOME/.venvs/qbox/bin/activate"
+python -m pip install './qbox-0.1.0-py3-none-any.whl[analysis,structure]'
+export QBOX_PYTHON="$VIRTUAL_ENV/bin/python"
 qbox --help
 ```
 
-See the [bundled guide](packaging/offline/README.zh-CN.md) for custom paths,
-read-only installations, self-checks, owned-lock recovery, rollback and removal.
-See [actual validation](docs/releases/offline-validation.md) before making a
-platform compatibility claim. GENERIC BLAS favors baseline CPU compatibility and
-can be slower than a CPU-optimized scientific environment.
+Run the install command from the directory containing the downloaded wheel.
+pip downloads the scientific dependencies. An existing Conda or other Python
+3.10+ environment also works. See the [installation guide](docs/installation.md)
+for Ubuntu/Rocky preparation, dependency checks, source installation and removal.
+qbox does not replace the system Python.
 
-## Source and wheel development
+QE, MPI, Multiwfn, unfold.x and pseudopotentials are external. The repository's
+[optional Multiwfn download](third_party/Multiwfn/README.md) contains an original
+ZIP, its license and checksum. Download and extract it separately, then set
+`QBOX_MULTIWFN_HOME`. It is excluded from qbox wheels and source distributions
+(sdists), and is never installed automatically.
 
-A complete source checkout or ordinary wheel uses a Python 3.10+ environment
-managed by the developer. Build a wheel with `python -m pip wheel --no-deps . -w dist`
-and install the local wheel with its separately supplied dependencies. The
-`analysis` and `structure` extras select the scientific dependencies. A wheel alone
-is not the complete offline distribution. Source/wheel mode preserves
-`QBOX_PYTHON` and `QBOX_SHARED_ROOT`; offline mode rejects a conflicting
-`QBOX_PYTHON` and uses its private runtime. Do not add private Python/library paths
-to global PATH or LD_LIBRARY_PATH.
+## Complete offline bundle (optional)
+
+Use `qbox-0.1.0-linux-x86_64-offline.tar.gz` and its SHA256 file when the target
+has no network or suitable Python. It includes private CPython 3.12 and fixed
+scientific dependencies, making it substantially larger; Multiwfn remains external.
+See the [offline guide](packaging/offline/README.zh-CN.md) and
+[recorded validation](docs/releases/offline-validation.md). Those results apply
+only to the identified offline archive, not arbitrary external Python environments.
+
+## Source installation and builds
+
+From a complete checkout in your activated Python environment:
+
+```bash
+python -m pip install '.[analysis,structure]'
+```
+
+Maintainers can build a lightweight wheel with
+`python -m pip wheel --no-deps . -w dist/lightweight`.
+The `analysis` and `structure` extras select analysis and structure dependencies.
+Ordinary installation preserves `QBOX_PYTHON` / `QBOX_SHARED_ROOT`; offline mode
+uses its private interpreter.
 
 ## Configuration
 
@@ -134,3 +149,5 @@ Maintained by waler.
 ## License
 
 qbox is released under the MIT License. See [`LICENSE`](LICENSE).
+
+The separately downloadable Multiwfn archive retains its original license; it is not covered by the qbox MIT license.

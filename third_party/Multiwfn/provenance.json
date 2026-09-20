@@ -1,0 +1,15 @@
+{
+  "name": "Multiwfn",
+  "version": "3.8(dev)",
+  "platform": "Linux x86_64",
+  "filename": "Multiwfn_3.8_dev_bin_Linux.zip",
+  "size": 33618174,
+  "sha256": "dbd45c363431c2ae6f6f4ee40bb0758bb2763249d38f11ae7258261628ed9af2",
+  "upstream_homepage": "http://sobereva.com/multiwfn/",
+  "upstream_download_page": "http://sobereva.com/multiwfn/download.html",
+  "acquisition": "Existing locally archived original ZIP; copied without modification. Original download timestamp and upstream-published checksum are not recorded. Not claimed to be the latest release.",
+  "archive_binary_timestamp": "2025-03-24T22:39:32 (ZIP local timestamp; timezone unknown, not a verified release date)",
+  "binary_sha256": "1be4bf716afc1ffa1097459153dd41f7f25caadc54773ff0d57d6064491230c5",
+  "license_member": "Multiwfn_3.8_dev_bin_Linux/LICENSE.txt",
+  "qbox_distribution": "Repository-only optional download; excluded from qbox wheel and sdist; never installed automatically."
+}

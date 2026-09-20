@@ -1,0 +1,9 @@
+LICENSE INFORMATION: To use Multiwfn, you are required to read and agree the following terms:
+(a) Currently Multiwfn is free of charge and open-source for both academic and commerical usages, anyone is allowed to freely distribute the original or their modified Multiwfn codes to others.
+(b) Multiwfn can be distributed as a free component of commercial code. Selling modified version of Multiwfn may also be granted, however, obtaining prior consent from the original author of Multiwfn (Tian Lu) is needed.
+(c) If Multiwfn is utilized in your work, or your own code incorporated any part of Multiwfn code, at least the following original papers of Multiwfn MUST BE cited in main text your paper or code:
+Tian Lu, Feiwu Chen, J. Comput. Chem., 33, 580-592 (2012)
+Tian Lu, J. Chem. Phys., 161, 082503 (2024)
+(d) There is no warranty of correctness of the results produced by Multiwfn, the author of Multiwfn does not hold responsibility in any way for any consequences arising from the use of the Multiwfn.
+
+Whenever possible, please mention and cite Multiwfn in main text rather than in supplemental information, otherwise not only Multiwfn will be difficult for readers to notice, but also the paper will not be included in citation statistics.

@@ -1,0 +1,4 @@
+include README.zh-CN.md
+include docs/installation.md
+# Optional third-party downloads belong to the repository, not qbox distributions.
+prune third_party
