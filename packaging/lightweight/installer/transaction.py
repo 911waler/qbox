@@ -27,6 +27,35 @@ def _environment() -> dict[str, str]:
             if not key.startswith(("QBOX_", "_QBOX_", "PYTHON")) and key not in removed}
 
 
+def _pip_environment(python: Path, env: dict[str, str]) -> dict[str, str]:
+    """Snapshot pip's transport configuration, disabling all write destinations.
+
+    Let pip discover global/user/site/explicit files with its own precedence.
+    Read only its Configuration object: running ``pip config list`` would also
+    activate global CLI settings such as an externally directed log file.
+    Subsequent pip commands use no config files and only transport options.
+    """
+    settings = json.loads(_run([str(python), "-I", "-c",
+        "import json; from pip._internal.configuration import Configuration; "
+        "config=Configuration(isolated=False); config.load(); "
+        "print(json.dumps(dict(config.items())))"], env=env))
+    transport = {
+        "index-url", "extra-index-url", "no-index", "find-links",
+        "trusted-host", "proxy", "cert", "client-cert", "timeout", "retries",
+        "keyring-provider",
+    }
+    controlled = {key: value for key, value in env.items()
+                  if not key.startswith("PIP_")}
+    for section in ("global", "install", ":env:"):
+        for name in transport:
+            value = settings.get(f"{section}.{name}")
+            if value:
+                controlled["PIP_" + name.upper().replace("-", "_")] = value
+    controlled["PIP_CONFIG_FILE"] = os.devnull
+    controlled["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+    return controlled
+
+
 def _run(args: list[str], *, env: dict[str, str], cwd: Path | str = "/") -> str:
     process = subprocess.Popen(args, env=env, cwd=cwd, text=True,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -250,7 +279,7 @@ def verify_install(options: InstallOptions, *, wheel_sha256: str) -> None:
     venv = options.prefix / "venv"
     if venv.is_symlink() or not venv.is_dir() or venv.stat().st_uid != os.geteuid():
         raise ValueError(f"not an owned environment: {venv}")
-    env = _environment()
+    env = _pip_environment(venv / "bin/python", _environment())
     if _versions(venv / "bin/python", env) != record.get("distributions"):
         raise ValueError(f"installed distribution versions changed: {venv}")
     _smoke(options, env, entry=entry)
@@ -298,6 +327,7 @@ def install(options: InstallOptions, *, wheel: Path, wheel_sha256: str) -> Path:
             _write_record(marker, record)
             python = prefix / "venv/bin/python"
             _run([str(options.python), "-I", "-m", "venv", str(prefix / "venv")], env=env)
+            env = _pip_environment(python, env)
             _run([str(python), "-I", "-m", "pip", "install", "--no-cache-dir", "--no-user",
                   str(wheel.absolute()) + "[analysis,structure]"], env=env)
             if options.mode == "system":

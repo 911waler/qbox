@@ -162,6 +162,66 @@ class TransactionTests(unittest.TestCase):
             self.install()
         self.assert_preserved()
 
+    def test_pip_configuration_cannot_redirect_install_outside_venv(self):
+        outside = self.root / "outside destination"
+        outside.mkdir()
+        sentinel = outside / "keep"
+        sentinel.write_bytes(b"outside sentinel")
+        config = self.root / "pip.conf"
+        find_links = os.environ.get("PIP_FIND_LINKS", "")
+        transport = (f"no-index = true\nfind-links = {find_links}\n"
+                     if find_links else "")
+        config.write_text(f"[global]\n{transport}[install]\ntarget = {outside}\n")
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith("PIP_")}
+        env["PIP_CONFIG_FILE"] = str(config)
+        try:
+            with patch.dict(os.environ, env, clear=True):
+                entry = self.install()
+                transaction.verify_install(self.options, wheel_sha256=self.sha)
+            self.assertTrue(entry.is_file())
+        finally:
+            self.assertEqual(sorted(item.name for item in outside.iterdir()), ["keep"])
+            self.assertEqual(sentinel.read_bytes(), b"outside sentinel")
+            self.assert_preserved()
+
+    def test_pip_transport_precedence_is_preserved_without_write_options(self):
+        home = self.root / "home"
+        config = home / ".config/pip/pip.conf"
+        config.parent.mkdir(parents=True)
+        outside = self.root / "must-not-be-created"
+        config.write_text(
+            "[global]\nindex-url = https://global.invalid/simple\n"
+            "cert = /configured/ca.pem\nclient-cert = /configured/client.pem\n"
+            "proxy = http://configured.invalid:1234\n"
+            f"log = {outside}\nroot = {outside}\n"
+            "[install]\nindex-url = https://install.invalid/simple\n"
+            "extra-index-url = https://extra.invalid/simple\n"
+            f"prefix = {outside}\ntarget = {outside}\nuser = true\n")
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith("PIP_")}
+        env.update(HOME=str(home), XDG_CONFIG_HOME=str(home / ".config"),
+                   PIP_LOG=str(outside), PIP_ROOT=str(outside))
+        for explicit in (False, True):
+            with self.subTest(explicit_file=explicit):
+                source = dict(env)
+                if explicit:
+                    source["PIP_CONFIG_FILE"] = str(config)
+                    source["PIP_INDEX_URL"] = "https://environment.invalid/simple"
+                result = transaction._pip_environment(self.python, source)
+                expected_index = ("https://environment.invalid/simple" if explicit
+                                  else "https://install.invalid/simple")
+                self.assertEqual(result["PIP_INDEX_URL"], expected_index)
+                self.assertEqual(result["PIP_EXTRA_INDEX_URL"], "https://extra.invalid/simple")
+                self.assertEqual(result["PIP_PROXY"], "http://configured.invalid:1234")
+                self.assertEqual(result["PIP_CERT"], "/configured/ca.pem")
+                self.assertEqual(result["PIP_CLIENT_CERT"], "/configured/client.pem")
+                self.assertEqual(result["PIP_CONFIG_FILE"], os.devnull)
+                for name in ("PIP_TARGET", "PIP_PREFIX", "PIP_ROOT", "PIP_USER", "PIP_LOG"):
+                    self.assertNotIn(name, result)
+                self.assertFalse(outside.exists())
+                self.assert_preserved()
+
     def test_int_and_term_keep_recoverable_record_and_release_own_lock(self):
         for sig in (signal.SIGINT, signal.SIGTERM):
             with self.subTest(signal=sig):
