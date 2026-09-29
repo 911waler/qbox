@@ -434,12 +434,13 @@ function run_qe_effective_mass_calculation (){
 		return 0
 	fi
 
-	pw_threads=`qe_prompt_positive_int ' 请输入 pw.x 使用的线程数 N1。'`
-	bands_threads=`qe_prompt_positive_int ' 请输入 bands.x 使用的线程数 N2。'`
 	qe_ensure_runtime_for mpirun pw.x bands.x || {
 		echo ' 错误：QE 运行环境未通过检查，已停止 EM 计算。'
 		return 1
 	}
+	qe_report_compute_resources
+	pw_threads=`qe_prompt_positive_int ' 请输入 pw.x 使用的 MPI 进程数 N1。'` || return 1
+	bands_threads=`qe_prompt_positive_int ' 请输入 bands.x 使用的 MPI 进程数 N2。'` || return 1
 
 	scf_cmd="cd ${em_dir} && mpirun -np ${pw_threads} pw.x -in ${calc_prefix}.scf.in 2>&1 | tee scf.out"
 	band_cmd="cd ${em_dir} && mpirun -np ${pw_threads} pw.x -in ${calc_prefix}.bands.in 2>&1 | tee band.out"

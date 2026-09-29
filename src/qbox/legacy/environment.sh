@@ -222,22 +222,66 @@ function qe_version_is_supported (){
 }
 
 function qe_capture_qe_version_output (){
-	local temp_dir="$1" pw_executable="$2"
-	(
-		cd "$temp_dir" || exit 1
-		"$pw_executable" -version </dev/null 2>&1 || true
-	)
+	local temp_dir="$1" pw_executable="$2" launcher
+	launcher="$(command -v mpirun 2>/dev/null || true)"
+	[ -x "$launcher" ] || launcher=''
+	qbox_python -m qbox.runtime "$pw_executable" "$temp_dir" "$launcher"
+}
+
+function qe_detect_runtime_accelerator (){
+	local executable="${1,,}" version_output="$2" loaded_module
+	local loaded_modules=()
+	# The probe describes the executable actually selected by PATH. QE_MODULE
+	# only chooses a fallback and must never override a preloaded CPU/GPU runtime.
+	if [[ "$version_output" == *'GPU acceleration is ACTIVE'* ]]; then
+		echo gpu
+		return 0
+	elif [[ "$version_output" == *'GPU acceleration is NOT ACTIVE'* ]]; then
+		echo cpu
+		return 0
+	fi
+	if [[ "$executable" =~ /qe/(cpu|gpu)/ ]]; then
+		echo "${BASH_REMATCH[1]}"
+		return 0
+	fi
+	IFS=: read -r -a loaded_modules <<<"${LOADEDMODULES:-}"
+	for loaded_module in "${loaded_modules[@]}"; do
+		case "$loaded_module" in
+			qe/gpu/*) echo gpu; return 0 ;;
+			qe/cpu/*) echo cpu; return 0 ;;
+		esac
+	done
+	echo cpu
+}
+
+function qe_runtime_accelerator (){
+	local executable
+	executable="$(qe_runtime_pw_executable_for pw.x 2>/dev/null || true)"
+	if [ -n "$executable" ] && [ "$executable" = "${_QE_RUNTIME_PW_EXECUTABLE:-}" ] &&
+	   [[ "${_QE_RUNTIME_ACCELERATOR:-}" =~ ^(cpu|gpu)$ ]]; then
+		echo "$_QE_RUNTIME_ACCELERATOR"
+	else
+		qe_detect_runtime_accelerator "$executable" ''
+	fi
 }
 
 function qe_require_supported_version (){
-	local pw_executable="${1-}" version_output version
+	local pw_executable="${1-}" version_output version probe_status=0
 	[ -x "$pw_executable" ] || {
 		echo " 错误：Quantum ESPRESSO 可执行文件不可用：$pw_executable" >&2
 		return 1
 	}
-	version_output="$(qe_with_temp_dir qe_capture_qe_version_output "${TMPDIR:-/tmp}" qe-version "$pw_executable")" || return 1
+	version_output="$(qe_with_temp_dir qe_capture_qe_version_output "${TMPDIR:-/tmp}" qe-version "$pw_executable")" || probe_status=$?
+	case "$probe_status" in
+		0|124) ;;
+		*) return 1 ;;
+	esac
 	version="$(printf '%s\n' "$version_output" | qe_extract_qe_version)"
 	[ -n "$version" ] || {
+		if [ "$probe_status" -eq 124 ]; then
+			echo ' 错误：Quantum ESPRESSO 版本检测超时，已停止探测；保留当前环境，请检查该环境中的 pw.x/MPI。' >&2
+			return 1
+		fi
 		echo ' 错误：无法识别 Quantum ESPRESSO 版本；仅支持严格大于 7.0 的版本。' >&2
 		return 1
 	}
@@ -247,6 +291,8 @@ function qe_require_supported_version (){
 	}
 	QE_RUNTIME_VERSION="$version"
 	export QE_RUNTIME_VERSION
+	_QE_RUNTIME_PW_EXECUTABLE="$(readlink -f -- "$pw_executable")"
+	_QE_RUNTIME_ACCELERATOR="$(qe_detect_runtime_accelerator "$_QE_RUNTIME_PW_EXECUTABLE" "$version_output")"
 }
 
 function qe_ensure_runtime_for (){
@@ -266,6 +312,8 @@ function qe_ensure_runtime_for (){
 		fi
 	done
 	if qe_runtime_commands_ready_for "${required_commands[@]}"; then
+		# The caller's loaded QE/MPI takes precedence even when fallback scripts
+		# or QE_MODULE are configured. Version failures must not replace it.
 		echo
 		echo " 已检测到所需命令可运行：${commands[*]}，跳过额外环境脚本加载。"
 	else
@@ -331,4 +379,3 @@ function qe_ensure_runtime_for (){
 function qe_load_runtime_environment (){
 	qe_ensure_runtime_for mpirun pw.x bands.x
 }
-

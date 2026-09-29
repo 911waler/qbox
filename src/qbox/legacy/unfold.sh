@@ -298,9 +298,10 @@ function run_qe_unfold_calculation (){
 	calc_prefix=`head -n 1 "$output_dir/unfold.prefix"`
 	scf_input="${calc_prefix}.scf.in"
 	bands_input="${calc_prefix}.bands.in"
-	pw_threads=`qe_prompt_positive_int_default ' 请输入 SCF/bands 的 MPI 进程数，直接回车使用 16。' 16`
-	unfold_threads=`qe_prompt_positive_int_default ' 请输入 unfold.x 的 MPI 进程数，直接回车使用 16。' 16`
 	qe_ensure_runtime_for mpirun pw.x unfold.x || return 1
+	qe_report_compute_resources
+	pw_threads=`qe_prompt_positive_int_default ' 请输入 SCF/bands 的 MPI 进程数，直接回车使用 16。' 16` || return 1
+	unfold_threads=`qe_prompt_positive_int_default ' 请输入 unfold.x 的 MPI 进程数，直接回车使用 16。' 16` || return 1
 	(
 		cd "$output_dir" || exit 1
 		set -o pipefail

@@ -98,6 +98,60 @@ test_supported_probe_isolated_and_tolerates_nonzero_pw() {
     }
 }
 
+test_version_probe_cannot_hang_preloaded_runtime() {
+    local sandbox bin mode status
+    sandbox="$(new_sandbox)" || return 1
+    bin="$sandbox/bin"
+    prepare_runtime_mocks "$bin" '7.5' || return 1
+    cat >"$bin/pw.x" <<'EOF_MOCK'
+#!/bin/sh
+if [ "$PROBE_MODE" = banner ]; then
+    printf '%s\n' 'Program PWSCF v.7.5 starts on 01Sep2026 at 12:00:00'
+fi
+# A stuck MPI process may ignore TERM and leave children holding stdout open.
+trap '' TERM
+sleep 30 &
+echo "$!" >"$PROBE_CHILD_PID"
+wait
+EOF_MOCK
+    cat >"$sandbox/check.sh" <<'EOF_CHECK'
+QBOX_TEST_MODE=1 source "$1/qbox"
+export PATH="$2:/usr/bin:/bin"
+export TMPDIR="$3"
+export QBOX_QE_ENV_SCRIPT="$3/replace-env.sh"
+export QBOX_ONEAPI_ENV_SCRIPT="$3/replace-env.sh"
+export QE_MODULE='qe/cpu/other'
+export PROBE_LOAD_MARKER="$3/loaded"
+module() { echo unexpected-module >>"$PROBE_LOAD_MARKER"; return 1; }
+qe_ensure_runtime_for mpirun pw.x
+status=$?
+if [ "$PROBE_MODE" = banner ]; then
+    [ "$status" -eq 0 ] && [ "${QE_RUNTIME_VERSION:-}" = 7.5 ] || exit 10
+else
+    [ "$status" -ne 0 ] || exit 11
+fi
+[ "$(command -v pw.x)" = "$2/pw.x" ] || exit 12
+EOF_CHECK
+    printf 'echo unexpected-script >>"%s/loaded"\n' "$sandbox" >"$sandbox/replace-env.sh"
+    for mode in banner silent; do
+        PROBE_MODE="$mode" PROBE_CHILD_PID="$sandbox/child.pid" \
+            timeout -k 1s 8s bash "$sandbox/check.sh" "$PROJECT_ROOT" "$bin" "$sandbox" \
+            >"$sandbox/$mode.out" 2>"$sandbox/$mode.err"
+        status=$?
+        assert_eq 0 "$status" "preloaded runtime probe hung or returned the wrong result ($mode, status $status)" || return 1
+        [ ! -e "$sandbox/loaded" ] || { fail 'preloaded environment was replaced during version detection'; return 1; }
+        [ -z "$(find "$sandbox" -maxdepth 1 -name '.qbox-qe-version.*' -print -quit)" ] || {
+            fail 'timed version probe left temporary files'; return 1;
+        }
+        # A killed child can briefly be a zombie while its init process reaps it.
+        if [ -r "/proc/$(cat "$sandbox/child.pid")/stat" ]; then
+            assert_eq Z "$(awk '{print $3}' "/proc/$(cat "$sandbox/child.pid")/stat")" \
+                'version probe left a live child process' || return 1
+        fi
+    done
+    assert_contains "$(cat "$sandbox/silent.err")" '版本检测超时' || return 1
+}
+
 test_unsupported_probe_reports_support_boundary() {
     local sandbox bin error_file status
     sandbox="$(new_sandbox)" || return 1
@@ -275,6 +329,42 @@ test_non_pw_tool_uses_module_environment() {
         fail 'a missing non-pw tool did not load its module environment'
         return 1
     }
+}
+
+test_missing_workflow_command_loads_module_once() {
+    local sandbox initial_bin module_bin
+    sandbox="$(new_sandbox)" || return 1
+    initial_bin="$sandbox/initial-bin"
+    module_bin="$sandbox/module-bin"
+    prepare_runtime_mocks "$initial_bin" '7.4.1' || return 1
+    prepare_runtime_mocks "$module_bin" '7.5' || return 1
+    write_command_mock "$module_bin/bands.x"
+    (
+        cd "$sandbox" || exit 1
+        export PATH="$initial_bin:/usr/bin:/bin" TMPDIR="$sandbox"
+        export QBOX_QE_ENV_SCRIPT='' QBOX_ONEAPI_ENV_SCRIPT=''
+        export QE_MODULE='qe/cpu/test'
+        module() {
+            case "$*" in
+                '--terse avail qe') printf '%s\n' 'qe/cpu/test' ;;
+                'load qe/cpu/test')
+                    printf '%s\n' "$*" >>"$sandbox/module.log"
+                    export PATH="$module_bin:$PATH"
+                    ;;
+                *) return 1 ;;
+            esac
+        }
+        # SCF needs only the preloaded pw.x/MPI; BAND additionally needs bands.x.
+        qe_ensure_runtime_for mpirun pw.x >scf-check.out 2>runtime.err || exit 1
+        [ ! -e module.log ] || exit 1
+        assert_eq "$initial_bin/pw.x" "$(command -v pw.x)" || exit 1
+        qe_ensure_runtime_for mpirun pw.x bands.x >band-check.out 2>>runtime.err || exit 1
+        assert_eq "$module_bin/pw.x" "$(command -v pw.x)" || exit 1
+        assert_eq 7.5 "${QE_RUNTIME_VERSION:-}" || exit 1
+        qe_ensure_runtime_for mpirun pw.x bands.x >repeat-check.out 2>>runtime.err || exit 1
+        assert_file_equals <(printf 'load qe/cpu/test\n') module.log || exit 1
+        [ ! -s runtime.err ] || exit 1
+    ) || { fail 'module was not loaded exactly when the workflow needed a missing command'; return 1; }
 }
 
 test_non_pw_tool_ignores_unrelated_pw() {
@@ -601,15 +691,49 @@ test_runtime_call_sites_use_central_loader() {
     done
 }
 
+test_singleton_failure_reuses_preloaded_mpi_without_loading_environment() {
+    local sandbox bin original_path original_modules
+    sandbox="$(new_sandbox)" || return 1
+    bin="$sandbox/qe/gpu/7.5/bin"
+    mkdir -p "$bin"
+    cat >"$bin/pw.x" <<'EOF_PW'
+#!/bin/sh
+[ "${QBOX_TEST_MPI:-}" = yes ] || exit 1
+printf 'Program PWSCF v.7.5\n'
+exit 1
+EOF_PW
+    cat >"$bin/mpirun" <<'EOF_MPI'
+#!/bin/sh
+[ "$1" = -np ] && [ "$2" = 1 ] || exit 9
+shift 2
+export QBOX_TEST_MPI=yes
+exec "$@"
+EOF_MPI
+    chmod +x "$bin/pw.x" "$bin/mpirun"
+    export PATH="$bin:$PATH" LOADEDMODULES='qe/gpu/7.5' QE_MODULE='qe/cpu/unused'
+    original_path="$PATH"; original_modules="$LOADEDMODULES"
+    module() { fail 'version probe replaced preloaded environment'; return 1; }
+    qe_ensure_runtime_for mpirun pw.x >"$sandbox/probe.log" 2>&1 || {
+        cat "$sandbox/probe.log" >&2; return 1;
+    }
+    assert_eq 7.5 "$QE_RUNTIME_VERSION" || return 1
+    assert_eq gpu "$(qe_runtime_accelerator)" || return 1
+    assert_eq "$original_path" "$PATH" || return 1
+    assert_eq "$original_modules" "$LOADEDMODULES"
+}
+
+run_test 'singleton failure reuses preloaded MPI without reloading' test_singleton_failure_reuses_preloaded_mpi_without_loading_environment
 run_test 'QE version support matrix' test_version_support_matrix
 run_test 'extract real PWSCF version line' test_extracts_real_pw_version_line
 run_test 'supported probe is isolated and tolerates nonzero pw.x' test_supported_probe_isolated_and_tolerates_nonzero_pw
+run_test 'version probe cannot hang a preloaded runtime' test_version_probe_cannot_hang_preloaded_runtime
 run_test 'unsupported probe reports strict support boundary' test_unsupported_probe_reports_support_boundary
 run_test 'unknown probe reports diagnostic failure' test_unknown_probe_reports_diagnostic_failure
 run_test 'sumpdos runtime does not require pw.x' test_sumpdos_runtime_does_not_require_pw
 run_test 'sumpdos runtime ignores pw.x version' test_sumpdos_runtime_ignores_pw_version
 run_test 'non-pw tool uses configured environment' test_non_pw_tool_uses_configured_environment
 run_test 'non-pw tool uses module environment' test_non_pw_tool_uses_module_environment
+run_test 'missing workflow command loads module once' test_missing_workflow_command_loads_module_once
 run_test 'non-pw tool ignores unrelated pw.x' test_non_pw_tool_ignores_unrelated_pw
 run_test 'absolute pw.x request is version authority' test_absolute_pw_request_is_version_authority
 run_test 'absolute non-pw request does not require pw.x' test_absolute_non_pw_request_does_not_require_pw

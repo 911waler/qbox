@@ -81,7 +81,17 @@ export QBOX_QE_ENV_SCRIPT=/path/to/qe-environment.sh
 export QBOX_ONEAPI_ENV_SCRIPT=/path/to/compiler-mpi-environment.sh
 ```
 
-`QBOX_QE_ENV_SCRIPT` 和 `QBOX_ONEAPI_ENV_SCRIPT` 是可选项。只有设置了相应变量时，qbox 才会加载环境脚本。
+可以在启动 qbox 前自行 `module load` 所需 QE 版本。自动计算开始前，qbox 只检查该流程所需的命令和动态库；当前环境满足要求时，沿用当前 QE/MPI，不调用 module，也不加载配置的环境脚本。仅生成输入文件不会触发环境加载。
+
+`QBOX_QE_ENV_SCRIPT` 和 `QBOX_ONEAPI_ENV_SCRIPT` 是可选的补充环境。仅在当前环境不足时，qbox 才尝试配置的 QE 脚本、module 选择和编译器/MPI 脚本。`QE_MODULE` 可指定缺少环境时要加载的模块，不会覆盖已满足要求的环境。
+
+需要 `pw.x` 的流程仍检查 QE 版本严格大于 7.0。直接版本探测最多等待 5 秒，并清理探测进程；若未取得版本，使用当前环境的 `mpirun -np 1` 再探测一次，同样最多等待 5 秒，以兼容无法直接启动的 MPI 构建。取得版本后按该版本检查；两次均无法取得版本时停止计算，保留当前环境。
+
+自动计算先确认 QE 运行环境（需要加载时先选择 CPU/GPU module），再输入并行数量。CPU 模式在输入前显示机器在线物理核心总数，以及最近 0.25 秒采样估算的空闲物理核心数；超线程的同核逻辑 CPU 不重复计数。空闲估算按每个核心最忙的逻辑 CPU 折算剩余容量并向下取整。
+
+GPU 模式只显示当前机器 GPU 数量和空闲 GPU 数量，使用有超时限制的 `nvidia-smi` 查询；无计算进程、采样利用率为零且允许计算的 GPU 计为空闲。这里统计驱动可见的物理设备，不是 CUDA 核心数或调度器分配额度。资源信息随负载变化，仅供参考；无法读取时显示“未知”。显示模式依据实际使用的 QE 程序和已加载 module 判断，保留用户预加载环境，不受尚未使用的 `QE_MODULE` 备用配置影响。输入值仍是传给 `mpirun -np` 的 MPI 进程数。全部计算步骤已完成且选择跳过时，不再加载环境或询问并行数量。
+
+自动能带计算的 SCF、`pw.x` bands 和 `bands.x` 三步均从项目目录运行，使输入中的相对 `outdir` 路径指向同一份 SCF 保存数据。能带输入、日志、数据和图像仍放在 `BAND/` 中。
 
 未设置 `QBOX_PYTHON` 或 `QBOX_MULTIWFN_HOME` 时，qbox 会分别从共享根目录下的 `python/bin/python3` 和 `multiwfn` 推导默认路径。显式设置的依赖路径始终优先。
 

@@ -363,6 +363,84 @@ test_scf_workflow_preserves_command_and_summary() {
     assert_file_equals <(printf 'mpirun <-np> <4> <pw.x> <-in> <sample.scf.in>\n') "$sandbox/commands.log"
 }
 
+test_scf_workflow_preserves_preloaded_runtime_with_fallbacks_configured() {
+    local sandbox bin output
+    sandbox="$(new_sandbox)" || return 1
+    bin="$sandbox/preloaded/bin"
+    write_qe_command_mocks "$bin"
+    mv "$bin/pw.x" "$bin/pw-command"
+    cat >"$bin/pw.x" <<'EOF_PRELOADED_PW'
+#!/usr/bin/env bash
+if [ "${1-}" = -version ]; then
+    printf 'Program PWSCF v.7.5\n'
+    exit 0
+fi
+printf '%s\n' "$0" >>"${QBOX_TEST_PW_EXECUTION_LOG:?}"
+exec "${0%/*}/pw-command" "$@"
+EOF_PRELOADED_PW
+    cp "$PROJECT_ROOT/tests/mocks/mpirun" "$bin/mpirun"
+    chmod +x "$bin/pw.x" "$bin/mpirun"
+    mkdir -p "$sandbox/replacement/bin"
+    cat >"$sandbox/replacement/bin/pw.x" <<'EOF_REPLACEMENT'
+#!/usr/bin/env bash
+exit 91
+EOF_REPLACEMENT
+    cp "$sandbox/replacement/bin/pw.x" "$sandbox/replacement/bin/mpirun"
+    chmod +x "$sandbox/replacement/bin/pw.x" "$sandbox/replacement/bin/mpirun"
+    cat >"$sandbox/qe-env.sh" <<'EOF_QE_ENV'
+printf 'qe-env\n' >>"$QBOX_TEST_ENV_LOAD_LOG"
+export PATH="$QBOX_TEST_REPLACEMENT_BIN:$PATH"
+EOF_QE_ENV
+    cat >"$sandbox/oneapi-env.sh" <<'EOF_ONEAPI_ENV'
+printf 'oneapi-env\n' >>"$QBOX_TEST_ENV_LOAD_LOG"
+export PATH="$QBOX_TEST_REPLACEMENT_BIN:$PATH"
+EOF_ONEAPI_ENV
+    write_even_electron_ho_fixture "$sandbox/sample.scf.in"
+    : >"$sandbox/commands.log"
+    : >"$sandbox/env-load.log"
+    (
+        cd "$sandbox" || exit 1
+        local inherited_path="$bin:$PATH"
+        export PATH="$inherited_path" QBOX_MOCK_COMMAND_LOG="$sandbox/commands.log"
+        export QBOX_TEST_PW_EXECUTION_LOG="$sandbox/pw-execution.log"
+        export QBOX_TEST_ENV_LOAD_LOG="$sandbox/env-load.log"
+        export QBOX_TEST_REPLACEMENT_BIN="$sandbox/replacement/bin"
+        export QBOX_QE_ENV_SCRIPT="$sandbox/qe-env.sh"
+        export QBOX_ONEAPI_ENV_SCRIPT="$sandbox/oneapi-env.sh"
+        export QE_MODULE='qe/cpu/replacement'
+        unset QBOX_MOCK_FAIL_INPUT QE_RUNTIME_VERSION
+        module() {
+            printf 'module <%s>\n' "$*" >>"$QBOX_TEST_ENV_LOAD_LOG"
+            export PATH="$QBOX_TEST_REPLACEMENT_BIN:$PATH"
+            return 1
+        }
+        qe_prompt_calc_prefix() { printf '%s\n' sample; }
+        qe_ask_recalculate_scf_completed() { printf '%s\n' yes; }
+        qe_recommend_pw_threads() { printf '%s\n' 4; }
+        qe_estimate_atom_count() { printf '%s\n' 3; }
+        qe_physical_cpu_cores() { printf '%s\n' 8; }
+        qe_prompt_positive_int_default() { printf '%s\n' 4; }
+
+        run_qe_scf_calculation || exit 1
+        assert_eq "$inherited_path" "$PATH" 'SCF runtime setup changed the inherited PATH' || exit 1
+        assert_eq "$bin/pw.x" "$(command -v pw.x)" 'SCF replaced the preloaded pw.x' || exit 1
+        assert_eq "$bin/mpirun" "$(command -v mpirun)" 'SCF replaced the preloaded mpirun' || exit 1
+        assert_eq 7.5 "${QE_RUNTIME_VERSION:-}" 'SCF did not validate the preloaded QE version'
+    ) >"$sandbox/output" 2>&1 || {
+        cat "$sandbox/output" >&2
+        return 1
+    }
+    output="$(cat "$sandbox/output")"
+    assert_file_equals /dev/null "$sandbox/env-load.log" \
+        'SCF loaded a configured environment script or called module despite a ready runtime' || return 1
+    assert_file_equals <(printf '%s\n' "$bin/pw.x") "$sandbox/pw-execution.log" \
+        'SCF did not execute the preloaded pw.x exactly once' || return 1
+    assert_file_equals <(printf 'mpirun <-np> <4> <pw.x> <-in> <sample.scf.in>\n') "$sandbox/commands.log" \
+        'SCF did not use the preloaded mpirun for its calculation' || return 1
+    assert_contains "$(cat "$sandbox/scf.out")" 'JOB DONE.' || return 1
+    assert_contains "$output" ' scf 是否计算成功：成功'
+}
+
 test_scf_workflow_preserves_skip_message_and_command() {
     local sandbox output
     sandbox="$(new_sandbox)" || return 1
@@ -481,8 +559,8 @@ test_band_workflow_preserves_commands_and_failure_short_circuit() {
     assert_contains "$output" ' 跳过 bands.x 计算：pw.x bands 失败。' || return 1
     assert_contains "$output" ' pw-band 是否计算成功：失败' || return 1
     assert_contains "$output" ' bands 是否计算成功：失败' || return 1
-    assert_file_equals <(printf 'mpirun <-np> <3> <pw.x> <-in> <sample.scf.in>\nmpirun <-np> <3> <pw.x> <-in> <sample.bands.in>\n') "$sandbox/commands.log" \
-        'bands.x ran after pw-bands failure or BAND workdir argv changed'
+    assert_file_equals <(printf 'mpirun <-np> <3> <pw.x> <-in> <sample.scf.in>\nmpirun <-np> <3> <pw.x> <-in> <BAND/sample.bands.in>\n') "$sandbox/commands.log" \
+        'bands.x ran after pw-bands failure or band input argv changed'
 }
 
 test_band_workflow_scf_failure_prevents_both_downstream_commands() {
@@ -552,8 +630,8 @@ test_band_workflow_preserves_three_stage_success_summary() {
     assert_contains "$output" ' scf 是否计算成功：成功' || return 1
     assert_contains "$output" ' pw-band 是否计算成功：成功' || return 1
     assert_contains "$output" ' bands 是否计算成功：成功' || return 1
-    assert_file_equals <(printf 'mpirun <-np> <3> <pw.x> <-in> <sample.scf.in>\nmpirun <-np> <3> <pw.x> <-in> <sample.bands.in>\nmpirun <-np> <3> <bands.x> <-in> <bands.in>\n') "$sandbox/commands.log" \
-        'band success stages did not run in their expected workdirs'
+    assert_file_equals <(printf 'mpirun <-np> <3> <pw.x> <-in> <sample.scf.in>\nmpirun <-np> <3> <pw.x> <-in> <BAND/sample.bands.in>\nmpirun <-np> <3> <bands.x> <-in> <BAND/bands.in>\n') "$sandbox/commands.log" \
+        'band success stages did not use project-relative input paths'
 }
 
 test_band_workflow_preserves_all_skip_messages() {
@@ -604,7 +682,7 @@ test_pdos_existing_scf_no_recalculation_skips_scf() {
     ) >"$sandbox/output" || return 1
     output="$(cat "$sandbox/output")"
     assert_contains "$output" ' 跳过 SCF 计算：已有成功的 scf.out。' || return 1
-    assert_contains "$output" ' 1) mpirun -np 2 pw.x -in sample.scf.in 2>&1 | tee scf.out' || return 1
+    assert_contains "$output" ' 1) 跳过：已有成功的 scf.out 和 tmp/sample.save' || return 1
     assert_contains "$output" ' scf 是否计算成功：跳过（已有成功结果）'
 }
 
@@ -1019,6 +1097,194 @@ test_pdos_batch_stage_executes_real_runner_path() {
     assert_contains "$(cat "$sandbox/scf.out")" 'JOB DONE.'
 }
 
+test_completed_ldos_missing_input_preserves_results_and_plotting() {
+    local sandbox bin rc output
+    sandbox="$(new_sandbox)" || return 1
+    bin="$sandbox/bin"
+    write_qe_command_mocks "$bin"
+    cp "$PROJECT_ROOT/tests/mocks/mpirun" "$bin/mpirun"
+    chmod +x "$bin/mpirun"
+    mkdir -p "$sandbox/LDOS" "$sandbox/tmp/sample.save"
+    write_even_electron_ho_fixture "$sandbox/sample.scf.in"
+    cp "$sandbox/sample.scf.in" "$sandbox/sample.nscf.in"
+    printf 'JOB DONE.\n' >"$sandbox/scf.out"
+    cat >"$sandbox/nscf.out" <<'EOF_NS_OUTPUT'
+Writing output data file ./tmp/sample.save
+FFT dimensions: ( 12, 12, 12 )
+the Fermi energy is 1.0 ev
+JOB DONE.
+EOF_NS_OUTPUT
+    printf 'JOB DONE.\n' >"$sandbox/LDOS/ldos.out"
+    printf 'saved LDOS data\n' >"$sandbox/LDOS/sample.pdos.ldos_boxes.dat"
+    : >"$sandbox/other.cif"
+    : >"$sandbox/events.log"
+    : >"$sandbox/commands.log"
+    (
+        # The production launcher does not enable nounset; the real input
+        # generator has unset local values until it reads the reference output.
+        set +u
+        cd "$sandbox" || exit 1
+        export PATH="$bin:$PATH" QBOX_MOCK_COMMAND_LOG="$sandbox/commands.log"
+        fname1=other.cif
+        prefix=other
+        qe_prompt_calc_prefix() { printf '%s\n' sample; }
+        qe_ask_recalculate_ldos_completed() { printf '%s\n' no; }
+        qe_prompt_energy_reference() { printf '%s\n' fermi; }
+        qe_ensure_runtime_for() { printf 'environment\n' >>"$sandbox/events.log"; return 1; }
+        qe_report_compute_resources() { printf 'resources\n' >>"$sandbox/events.log"; }
+        qe_prompt_positive_int_default() { printf 'prompt\n' >>"$sandbox/events.log"; printf '2\n'; }
+        qe_embedded_plot_ldos() {
+            printf '%s\n' "$1" >"$sandbox/plotted-data"
+            touch LDOS/sample.pdos.ldos_boxes_fermi.png
+        }
+        qe_ldos_output_success sample || exit 1
+        run_qe_ldos_calculation <<<0
+    ) >"$sandbox/output" 2>&1
+    rc=$?
+    assert_file_equals /dev/null "$sandbox/commands.log" \
+        'completed LDOS rebuilt a missing input and unexpectedly ran projwfc.x' || return 1
+    assert_eq 0 "$rc" 'completed LDOS could not reuse its results without ldos.in' || return 1
+    assert_file_equals /dev/null "$sandbox/events.log" \
+        'completed LDOS requested runtime setup, resources or MPI input' || return 1
+    [ ! -e "$sandbox/LDOS/ldos.in" ] || fail 'completed LDOS unnecessarily regenerated ldos.in' || return 1
+    assert_file_equals <(printf 'saved LDOS data\n') "$sandbox/LDOS/sample.pdos.ldos_boxes.dat" || return 1
+    assert_file_equals <(printf 'LDOS/sample.pdos.ldos_boxes.dat\n') "$sandbox/plotted-data" || return 1
+    output="$(cat "$sandbox/output")"
+    assert_contains "$output" ' 跳过 projwfc.x LDOS 计算：已有成功的 LDOS 输出。' || return 1
+    assert_contains "$output" ' plot-ldos 是否绘图成功：成功'
+}
+
+configure_workflow_startup_case() {
+    local workflow="$1" sandbox="$2"
+    write_qe_command_mocks "$sandbox/bin"
+    write_optical_command_mocks "$sandbox/bin"
+    write_even_electron_ho_fixture "$sandbox/sample.scf.in"
+    cp "$sandbox/sample.scf.in" "$sandbox/sample.nscf.in"
+    mkdir -p "$sandbox/"{BAND,PDOS/ATOM_PDOS,LDOS,Epsilon,Polar,EM,UNFOLD}
+    touch "$sandbox/BAND/sample.bands.in" "$sandbox/BAND/bands.in" \
+        "$sandbox/PDOS/pdos.in" "$sandbox/LDOS/ldos.in" \
+        "$sandbox/UNFOLD/sample.scf.in" "$sandbox/UNFOLD/sample.bands.in" "$sandbox/UNFOLD/unfold.in"
+    printf 'sample\n' >"$sandbox/UNFOLD/unfold.prefix"
+    export PATH="$sandbox/bin:$PATH" QBOX_MOCK_COMMAND_LOG="$sandbox/commands.log"
+    export QBOX_TEST_RECALC=no QBOX_MOCK_FAIL_INPUT=sample.scf.in
+    : >"$sandbox/commands.log"
+    : >"$sandbox/events.log"
+    case "$workflow" in
+        pdos) configure_pdos_workflow_doubles ;;
+        ldos) configure_ldos_workflow_doubles ;;
+        epsilon)
+            configure_epsilon_workflow_doubles
+            export QBOX_MOCK_FAIL_INPUT=sample.epsilon.scf.in
+            ;;
+        polar) configure_polar_workflow_doubles ;;
+        effective_mass)
+            qe_detect_prefix_for_em() { printf '%s\n' sample; }
+            qe_prepare_em_source_inputs() { return 0; }
+            qe_prepare_em_inputs() { return 0; }
+            ;;
+    esac
+    qe_prompt_calc_prefix() { printf '%s\n' sample; }
+    qe_ask_recalculate_scf_completed() { printf '%s\n' no; }
+    qe_ask_recalculate_band_completed() { printf '%s\n' no; }
+    qe_ensure_band_inputs() { return 0; }
+    qe_recommend_pw_threads() { printf '%s\n' 2; }
+    qe_recommend_projwfc_threads() { printf '%s\n' 2; }
+    qe_estimate_atom_count() { printf '%s\n' 3; }
+    qe_physical_cpu_cores() { printf '%s\n' 4; }
+    qe_ensure_runtime_for() {
+        printf 'environment\n' >>"$sandbox/events.log"
+        return "${QBOX_TEST_RUNTIME_STATUS:-0}"
+    }
+    qe_report_compute_resources() { printf 'resources\n' >>"$sandbox/events.log"; }
+    qe_prompt_positive_int_default() {
+        printf 'prompt\n' >>"$sandbox/events.log"
+        printf '%s\n' 2
+    }
+    qe_prompt_positive_int() { qe_prompt_positive_int_default "$@"; }
+}
+
+assert_workflow_selects_environment_before_parallel_input() {
+    local workflow="$1" prompt_count="$2" sandbox rc expected i
+    sandbox="$(new_sandbox)" || return 1
+    (
+        configure_workflow_startup_case "$workflow" "$sandbox"
+        cd "$sandbox" || exit 1
+        "run_qe_${workflow}_calculation" <<<y
+    ) >"$sandbox/output" 2>&1
+    rc=$?
+    assert_eq 1 "$rc" "$workflow did not reach its intentionally failing mock SCF" || return 1
+    expected=$'environment\nresources\n'
+    for ((i=0; i<prompt_count; i++)); do expected+=$'prompt\n'; done
+    assert_file_equals <(printf '%s' "$expected") "$sandbox/events.log" \
+        "$workflow did not select environment and report resources before MPI input" || return 1
+    [ -s "$sandbox/commands.log" ] || fail "$workflow did not execute the mock calculation"
+}
+
+assert_workflow_runtime_cancellation_prevents_parallel_input() {
+    local workflow="$1" sandbox rc
+    sandbox="$(new_sandbox)" || return 1
+    (
+        configure_workflow_startup_case "$workflow" "$sandbox"
+        export QBOX_TEST_RUNTIME_STATUS=1
+        cd "$sandbox" || exit 1
+        "run_qe_${workflow}_calculation" <<<y
+    ) >"$sandbox/output" 2>&1
+    rc=$?
+    assert_eq 1 "$rc" "$workflow swallowed runtime selection cancellation" || return 1
+    assert_file_equals <(printf 'environment\n') "$sandbox/events.log" \
+        "$workflow asked for MPI input or sampled resources after runtime cancellation" || return 1
+    assert_file_equals /dev/null "$sandbox/commands.log" \
+        "$workflow executed a calculation after runtime cancellation"
+}
+
+assert_workflow_parallel_input_cancellation_stops_calculation() {
+    local workflow="$1" sandbox rc
+    sandbox="$(new_sandbox)" || return 1
+    (
+        configure_workflow_startup_case "$workflow" "$sandbox"
+        qe_prompt_positive_int_default() {
+            printf 'prompt\n' >>"$sandbox/events.log"
+            return 1
+        }
+        cd "$sandbox" || exit 1
+        "run_qe_${workflow}_calculation" <<<y
+    ) >"$sandbox/output" 2>&1
+    rc=$?
+    assert_eq 1 "$rc" "$workflow swallowed cancellation of MPI input" || return 1
+    assert_file_equals <(printf 'environment\nresources\nprompt\n') "$sandbox/events.log" \
+        "$workflow kept prompting after MPI input was cancelled" || return 1
+    assert_file_equals /dev/null "$sandbox/commands.log" \
+        "$workflow executed a calculation after MPI input was cancelled"
+}
+
+assert_completed_workflow_skips_runtime_and_resources() {
+    local workflow="$1" sandbox
+    sandbox="$(new_sandbox)" || return 1
+    (
+        configure_workflow_startup_case "$workflow" "$sandbox"
+        cd "$sandbox" || exit 1
+        touch PDOS/ATOM_PDOS/raw-pdos PDOS/ATOM_PDOS/sample_tot.dat \
+            LDOS/sample.pdos.ldos_boxes.dat
+        qe_output_success_for_prefix() { return 0; }
+        qe_band_pw_output_success() { return 0; }
+        qe_bandsx_output_success() { return 0; }
+        qe_pdos_output_success() { return 0; }
+        qe_ldos_output_success() { return 0; }
+        qe_epsilon_scf_success() { return 0; }
+        qe_epsilon_nscf_success() { return 0; }
+        qe_epsilon_output_success() { return 0; }
+        qe_polar_output_success() { return 0; }
+        "run_qe_${workflow}_calculation"
+    ) >"$sandbox/output" 2>&1 || {
+        cat "$sandbox/output" >&2
+        return 1
+    }
+    assert_file_equals /dev/null "$sandbox/events.log" \
+        "$workflow loaded an environment, sampled resources or asked MPI input when all calculations were skipped" || return 1
+    assert_file_equals /dev/null "$sandbox/commands.log" \
+        "$workflow ran an external calculation despite all results being complete"
+}
+
 run_test 'stage runner success preserves workdir callback and argv' test_stage_runner_success_preserves_workdir_callback_and_argv
 run_test 'stage runner predicate failure sets failed' test_stage_runner_predicate_failure_sets_failed
 run_test 'stage runner sets common status variable name' test_stage_runner_sets_common_status_variable_name
@@ -1029,6 +1295,7 @@ run_test 'stage runner preserves command failure through tee' test_stage_runner_
 run_test 'stage runner rejects invalid contract without execution' test_stage_runner_rejects_invalid_contract_without_execution
 run_test 'shared recalculation prompt contract' test_shared_recalculation_prompt_contract
 run_test 'SCF workflow preserves command and summary' test_scf_workflow_preserves_command_and_summary
+run_test 'SCF workflow preserves preloaded runtime with fallbacks configured' test_scf_workflow_preserves_preloaded_runtime_with_fallbacks_configured
 run_test 'SCF workflow preserves skip message and command' test_scf_workflow_preserves_skip_message_and_command
 run_test 'SCF workflow propagates stage contract error' test_scf_workflow_propagates_stage_contract_error
 run_test 'band workflow preserves commands and failure short-circuit' test_band_workflow_preserves_commands_and_failure_short_circuit
@@ -1043,6 +1310,7 @@ run_test 'PDOS NSCF failure prevents projwfc and postprocessing' test_pdos_nscf_
 run_test 'PDOS success preserves clean sum plot order commands and summary' test_pdos_success_preserves_clean_sum_plot_order_commands_and_summary
 run_test 'LDOS NSCF failure prevents projwfc finalize and plot' test_ldos_nscf_failure_prevents_projwfc_finalize_and_plot
 run_test 'LDOS success preserves commands finalize plot and summary' test_ldos_success_preserves_commands_finalize_plot_and_summary
+run_test 'completed LDOS missing input preserves results and plotting' test_completed_ldos_missing_input_preserves_results_and_plotting
 run_test 'epsilon preserves success order commands and summary' test_epsilon_preserves_success_order_commands_and_summary
 run_test 'epsilon SCF failure prevents NSCF and epsilon.x' test_epsilon_scf_failure_prevents_nscf_and_epsilon
 run_test 'epsilon successful stages skip without recalculation' test_epsilon_successful_stages_skip_without_recalculation
@@ -1054,4 +1322,17 @@ run_test 'PDOS recalculation EOF runs no command' test_pdos_recalculation_eof_ru
 run_test 'PDOS runner contract error stops every downstream stage' test_pdos_runner_contract_error_stops_every_downstream_stage
 run_test 'LDOS runner contract error stops every downstream stage' test_ldos_runner_contract_error_stops_every_downstream_stage
 run_test 'PDOS batch stage executes real runner path' test_pdos_batch_stage_executes_real_runner_path
+for workflow_case in 'scf 1' 'band 2' 'pdos 3' 'ldos 3' 'epsilon 3' 'polar 4' 'effective_mass 2' 'unfold 2'; do
+    read -r workflow_name workflow_prompt_count <<<"$workflow_case"
+    run_test "$workflow_name selects environment before MPI input" \
+        assert_workflow_selects_environment_before_parallel_input "$workflow_name" "$workflow_prompt_count"
+    run_test "$workflow_name runtime cancellation prevents MPI input" \
+        assert_workflow_runtime_cancellation_prevents_parallel_input "$workflow_name"
+    run_test "$workflow_name MPI input cancellation stops calculation" \
+        assert_workflow_parallel_input_cancellation_stops_calculation "$workflow_name"
+done
+for workflow_name in scf band pdos ldos epsilon polar; do
+    run_test "$workflow_name complete results skip environment and resources" \
+        assert_completed_workflow_skips_runtime_and_resources "$workflow_name"
+done
 finish_tests

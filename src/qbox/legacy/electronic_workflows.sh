@@ -2,7 +2,7 @@
 # Internal compatibility module; source via legacy/load.sh.
 
 function run_qe_scf_calculation (){
-	local calc_prefix scf_input pw_threads recommended_threads atom_count physical_cores
+	local calc_prefix scf_input pw_threads recommended_threads atom_count
 	local scf_command scf_status recalc_completed stage_rc
 
 	echo
@@ -33,19 +33,19 @@ function run_qe_scf_calculation (){
 		scf_command="跳过：已有成功的 scf.out 和 tmp/${calc_prefix}.save"
 		scf_status="skipped"
 	else
-		recommended_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
-		atom_count=`qe_estimate_atom_count "$calc_prefix"`
-		physical_cores=`qe_physical_cpu_cores`
-		if [ -n "$atom_count" ]; then
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的线程数 N1。检测到体系原子数 ${atom_count}，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_threads}；直接回车使用推荐值。" "$recommended_threads"`
-		else
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的线程数 N1。未能读取体系大小，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_threads}；直接回车使用推荐值。" "$recommended_threads"`
-		fi
-
 		qe_ensure_runtime_for mpirun pw.x || {
 			echo ' 错误：QE 运行环境未通过检查，已停止 SCF 计算。'
 			return 1
 		}
+		qe_report_compute_resources
+		recommended_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
+		atom_count=`qe_estimate_atom_count "$calc_prefix"`
+		if [ -n "$atom_count" ]; then
+			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_threads}；直接回车使用推荐值。" "$recommended_threads"` || return 1
+		else
+			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_threads}；直接回车使用推荐值。" "$recommended_threads"` || return 1
+		fi
+
 		scf_command="mpirun -np ${pw_threads} pw.x -in ${scf_input} 2>&1 | tee scf.out"
 
 		echo
@@ -113,12 +113,13 @@ function run_qe_band_calculation (){
 		pw_band_command="跳过：已有成功的 BAND/band.out"
 		bands_command="跳过：已有成功的 BAND/bands.out 和 BAND/bands.dat.gnu"
 	else
-		pw_threads=`qe_prompt_positive_int ' 请输入 pw.x 使用的线程数 N1。'`
-		bands_threads=`qe_prompt_positive_int ' 请输入 bands.x 使用的线程数 N2。'`
 		qe_ensure_runtime_for mpirun pw.x bands.x || {
 			echo ' 错误：QE 运行环境未通过检查，已停止能带计算。'
 			return 1
 		}
+		qe_report_compute_resources
+		pw_threads=`qe_prompt_positive_int ' 请输入 pw.x 使用的 MPI 进程数 N1。'` || return 1
+		bands_threads=`qe_prompt_positive_int ' 请输入 bands.x 使用的 MPI 进程数 N2。'` || return 1
 		scf_command="mpirun -np ${pw_threads} pw.x -in ${scf_input} 2>&1 | tee scf.out"
 		pw_band_command="mpirun -np ${pw_threads} pw.x -in ${pw_band_input} 2>&1 | tee BAND/band.out"
 		bands_command="mpirun -np ${bands_threads} bands.x -in ${bandsx_input} 2>&1 | tee BAND/bands.out"
@@ -145,8 +146,9 @@ function run_qe_band_calculation (){
 		pw_band_run_status="failed"
 	else
 		echo " 开始 pw.x bands 计算：${pw_band_command}"
-		qe_run_stage pw_band_run_status BAND band.out qe_output_success BAND/band.out -- \
-			mpirun -np "$pw_threads" pw.x -in "${pw_band_input#BAND/}"
+		# Relative outdir/pseudo_dir paths are anchored to the SCF project directory.
+		qe_run_stage pw_band_run_status . BAND/band.out qe_output_success BAND/band.out -- \
+			mpirun -np "$pw_threads" pw.x -in "$pw_band_input"
 		stage_rc=$?
 		case "$stage_rc" in 0|1) ;; *) return "$stage_rc" ;; esac
 	fi
@@ -160,8 +162,8 @@ function run_qe_band_calculation (){
 		bands_run_status="failed"
 	else
 		echo " 开始 bands.x 计算：${bands_command}"
-		qe_run_stage bands_run_status BAND bands.out qe_output_success BAND/bands.out -- \
-			mpirun -np "$bands_threads" bands.x -in "${bandsx_input#BAND/}"
+		qe_run_stage bands_run_status . BAND/bands.out qe_output_success BAND/bands.out -- \
+			mpirun -np "$bands_threads" bands.x -in "$bandsx_input"
 		stage_rc=$?
 		case "$stage_rc" in 0|1) ;; *) return "$stage_rc" ;; esac
 	fi
@@ -194,4 +196,3 @@ function run_qe_band_calculation (){
 	fi
 	return 0
 }
-

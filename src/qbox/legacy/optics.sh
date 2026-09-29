@@ -733,10 +733,10 @@ function qe_epsilon_settings_menu (){
 
 function run_qe_epsilon_calculation (){
 	local calc_prefix base_scf scf_input nscf_input epsilon_input
-	local recalc_completed scf_threads nscf_threads epsilon_threads nbnd nelec epsilon_nelec
+	local recalc_completed all_epsilon_steps_done scf_threads nscf_threads epsilon_threads nbnd nelec epsilon_nelec
 	local scf_status nscf_status epsilon_status
 	local scf_command nscf_command epsilon_command
-	local recommended_scf_threads recommended_nscf_threads atom_count physical_cores
+	local recommended_scf_threads recommended_nscf_threads atom_count
 	local old_pwin_default_pseudolib stage_rc
 
 	echo
@@ -767,6 +767,10 @@ function run_qe_epsilon_calculation (){
 	if ! recalc_completed=`qe_ask_recalculate_epsilon_completed "$calc_prefix"`; then
 		return 1
 	fi
+	all_epsilon_steps_done=0
+	if [ "$recalc_completed" == "no" ] && qe_epsilon_scf_success "$calc_prefix" && qe_epsilon_nscf_success "$calc_prefix" && qe_epsilon_output_success; then
+		all_epsilon_steps_done=1
+	fi
 	epsilon_system_type="Semi-conductor"
 	epsilon_occ="fixed"
 	epsilon_smearing="gauss"
@@ -780,7 +784,9 @@ function run_qe_epsilon_calculation (){
 		epsilon_degauss="0.002"
 		qe_print_odd_electron_notice "$epsilon_nelec" "光学 SCF/NSCF 使用 occupations='smearing'、smearing='marzari-vanderbilt'、degauss=0.002 Ry"
 	fi
-	qe_epsilon_settings_menu || return 0
+	if [ "$all_epsilon_steps_done" != "1" ]; then
+		qe_epsilon_settings_menu || return 0
+	fi
 	if qe_nelec_is_odd_integer "$epsilon_nelec"; then
 		if [ "$epsilon_occ" != "smearing" ] || [ "$epsilon_smearing" != "marzari-vanderbilt" ] || [ "$epsilon_degauss" != "0.002" ]; then
 			epsilon_occ="smearing"
@@ -790,18 +796,24 @@ function run_qe_epsilon_calculation (){
 		fi
 	fi
 
-	recommended_scf_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
-	recommended_nscf_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
-	atom_count=`qe_estimate_atom_count "$calc_prefix"`
-	physical_cores=`qe_physical_cpu_cores`
-	if [ -n "$atom_count" ]; then
-		scf_threads=`qe_prompt_positive_int_default " 请输入 optical SCF pw.x 使用的线程数 N1。检测到体系原子数 ${atom_count}，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"`
-		nscf_threads=`qe_prompt_positive_int_default " 请输入 optical NSCF pw.x 使用的线程数 N2。检测到体系原子数 ${atom_count}，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"`
-	else
-		scf_threads=`qe_prompt_positive_int_default " 请输入 optical SCF pw.x 使用的线程数 N1。未能读取体系大小，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"`
-		nscf_threads=`qe_prompt_positive_int_default " 请输入 optical NSCF pw.x 使用的线程数 N2。未能读取体系大小，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"`
+	if [ "$all_epsilon_steps_done" != "1" ]; then
+		qe_ensure_runtime_for mpirun pw.x epsilon.x || {
+			echo ' 错误：QE 运行环境未通过检查，已停止光学计算。'
+			return 1
+		}
+		qe_report_compute_resources
+		recommended_scf_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
+		recommended_nscf_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
+		atom_count=`qe_estimate_atom_count "$calc_prefix"`
+		if [ -n "$atom_count" ]; then
+			scf_threads=`qe_prompt_positive_int_default " 请输入 optical SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " 请输入 optical NSCF pw.x 使用的 MPI 进程数 N2。检测到体系原子数 ${atom_count}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
+		else
+			scf_threads=`qe_prompt_positive_int_default " 请输入 optical SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " 请输入 optical NSCF pw.x 使用的 MPI 进程数 N2。未能读取体系大小，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
+		fi
+		epsilon_threads=`qe_prompt_positive_int_default ' 请输入 epsilon.x 使用的 MPI 进程数 N3。直接回车使用 16。' '16'` || return 1
 	fi
-	epsilon_threads=`qe_prompt_positive_int_default ' 请输入 epsilon.x 使用的 MPI 进程数 N3。直接回车使用 16。' '16'`
 
 	echo
 	echo ' 光吸收/介电函数输入文件将自动使用 PD04 Norm-conserving 赝势库。'
@@ -811,13 +823,15 @@ function run_qe_epsilon_calculation (){
 		qe_prepare_epsilon_scf_input "$base_scf" "$scf_input" "$epsilon_occ" "$epsilon_smearing" "$epsilon_degauss"
 	fi
 
-	qe_ensure_runtime_for mpirun pw.x epsilon.x || {
-		echo ' 错误：QE 运行环境未通过检查，已停止光学计算。'
-		return 1
-	}
-	scf_command="cd Epsilon && mpirun -np ${scf_threads} pw.x -in ${calc_prefix}.epsilon.scf.in 2>&1 | tee scf.out"
-	nscf_command="cd Epsilon && mpirun -np ${nscf_threads} pw.x -in ${calc_prefix}.epsilon.nscf.in 2>&1 | tee nscf.out"
-	epsilon_command="cd Epsilon && mpirun -np ${epsilon_threads} epsilon.x -in epsilon.in 2>&1 | tee epsilon.out"
+	if [ "$all_epsilon_steps_done" == "1" ]; then
+		scf_command="跳过：已有成功的 Epsilon/scf.out"
+		nscf_command="跳过：已有成功的 Epsilon/nscf.out"
+		epsilon_command="跳过：已有成功的 Epsilon/epsilon.out 和 epsr/epsi 数据"
+	else
+		scf_command="cd Epsilon && mpirun -np ${scf_threads} pw.x -in ${calc_prefix}.epsilon.scf.in 2>&1 | tee scf.out"
+		nscf_command="cd Epsilon && mpirun -np ${nscf_threads} pw.x -in ${calc_prefix}.epsilon.nscf.in 2>&1 | tee nscf.out"
+		epsilon_command="cd Epsilon && mpirun -np ${epsilon_threads} epsilon.x -in epsilon.in 2>&1 | tee epsilon.out"
+	fi
 
 	echo
 	if [ "$recalc_completed" == "no" ] && qe_epsilon_scf_success "$calc_prefix"; then
@@ -901,9 +915,9 @@ function run_qe_epsilon_calculation (){
 }
 
 function run_qe_polar_calculation (){
-	local calc_prefix scf_input pw_threads polar_threads recommended_threads atom_count physical_cores
+	local calc_prefix scf_input pw_threads polar_threads recommended_threads atom_count
 	local recommended_scf_threads recommended_polar_threads
-	local recalc_completed scf_status x_status y_status z_status
+	local recalc_completed all_polar_steps_done scf_status x_status y_status z_status
 	local scf_command x_command y_command z_command
 	local nppstr kfactor axis gdir infile outfile status_var polar_nelec stage_rc
 
@@ -940,35 +954,51 @@ function run_qe_polar_calculation (){
 	if ! recalc_completed=`qe_ask_recalculate_polar_completed "$calc_prefix"`; then
 		return 1
 	fi
-	recommended_scf_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
-	recommended_polar_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
-	atom_count=`qe_estimate_atom_count "$calc_prefix"`
-	physical_cores=`qe_physical_cpu_cores`
-	if [ -n "$atom_count" ]; then
-		pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的线程数 N1。检测到体系原子数 ${atom_count}，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"`
-		polar_threads=`qe_prompt_positive_int_default " 请输入 Berry phase NSCF pw.x 使用的线程数 N2。检测到体系原子数 ${atom_count}，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_polar_threads}；直接回车使用推荐值。" "$recommended_polar_threads"`
-	else
-		pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的线程数 N1。未能读取体系大小，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"`
-		polar_threads=`qe_prompt_positive_int_default " 请输入 Berry phase NSCF pw.x 使用的线程数 N2。未能读取体系大小，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_polar_threads}；直接回车使用推荐值。" "$recommended_polar_threads"`
+	all_polar_steps_done=0
+	if [ "$recalc_completed" == "no" ] && qe_output_success_for_prefix scf.out "$calc_prefix" && qe_polar_output_success x && qe_polar_output_success y && qe_polar_output_success z; then
+		all_polar_steps_done=1
 	fi
-	echo
-	echo ' nppstr 取值建议：普通 3D 晶体 8-12；层状/低维/强极化体系 12-20；正式结果建议测试 12/16/20 收敛。'
-	nppstr=`qe_prompt_positive_int_default ' 请输入 Berry phase 的 nppstr。默认 12。' '12'`
-	echo
-	echo ' Berry phase 方向 K 点加密倍数建议：快速预览 2；常规计算 3；正式收敛测试可比较 3/4/5。'
-	echo ' 该倍数只加密当前 Berry phase 方向，例如 x 方向会将 kx 放大。'
-	kfactor=`qe_prompt_positive_int_default ' 请输入 Berry phase 方向 K 点加密倍数。默认 3。' '3'`
+	if [ "$all_polar_steps_done" != "1" ]; then
+		qe_ensure_runtime_for mpirun pw.x || {
+			echo ' 错误：QE 运行环境未通过检查，已停止极性计算。'
+			return 1
+		}
+		qe_report_compute_resources
+		recommended_scf_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
+		recommended_polar_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
+		atom_count=`qe_estimate_atom_count "$calc_prefix"`
+		if [ -n "$atom_count" ]; then
+			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
+			polar_threads=`qe_prompt_positive_int_default " 请输入 Berry phase NSCF pw.x 使用的 MPI 进程数 N2。检测到体系原子数 ${atom_count}，推荐 ${recommended_polar_threads}；直接回车使用推荐值。" "$recommended_polar_threads"` || return 1
+		else
+			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
+			polar_threads=`qe_prompt_positive_int_default " 请输入 Berry phase NSCF pw.x 使用的 MPI 进程数 N2。未能读取体系大小，推荐 ${recommended_polar_threads}；直接回车使用推荐值。" "$recommended_polar_threads"` || return 1
+		fi
+		echo
+		echo ' nppstr 取值建议：普通 3D 晶体 8-12；层状/低维/强极化体系 12-20；正式结果建议测试 12/16/20 收敛。'
+		nppstr=`qe_prompt_positive_int_default ' 请输入 Berry phase 的 nppstr。默认 12。' '12'` || return 1
+		echo
+		echo ' Berry phase 方向 K 点加密倍数建议：快速预览 2；常规计算 3；正式收敛测试可比较 3/4/5。'
+		echo ' 该倍数只加密当前 Berry phase 方向，例如 x 方向会将 kx 放大。'
+		kfactor=`qe_prompt_positive_int_default ' 请输入 Berry phase 方向 K 点加密倍数。默认 3。' '3'` || return 1
+	else
+		nppstr=12
+		kfactor=3
+	fi
 
 	mkdir -p Polar
-	qe_ensure_runtime_for mpirun pw.x || {
-		echo ' 错误：QE 运行环境未通过检查，已停止极性计算。'
-		return 1
-	}
 
-	scf_command="mpirun -np ${pw_threads} pw.x -in ${scf_input} 2>&1 | tee scf.out"
-	x_command="cd Polar && mpirun -np ${polar_threads} pw.x -in ${calc_prefix}.polar-x.nscf.in 2>&1 | tee polar-x.out"
-	y_command="cd Polar && mpirun -np ${polar_threads} pw.x -in ${calc_prefix}.polar-y.nscf.in 2>&1 | tee polar-y.out"
-	z_command="cd Polar && mpirun -np ${polar_threads} pw.x -in ${calc_prefix}.polar-z.nscf.in 2>&1 | tee polar-z.out"
+	if [ "$all_polar_steps_done" == "1" ]; then
+		scf_command="跳过：已有成功的 scf.out 和 tmp/${calc_prefix}.save"
+		x_command="跳过：已有成功的 Polar/polar-x.out"
+		y_command="跳过：已有成功的 Polar/polar-y.out"
+		z_command="跳过：已有成功的 Polar/polar-z.out"
+	else
+		scf_command="mpirun -np ${pw_threads} pw.x -in ${scf_input} 2>&1 | tee scf.out"
+		x_command="cd Polar && mpirun -np ${polar_threads} pw.x -in ${calc_prefix}.polar-x.nscf.in 2>&1 | tee polar-x.out"
+		y_command="cd Polar && mpirun -np ${polar_threads} pw.x -in ${calc_prefix}.polar-y.nscf.in 2>&1 | tee polar-y.out"
+		z_command="cd Polar && mpirun -np ${polar_threads} pw.x -in ${calc_prefix}.polar-z.nscf.in 2>&1 | tee polar-z.out"
+	fi
 
 	echo
 	if [ "$recalc_completed" == "no" ] && qe_output_success_for_prefix scf.out "$calc_prefix"; then

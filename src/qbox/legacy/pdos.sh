@@ -314,8 +314,8 @@ function run_qe_pdos_calculation (){
 	local scf_status nscf_status pdos_status clean_status sum_status plot_status
 	local scf_command nscf_command pdos_command clean_command sum_command plot_command
 	local old_fname1 old_prefix
-	local recalc_completed stage_rc
-	local recommended_scf_threads recommended_nscf_threads recommended_projwfc_threads atom_count physical_cores
+	local recalc_completed stage_rc all_pdos_steps_done
+	local recommended_scf_threads recommended_nscf_threads recommended_projwfc_threads atom_count
 	local pdos_zero_reference plot_prefix
 
 	echo
@@ -324,20 +324,30 @@ function run_qe_pdos_calculation (){
 	if ! recalc_completed=`qe_ask_recalculate_completed "$calc_prefix"`; then
 		return 1
 	fi
-	recommended_scf_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
-	recommended_nscf_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
-	recommended_projwfc_threads=`qe_recommend_projwfc_threads "$calc_prefix"`
-	atom_count=`qe_estimate_atom_count "$calc_prefix"`
-	physical_cores=`qe_physical_cpu_cores`
+	all_pdos_steps_done=0
+	if [ "$recalc_completed" == "no" ] && qe_output_success_for_prefix scf.out "$calc_prefix" && qe_output_success_for_prefix nscf.out "$calc_prefix" && qe_pdos_output_success "$calc_prefix" && qe_pdos_clean_success && qe_pdos_sum_success; then
+		all_pdos_steps_done=1
+	fi
+	if [ "$all_pdos_steps_done" != "1" ]; then
+		qe_ensure_runtime_for mpirun pw.x projwfc.x sumpdos.x || {
+			echo ' 错误：QE 运行环境未通过检查，已停止 PDOS 计算。'
+			return 1
+		}
+		qe_report_compute_resources
+		recommended_scf_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
+		recommended_nscf_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
+		recommended_projwfc_threads=`qe_recommend_projwfc_threads "$calc_prefix"`
+		atom_count=`qe_estimate_atom_count "$calc_prefix"`
 
-	if [ -n "$atom_count" ]; then
-		pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的线程数 N1。检测到体系原子数 ${atom_count}，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"`
-		nscf_threads=`qe_prompt_positive_int_default " 请输入 NSCF pw.x 使用的线程数 N2。检测到体系原子数 ${atom_count}，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"`
-		projwfc_threads=`qe_prompt_positive_int_default " 请输入 projwfc.x 使用的线程数 N3。检测到体系原子数 ${atom_count}，推荐 ${recommended_projwfc_threads}；直接回车使用推荐值。" "$recommended_projwfc_threads"`
-	else
-		pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的线程数 N1。未能读取体系大小，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"`
-		nscf_threads=`qe_prompt_positive_int_default " 请输入 NSCF pw.x 使用的线程数 N2。未能读取体系大小，当前机器物理核心数约 ${physical_cores}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"`
-		projwfc_threads=`qe_prompt_positive_int_default " 请输入 projwfc.x 使用的线程数 N3。未能读取体系大小，推荐 ${recommended_projwfc_threads}；直接回车使用推荐值。" "$recommended_projwfc_threads"`
+		if [ -n "$atom_count" ]; then
+			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " 请输入 NSCF pw.x 使用的 MPI 进程数 N2。检测到体系原子数 ${atom_count}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
+			projwfc_threads=`qe_prompt_positive_int_default " 请输入 projwfc.x 使用的 MPI 进程数 N3。检测到体系原子数 ${atom_count}，推荐 ${recommended_projwfc_threads}；直接回车使用推荐值。" "$recommended_projwfc_threads"` || return 1
+		else
+			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " 请输入 NSCF pw.x 使用的 MPI 进程数 N2。未能读取体系大小，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
+			projwfc_threads=`qe_prompt_positive_int_default " 请输入 projwfc.x 使用的 MPI 进程数 N3。未能读取体系大小，推荐 ${recommended_projwfc_threads}；直接回车使用推荐值。" "$recommended_projwfc_threads"` || return 1
+		fi
 	fi
 	pdos_zero_reference=`qe_prompt_energy_reference "态密度图"`
 	plot_prefix="${calc_prefix}_${pdos_zero_reference}"
@@ -386,18 +396,20 @@ function run_qe_pdos_calculation (){
 		return 1
 	fi
 
-	qe_ensure_runtime_for mpirun pw.x projwfc.x sumpdos.x || {
-		echo ' 错误：QE 运行环境未通过检查，已停止 PDOS 计算。'
-		return 1
-	}
 	if [ "$recalc_completed" == "yes" ]; then
 		echo " 将旧的 PDOS 输出移入时间戳备份目录。"
 		qe_clean_pdos_generated_outputs || return 1
 	fi
 
-	scf_command="mpirun -np ${pw_threads} pw.x -in ${scf_input} 2>&1 | tee scf.out"
-	nscf_command="mpirun -np ${nscf_threads} pw.x -in ${nscf_input} 2>&1 | tee nscf.out"
-	pdos_command="mpirun -np ${projwfc_threads} projwfc.x -in ${pdos_input} 2>&1 | tee PDOS/pdos.out"
+	if [ "$all_pdos_steps_done" == "1" ]; then
+		scf_command="跳过：已有成功的 scf.out 和 tmp/${calc_prefix}.save"
+		nscf_command="跳过：已有成功的 nscf.out 和 tmp/${calc_prefix}.save"
+		pdos_command="跳过：已有成功的 PDOS 输出"
+	else
+		scf_command="mpirun -np ${pw_threads} pw.x -in ${scf_input} 2>&1 | tee scf.out"
+		nscf_command="mpirun -np ${nscf_threads} pw.x -in ${nscf_input} 2>&1 | tee nscf.out"
+		pdos_command="mpirun -np ${projwfc_threads} projwfc.x -in ${pdos_input} 2>&1 | tee PDOS/pdos.out"
+	fi
 	clean_command="cd PDOS && qe_builtin_clean_pdos"
 	sum_command="cd PDOS/ATOM_PDOS && qe_builtin_sumdos"
 	plot_command="cd PDOS/ATOM_PDOS && qe_builtin_plot_pdos --output-prefix ${plot_prefix} --zero-reference ${pdos_zero_reference} --fermi-from ../../nscf.out ../../scf.out"

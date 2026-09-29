@@ -92,8 +92,43 @@ export QBOX_QE_ENV_SCRIPT=/path/to/qe-environment.sh
 export QBOX_ONEAPI_ENV_SCRIPT=/path/to/compiler-mpi-environment.sh
 ```
 
-`QBOX_QE_ENV_SCRIPT` and `QBOX_ONEAPI_ENV_SCRIPT` are optional. qbox loads an
-environment script only when you set its variable.
+You may `module load` your chosen QE version before starting qbox. Before an
+automatic calculation, qbox checks the commands and shared libraries needed by
+that workflow. If the current environment meets those requirements, qbox keeps
+its QE/MPI without calling module or loading configured environment scripts.
+Generating input files alone does not load an environment.
+
+`QBOX_QE_ENV_SCRIPT` and `QBOX_ONEAPI_ENV_SCRIPT` are optional fallbacks. Only when
+the current environment is insufficient does qbox try the configured QE script,
+module selection, and compiler/MPI script. `QE_MODULE` selects a fallback module;
+it does not override an environment that already meets the requirements.
+
+Workflows requiring `pw.x` still require QE strictly newer than 7.0. The version
+probe waits at most 5 seconds and cleans up its processes. If direct startup
+does not return a version, qbox retries once through the current `mpirun -np 1`,
+also with a 5-second limit; this supports MPI builds that cannot start as
+singleton processes. A captured version is checked normally; if neither probe
+returns one, qbox stops the calculation while preserving the current environment.
+
+Automatic calculations confirm the QE environment first (selecting a CPU/GPU
+module when loading is needed), then ask for parallelism. Before those prompts,
+CPU mode shows the online physical core count without counting SMT siblings twice,
+plus estimated idle physical cores from a 0.25-second sample. The estimate uses
+each core's busiest logical CPU, sums its remaining capacity, and rounds down.
+GPU mode instead shows only the machine's GPU count and idle GPU count, using a
+bounded `nvidia-smi` snapshot. An idle GPU has no compute process, zero sampled
+utilization, and an enabled compute mode. These counts describe physical devices
+reported by the driver, not CUDA cores or scheduler allocations. Resource counts
+change with load and are guidance only; unavailable information is shown as
+unknown. Resource mode follows the active QE executable/module, including a
+preloaded environment, rather than an unused `QE_MODULE` fallback.
+The entered counts are MPI processes passed to `mpirun -np`. Reusing
+completed results for all calculation stages skips environment loading and these
+parallelism prompts.
+
+Automatic band calculations run SCF, `pw.x` bands, and `bands.x` from the project
+directory, so their relative `outdir` paths resolve to the same SCF save data.
+Band inputs, output logs, data, and plots remain under `BAND/`.
 
 When `QBOX_PYTHON` or `QBOX_MULTIWFN_HOME` is not set, `QBOX_SHARED_ROOT`
 derives them from `python/bin/python3` and `multiwfn` below the shared root.

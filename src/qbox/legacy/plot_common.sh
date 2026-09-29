@@ -320,23 +320,31 @@ function qe_recommend_projwfc_threads (){
 }
 
 function qe_physical_cpu_cores (){
-	local sockets cores_per_socket physical nproc_count
-
-	sockets=`lscpu 2>/dev/null | awk -F: '/^Socket\\(s\\)/ {gsub(/[ \t]/,"",$2); print $2; exit}'`
-	cores_per_socket=`lscpu 2>/dev/null | awk -F: '/^Core\\(s\\) per socket/ {gsub(/[ \t]/,"",$2); print $2; exit}'`
-	if echo "$sockets $cores_per_socket" | awk '$1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ && $1>0 && $2>0 {exit 0} {exit 1}'; then
-		physical=$((sockets * cores_per_socket))
+	local physical
+	physical="$(qbox_python -m qbox.cpu_resources --physical-count 2>/dev/null)"
+	if [[ "$physical" =~ ^[1-9][0-9]*$ ]]; then
 		echo "$physical"
 		return 0
 	fi
+	# A conservative recommendation when physical topology is unavailable.
+	# The resource report shows 'unknown'; never label logical CPUs as cores.
+	echo "1"
+}
 
-	nproc_count=`nproc 2>/dev/null`
-	if echo "$nproc_count" | awk '$1 ~ /^[0-9]+$/ && $1>0 {exit 0} {exit 1}'; then
-		echo "$nproc_count"
-		return 0
+function qe_report_cpu_resources (){
+	qbox_python -m qbox.cpu_resources >&2 || {
+		printf ' 当前机器物理核心总数：未知\n 估算空闲物理核心数：未知\n' >&2
+	}
+}
+
+function qe_report_compute_resources (){
+	if [ "$(qe_runtime_accelerator)" = gpu ]; then
+		qbox_python -m qbox.gpu_resources >&2 || {
+			printf ' 当前机器 GPU 数量：未知\n 空闲 GPU 数量：未知\n' >&2
+		}
+	else
+		qe_report_cpu_resources
 	fi
-
-	echo "16"
 }
 
 function qe_min_positive_int (){
