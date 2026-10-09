@@ -7,6 +7,7 @@ Requires pip plus the analysis dependencies in this Python; never runs QE/MPI.
 
 import json
 import os
+import re
 from email.parser import BytesParser
 from pathlib import Path
 import subprocess
@@ -113,7 +114,7 @@ K_POINTS automatic
             "grid": [2, 1, 1], "nbnd": 4, "num_wann": 1, "projections": ["Si:s"],
             "tasks": ["model"], "parameters": {}}))
         run(installed_cli, "--task", "wannier-input", "--config", "wannier settings.json", "--conflict", "cancel")
-        assert "write_hr = true" in (work / "si.win").read_text()
+        assert re.search(r"(?m)^\s*write_hr\s*=\s*true\s*$", (work / "si.win").read_text())
         assert (work / "si.nscf.in").is_file()
         assert not (work / "WANNIER").exists()
 
