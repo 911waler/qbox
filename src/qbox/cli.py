@@ -105,10 +105,14 @@ Usage:
   {name} [ACTION ...]
   {name} --task ID_OR_NAME [INPUT ...]
   {name} --list
+  {name} kmesh NX NY NZ --format qe|wannier
+  {name} --task wannier-input [CIF_OR_SCF_INPUT_OR_WIN]
+  {name} --task wannier-input --config JSON --conflict cancel|backup
   {name} --help
   {name} --version
 
-Existing interactive menus and numeric invocations are preserved.
+Task 11 generates Wannier90 inputs in the current directory.
+Old task IDs 11–37 are now 12–38; IDs 0–10 and PW presets are unchanged.
 Use --list to discover task IDs and names. --task selects a task explicitly;
 arguments after its ID/name are passed to that task's existing workflow.
 
@@ -151,6 +155,10 @@ def main(argv=None):
         print(render_list(), end="")
         return 0
 
+    if args and args[0] == "kmesh":
+        from .io.kmesh import main as kmesh_main
+        return kmesh_main(args[1:])
+
     env = os.environ.copy()
     env.pop("QBOX_TASK_ID", None)
     if args and args[0] == "--task":
@@ -162,6 +170,9 @@ def main(argv=None):
         except ValueError as error:
             print(f"{name}: {error}; see --list", file=sys.stderr)
             return 2
+        if task.slug == "wannier-input":
+            from .io.wannier_menu import main as wannier_main
+            return wannier_main(args[2:])
         env["QBOX_TASK_ID"] = str(task.id)
         args = args[2:]
 

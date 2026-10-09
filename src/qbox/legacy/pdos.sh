@@ -340,13 +340,13 @@ function run_qe_pdos_calculation (){
 		atom_count=`qe_estimate_atom_count "$calc_prefix"`
 
 		if [ -n "$atom_count" ]; then
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
-			nscf_threads=`qe_prompt_positive_int_default " 请输入 NSCF pw.x 使用的 MPI 进程数 N2。检测到体系原子数 ${atom_count}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
-			projwfc_threads=`qe_prompt_positive_int_default " 请输入 projwfc.x 使用的 MPI 进程数 N3。检测到体系原子数 ${atom_count}，推荐 ${recommended_projwfc_threads}；直接回车使用推荐值。" "$recommended_projwfc_threads"` || return 1
+			pw_threads=`qe_prompt_positive_int_default " SCF pw.x MPI 进程数 N1 [原子数 ${atom_count}，回车 ${recommended_scf_threads}]：" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " NSCF pw.x MPI 进程数 N2 [原子数 ${atom_count}，回车 ${recommended_nscf_threads}]：" "$recommended_nscf_threads"` || return 1
+			projwfc_threads=`qe_prompt_positive_int_default " projwfc.x MPI 进程数 N3 [原子数 ${atom_count}，回车 ${recommended_projwfc_threads}]：" "$recommended_projwfc_threads"` || return 1
 		else
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
-			nscf_threads=`qe_prompt_positive_int_default " 请输入 NSCF pw.x 使用的 MPI 进程数 N2。未能读取体系大小，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
-			projwfc_threads=`qe_prompt_positive_int_default " 请输入 projwfc.x 使用的 MPI 进程数 N3。未能读取体系大小，推荐 ${recommended_projwfc_threads}；直接回车使用推荐值。" "$recommended_projwfc_threads"` || return 1
+			pw_threads=`qe_prompt_positive_int_default " SCF pw.x MPI 进程数 N1 [回车 ${recommended_scf_threads}]：" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " NSCF pw.x MPI 进程数 N2 [回车 ${recommended_nscf_threads}]：" "$recommended_nscf_threads"` || return 1
+			projwfc_threads=`qe_prompt_positive_int_default " projwfc.x MPI 进程数 N3 [回车 ${recommended_projwfc_threads}]：" "$recommended_projwfc_threads"` || return 1
 		fi
 	fi
 	pdos_zero_reference=`qe_prompt_energy_reference "态密度图"`
@@ -626,7 +626,7 @@ function analyze_qe_dopant_pdos (){
 	echo
 	echo ' 该功能分析 QE projwfc.x 的原始 pdos_atm 文件，输出掺杂原子及近邻原子的局域 PDOS。'
 
-	if [ -n "$fname1" ] && [ -f "$fname1" ] && { [ -n "${QBOX_TASK_ID:-}" ] || [ "$fname1" != "28" ]; }; then
+	if [ -n "$fname1" ] && [ -f "$fname1" ] && { [ -n "${QBOX_TASK_ID:-}" ] || [ "$fname1" != "29" ]; }; then
 		structure_file="$fname1"
 	else
 		calc_prefix=`qe_prompt_calc_prefix`

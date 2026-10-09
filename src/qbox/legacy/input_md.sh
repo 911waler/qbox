@@ -69,16 +69,7 @@ while [[ "$md_arg" != "7" ]]; do
             return $?
             ;;
         "1")
-            echo ' ##########################################################'
-            echo '若需要修改自动选取 K 网格的精度，可以修改 qbox 文件的'
-            echo 'result=$(echo "scale=9; 30 / $a_value" | bc) 中的 30 为其他值'
-            echo '---- 20 低精度 结构优化 '
-            echo '---- 30 中等精度 能带、态密度计算 '
-            echo '---- 40 高精度 光学性质计算、精细能带 '
-            echo '---- 50+ 超高精度 不推荐 '
-            echo ' ##########################################################'
-            echo ' ***手动输入的话，以 2,2,1 这样的格式输入三个方向的 K 点采样密度***'
-            echo " 也可以直接输入'gamma', 这样布里渊区会进行Gamma点的单点计算"
+            echo ' K 点网格（例如 2,2,1；Gamma 单点输入 gamma）：'
             if ! read -r kpmesh; then
                 qe_release_structure_context_with_status 1
                 return $?

@@ -387,9 +387,9 @@ test_constraint_writer_rejects_bad_ranges_without_clobbering() {
 test_dispatch_and_definitions_use_qbox_interfaces() {
     local source_text source_file handler
     source_text="$(declare -f relax2cif_menu md2cif_extract_target qbox_md_to_xyz_menu qbox_nscf_menu qbox_constraints_menu)"
-    assert_eq 'qbox_md_to_xyz_menu' "$(qe_action_handler 26)" 'action 26 still targets the legacy MD handler' || return 1
-    assert_eq 'qbox_nscf_menu' "$(qe_action_handler 27)" 'action 27 still targets the legacy NSCF handler' || return 1
-    assert_eq 'qbox_constraints_menu' "$(qe_action_handler 30)" 'action 30 does not target the qbox constraints menu' || return 1
+    assert_eq 'qbox_md_to_xyz_menu' "$(qe_action_handler 27)" 'action 27 still targets the legacy MD handler' || return 1
+    assert_eq 'qbox_nscf_menu' "$(qe_action_handler 28)" 'action 28 still targets the legacy NSCF handler' || return 1
+    assert_eq 'qbox_constraints_menu' "$(qe_action_handler 31)" 'action 31 does not target the qbox constraints menu' || return 1
     for handler in qbox_md_to_xyz_menu qbox_nscf_menu qbox_constraints_menu; do
         [ "$(type -t "$handler")" = function ] || {
             fail "dispatcher target is not a defined qbox menu: $handler"

@@ -131,7 +131,7 @@ function scf2nscf (){
 	local infile outfile before_checksum after_checksum use_tetrahedra outfile_preexisting
 
 	infile="$fname1"
-	if [ -z "$infile" ] || { [ -z "${QBOX_TASK_ID:-}" ] && [ "$infile" == "29" ]; }; then
+	if [ -z "$infile" ] || { [ -z "${QBOX_TASK_ID:-}" ] && [ "$infile" == "30" ]; }; then
 		echo
 		echo ' 请输入需要转换的 .scf.in 文件。'
 		read infile

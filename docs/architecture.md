@@ -51,7 +51,8 @@ unfolding 分别位于同名领域文件。
 
 ## 兼容性和分发约束
 
-- 保留 0–37 号、旧菜单文本及旧命令位置；新任务名是附加接口。
+- 0–10 保留，11 为 Wannier90 输入，原 11–37 顺延至 12–38；原 slug、handler、分组与参数位置保持。
+- PW 的 00/0250/0260/0230/0240 快捷参数不属于任务编号，不参与迁移。
 - `--task` 表示显式选任务，不把后续数字文件名解释为任务或 PW 快捷选项。
 - 根启动器仍可被 Bash source，供旧脚本及回归测试调用兼容函数。
 - 源码分发需完整目录；wheel 分发需包含 `legacy/*.sh`、`bin/*` 和 Python 模块。
@@ -59,6 +60,12 @@ unfolding 分别位于同名领域文件。
 - 不把工作目录、输出文件、赝势或本机安装路径写入安装包。
 
 ## 验证
+
+声子执行入口 `phonons`（40）经 `legacy/phonon_workflows.sh` 复用环境、资源和
+`qe_run_stage` 执行机制。`io/phonon_workflow.py` 负责工作目录准备、SCF 路径重写、
+各阶段有效性与状态记录；输入向导和绘图仍调用已有声子模块。整条链在项目的
+`PHONON/` 中运行，外部 SCF/CIF 保持原样。与单独绘图菜单（39）扫描全部数据不同，
+自动绘图只处理本次流程的频率文件。原生 QE 验收入口为 `tools/verify-phonon-native.py`。
 
 `tests/run.sh` 运行 Bash 行为测试及 `tests/python` 中的 unittest。旧的单文件源码
 检查已改为模块级检查或直接行为验证；保留生成文件、任务映射、错误路径和清理测试。
@@ -86,3 +93,18 @@ Release acceptance binds the actual archive, manifest and source commit to five
 immutable target images and a strict baseline-CPU VM. Container kernels are shared
 with the host. Supplemental diagnostics are maintainer-only, and a static ELF scan
 or CPUID report cannot substitute for execution. Evidence stays outside the tar.gz.
+
+## Wannier 输入边界
+
+`io/kmesh.py` 提供标准库网格，`qbox kmesh` 直接进入其命令接口。
+`io/wannier_inputs.py` 负责 QE 保真改写及模型校验，`wannier_profiles.py`
+保存版本化物性参数与导出依赖，`wannier_paths.py` 提供原胞基底路径。
+`wannier_workflow.py` 汇总新建/已有结果模式并纯生成文本包，
+`wannier_publish.py` 管理当前目录冲突、摘要复核与回滚。
+`wannier_cif.py` 在用户选择方向后复用已有 QE SCF 输入向导，用私有暂存目录隔离转换，
+验证后无覆盖地发布 SCF 输入到当前目录，再作为普通 QE 来源交给工作流；不执行计算。
+进入向导前，`wannier_sources.py` 先发现并校验当前目录已有 SCF 与 CIF 的结构是否匹配，
+优先复用同名匹配输入，避免重复配置和生成。
+`wannier_menu.py` 消费同一份方向/参数元数据；显式 `--task wannier-input`
+直接进入 Python 保留全部自动化参数，主菜单和传统数字入口经 `legacy/wannier.sh` 调用。
+菜单返回不发布文件，切换方向替换任务选择并保留公共模型配置。

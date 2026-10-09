@@ -235,6 +235,148 @@ test_structure_context_reset_preserves_unrelated_state() {
     )
 }
 
+test_structure_context_uses_short_local_names_under_deep_paths() {
+    local sandbox deep component long_prefix input context_dir old_cwd log
+    sandbox="$(new_sandbox)" || return 1
+    printf -v component '%080d' 0
+    printf -v long_prefix 'molecule_%0150d' 0
+    deep="$sandbox/$component/$component/$component"
+    mkdir -p "$deep" || return 1
+    input="$deep/$long_prefix.CIF"
+    cp -- "$STRUCTURE_FIXTURE" "$input" || return 1
+    printf '%s\n' 'user-owned output' >"$deep/${long_prefix}_QE.tmp"
+    (
+        cd "$deep" || exit 1
+        source_qbox
+        export QBOX_MOCK_QE_TMP="$QE_TMP_FIXTURE"
+        export QBOX_MOCK_MULTIWFN_PATH_LIMIT=200
+        export QBOX_MOCK_MULTIWFN_CALL="$sandbox/multiwfn-call"
+        PATH="$MOCK_MULTIWFN_DIR:$PATH"
+        unset QBOX_MULTIWFN_HOME
+        old_cwd="$PWD"
+        qe_prepare_structure_context "$input" || exit 1
+        context_dir="$QE_STRUCT_DIR"
+        assert_eq "$old_cwd" "$PWD" 'structure preparation changed caller cwd' || exit 1
+        assert_eq "$input" "$QE_STRUCT_INPUT" 'source path contract changed' || exit 1
+        assert_eq "$context_dir/${long_prefix}_QE.tmp" "$QE_STRUCT_TMP" 'public scratch filename changed' || exit 1
+        assert_eq 3 "$QE_STRUCT_NAT" 'deep-path atom count changed' || exit 1
+        assert_file_equals "$STRUCTURE_FIXTURE" "$input" 'original CIF was modified' || exit 1
+        assert_eq 'user-owned output' "$(cat "$deep/${long_prefix}_QE.tmp")" 'caller output was modified' || exit 1
+        mapfile -t call <"$QBOX_MOCK_MULTIWFN_CALL"
+        [[ "${call[0]}" != */* && "${call[0]}" == *.CIF && ${#call[0]} -lt 200 ]] || { fail 'Multiwfn input did not use a short relative name with preserved extension'; exit 1; }
+        [[ "${call[1]}" != */* && ${#call[1]} -lt 200 ]] || { fail 'Multiwfn output did not use a short relative name'; exit 1; }
+        assert_eq "$context_dir" "${call[2]}" 'Multiwfn ran outside the private context' || exit 1
+        qe_release_structure_context || exit 1
+        assert_context_released "$context_dir" || exit 1
+        assert_eq 2 "$(find "$deep" -mindepth 1 -maxdepth 1 | wc -l)" 'structure scratch leaked into caller directory' || exit 1
+    )
+}
+
+test_structure_context_missing_output_reports_multiwfn_diagnostic() {
+    local sandbox status log
+    sandbox="$(new_sandbox)" || return 1
+    (
+        cd "$sandbox" || exit 1
+        source_qbox
+        prepare_structure_sandbox "$sandbox" || exit 1
+        unset QBOX_MULTIWFN_HOME
+        Multiwfn() { cat >/dev/null; echo 'Multiwfn diagnostic: export unavailable'; return 0; }
+        qe_prepare_structure_context "$fname1" >"$sandbox/prepare.log" 2>&1
+        status=$?
+        log="$(cat "$sandbox/prepare.log")"
+        assert_nonzero "$status" 'zero exit without output incorrectly succeeded' || exit 1
+        assert_contains "$log" 'Multiwfn 未生成有效的 QE 结构文件' 'missing output has no clear error' || exit 1
+        assert_contains "$log" 'export unavailable' 'Multiwfn diagnostic was swallowed' || exit 1
+        assert_not_contains "$log" 'awk:' 'missing output leaked a raw awk error' || exit 1
+        assert_context_released "$sandbox/water_QE.tmp" || exit 1
+        assert_eq 0 "$(find "$sandbox" -maxdepth 1 -name '.qbox-structure.*' | wc -l)" 'missing output leaked a private context' || exit 1
+    )
+}
+
+test_structure_context_survives_output_only_path_truncation() {
+    local sandbox input long_prefix pad_length
+    sandbox="$(new_sandbox)" || return 1
+    # The source fits Multiwfn's buffer, while the old absolute output path
+    # grows past it once the private context directory is inserted.
+    pad_length=$((188 - ${#sandbox} - 5 - 9))
+    printf -v long_prefix 'molecule_%0*d' "$pad_length" 0
+    input="$sandbox/$long_prefix.cif"
+    [ "${#input}" -eq 188 ] || return 1
+    cp -- "$STRUCTURE_FIXTURE" "$input" || return 1
+    (
+        cd "$sandbox" || exit 1
+        source_qbox
+        export QBOX_MOCK_QE_TMP="$QE_TMP_FIXTURE"
+        export QBOX_MOCK_MULTIWFN_PATH_LIMIT=200
+        PATH="$MOCK_MULTIWFN_DIR:$PATH"
+        unset QBOX_MULTIWFN_HOME
+        qe_prepare_structure_context "$input" || exit 1
+        [ "${#QE_STRUCT_TMP}" -gt 200 ] || { fail 'output-only truncation fixture is too short'; exit 1; }
+        assert_eq 3 "$QE_STRUCT_NAT" 'output-path truncation prevented parsing' || exit 1
+        qe_release_structure_context || exit 1
+    )
+}
+
+test_structure_context_retains_nonzero_multiwfn_diagnostic() {
+    local sandbox status log
+    sandbox="$(new_sandbox)" || return 1
+    (
+        cd "$sandbox" || exit 1
+        source_qbox
+        prepare_structure_sandbox "$sandbox" || exit 1
+        unset QBOX_MULTIWFN_HOME
+        Multiwfn() { cat >/dev/null; echo 'Multiwfn diagnostic: bad structure' >&2; return 29; }
+        qe_prepare_structure_context "$fname1" >"$sandbox/prepare.log" 2>&1
+        status=$?
+        log="$(cat "$sandbox/prepare.log")"
+        assert_eq 29 "$status" 'Multiwfn failure status was masked' || exit 1
+        assert_contains "$log" 'bad structure' 'nonzero Multiwfn diagnostic was swallowed' || exit 1
+        assert_context_released "$sandbox/water_QE.tmp" || exit 1
+    )
+}
+
+test_structure_context_resolves_relative_multiwfn_location_before_chdir() {
+    local sandbox mode
+    sandbox="$(new_sandbox)" || return 1
+    for mode in home path; do
+        (
+            cd "$sandbox" || exit 1
+            source_qbox
+            prepare_structure_sandbox "$sandbox" || exit 1
+            mkdir -p 'relative tools'
+            cp -- "$MOCK_MULTIWFN_DIR/Multiwfn" 'relative tools/Multiwfn' || exit 1
+            export QBOX_MOCK_MULTIWFN_CALL="$sandbox/multiwfn-call"
+            if [ "$mode" = home ]; then
+                QBOX_MULTIWFN_HOME='relative tools'
+            else
+                unset QBOX_MULTIWFN_HOME
+                PATH="relative tools:$PATH"
+            fi
+            qe_prepare_structure_context "$fname1" || exit 1
+            mapfile -t call <"$QBOX_MOCK_MULTIWFN_CALL"
+            assert_eq "$QE_STRUCT_DIR" "${call[2]}" "$mode tool did not run in context" || exit 1
+            assert_eq 3 "$QE_STRUCT_NAT" "$mode relative Multiwfn was not resolved" || exit 1
+            qe_release_structure_context || exit 1
+        ) || return 1
+    done
+}
+
+test_structure_context_accepts_legacy_shim_inside_private_directory() {
+    local sandbox
+    sandbox="$(new_sandbox)" || return 1
+    (
+        cd "$sandbox" || exit 1
+        source_qbox
+        prepare_structure_sandbox "$sandbox" || exit 1
+        unset QBOX_MULTIWFN_HOME
+        Multiwfn() { cat >/dev/null; cp -- "$QE_TMP_FIXTURE" "${prefix}_QE.tmp"; }
+        qe_prepare_structure_context "$fname1" || exit 1
+        [ ! -e "$sandbox/water_QE.tmp" ] || { fail 'legacy shim wrote into caller cwd'; exit 1; }
+        assert_eq 3 "$QE_STRUCT_NAT" 'legacy shim result was not parsed' || exit 1
+        qe_release_structure_context || exit 1
+    )
+}
+
 test_structure_context_release_removes_only_registered_context() {
     local sandbox sibling
     sandbox="$(new_sandbox)" || return 1
@@ -834,6 +976,12 @@ test_postprocess_pw_context_is_file_scoped() {
 
 run_test 'baseline MD output remains exact' test_md_baseline_output_is_stable
 run_test 'structure context populates namespaced and legacy globals' test_structure_context_populates_namespaced_and_legacy_globals
+run_test 'structure context survives Multiwfn path limit in deep directories' test_structure_context_uses_short_local_names_under_deep_paths
+run_test 'structure context survives output-only Multiwfn path truncation' test_structure_context_survives_output_only_path_truncation
+run_test 'structure context reports missing Multiwfn output clearly' test_structure_context_missing_output_reports_multiwfn_diagnostic
+run_test 'structure context retains Multiwfn failure diagnostics' test_structure_context_retains_nonzero_multiwfn_diagnostic
+run_test 'structure context resolves relative Multiwfn locations' test_structure_context_resolves_relative_multiwfn_location_before_chdir
+run_test 'structure context keeps legacy shims inside its private directory' test_structure_context_accepts_legacy_shim_inside_private_directory
 run_test 'structure reset preserves unrelated state' test_structure_context_reset_preserves_unrelated_state
 run_test 'structure release removes only registered context' test_structure_context_release_removes_only_registered_context
 run_test 'pwin uses shared structure preparation' test_pwin_uses_shared_structure_preparation

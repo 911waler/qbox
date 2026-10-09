@@ -5,7 +5,6 @@ function nebin (){
 	local neb_output
  
 #run tips
-echo ' 提示：可以直接运行 ./qbox [CuO.relax_ini.in] [CuO.relax_ini.out] [CuO.relax_fin.out] 调用本功能。'
 #read the input files.
 if [ -z "$fname1" ]; then 
 	echo 
@@ -138,11 +137,7 @@ echo " 5) 返回"
 
 #-----------Phonon frequency of adsorbed molecule at gamma-----------
 function qe_phonon_adsorbed_frequency (){
-echo ' 吸附分子 Gamma 点振动频率计算流程：'
-echo ' * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。'
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 计算振动频率。'
-echo '   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out'
+echo ' 吸附分子 Gamma 点振动输入'
 echo 
 echo ' 请输入需要参与线性响应计算的原子编号，例如 3,5,10-15'
 read atmphon
@@ -179,10 +174,7 @@ echo "${atmphon_arry[@]}" >> ${prefix}.ph.in
 function qe_phonon_adsorbed_thermo (){
 	: > "${prefix}.shm"
  
-echo " 吸附分子热力学性质计算流程："
-echo " * 步骤 1：计算吸附分子的 Gamma 点振动频率。"
-echo " * 步骤 2：使用 Shermo 计算热力学性质。"
-echo "   运行命令示例：Shermo xxx.shm -T 298.15 -P 1 -E 300 -imode 1"
+echo ' 吸附分子 Shermo 输入'
 echo
 if [ -z "$fname2" ]; then
 	echo " 本功能需要读取 ph.x 输出文件，例如 xxx.ph.out"
@@ -394,13 +386,7 @@ function qe_generate_phonon_dispersion_inputs (){
 
 #-----------Phonon frequency of gaseous molecule at gamma-----------
 function qe_phonon_gas_frequency (){
-echo ' 气相分子 Gamma 点振动频率计算流程：'
-echo ' * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。'
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 计算振动频率。'
-echo '   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out'
-echo ' * 步骤 3：使用 dynmat.x 施加声学和规则 ASR。'
-echo '   运行命令示例：dynmat.x -i dynmat.in > dynmat.out'
+echo ' 气相分子 Gamma 点振动输入'
 echo
 
     qe_write_ph_input "${prefix}.ph.in" "${prefix}.dynG" '' '' '' \
@@ -423,10 +409,7 @@ function qe_frequency_is_positive (){
 function qe_phonon_gas_thermo (){
 local status last_frequency_line
 local -a gasfreq=()
-echo " 气相分子热力学性质计算流程："
-echo " * 步骤 1：计算气相分子的 Gamma 点振动频率。"
-echo " * 步骤 2：使用 Shermo 计算热力学性质。"
-echo "   运行命令示例：Shermo xxx.shm -T 298.15 -P 1 -E 300 -imode 0"
+echo ' 气相分子 Shermo 输入'
 echo 
  
 if [ -z "$(ls dynmat.mold 2>/dev/null)" ]; then 
@@ -495,13 +478,7 @@ echo '0.00    1' >> ${prefix}.shm
 
 #---------Non-polar materials Phonon frequency at gamma-------
 function qe_phonon_nonpolar_frequency (){
-echo ' 非极性材料 Gamma 点声子频率计算流程：'
-echo ' * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。'
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 计算声子频率。'
-echo '   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out'
-echo ' * 步骤 3：使用 dynmat.x 施加声学和规则 ASR。'
-echo '   运行命令示例：dynmat.x -i dynmat.in > dynmat.out'
+echo ' 非极性材料 Gamma 点声子输入'
 echo
 
     qe_write_ph_input "${prefix}.ph.in" "${prefix}.dynG" '' '' '' \
@@ -512,10 +489,7 @@ echo
 # Gamma-point IR input. Born effective charges and dielectric response require
 # an unperturbed insulating ground state and epsil=.true. in ph.x.
 function qe_phonon_ir (){
-	echo ' 红外光谱 IR 计算流程：'
-	echo ' * 步骤 1：使用绝缘体/半导体平衡结构完成 pw.x SCF。'
-	echo ' * 步骤 2：使用 ph.x 在 Gamma 点计算声子、Born 有效电荷和介电张量。'
-	echo ' * 步骤 3：使用 dynmat.x 计算振动模式和 IR 活性。'
+	echo ' 红外光谱 IR 输入（绝缘体/半导体）'
 	echo
 
 
@@ -527,17 +501,7 @@ function qe_phonon_ir (){
 
 #---------Non-polar materials Phonon dispersion-------
 function qe_phonon_nonpolar_dispersion (){
-echo " 非极性材料声子色散计算流程："
-echo " * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。"
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 在均匀 q 点网格上进行声子计算。'
-echo "   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out"
-echo ' * 步骤 3：使用 q2r.x 计算原子间力常数 IFC。'
-echo '   运行命令示例：q2r.x -i xxx.q2r.in > xxx.q2r.out'
-echo ' * 步骤 4：使用 matdyn.x 基于 IFC 计算路径 q 点上的声子。'
-echo '   运行命令示例：matdyn.x -i xxx.matdyn.in > xxx.matdyn.out'
-echo ' * 步骤 5：使用 plotband.x 和 gnuplot 绘制声子色散。'
-echo '   运行命令示例：plotband.x < xxx.plotband.in > xxx.plotband.out'
+echo ' 非极性材料声子色散输入'
 echo 
 
     qe_generate_phonon_dispersion_inputs "$prefix"
@@ -545,13 +509,7 @@ echo
 
 #---------Non-polar materials raman-------
 function qe_phonon_nonpolar_raman (){
-echo ' 非极性材料 Raman 光谱计算流程：'
-echo ' * 步骤 1：使用 lda 泛函和 NC 赝势对平衡结构进行自洽场计算。'
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 计算 Raman 光谱。'
-echo '   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out'
-echo ' * 步骤 3：使用 dynmat.x 施加声学和规则 ASR。'
-echo '   运行命令示例：dynmat.x -i dynmat.in > dynmat.out'
+echo ' 非极性材料 Raman 输入（LDA / NC 赝势）'
 echo
 
     qe_write_ph_input "${prefix}.ph.in" "${prefix}.dynG" '' '.true.' '' \
@@ -561,13 +519,7 @@ echo
 
 #---------polar materials Phonon frequency at gamma-------
 function qe_phonon_polar_frequency (){
-echo ' 极性材料 Gamma 点声子频率计算流程：'
-echo ' * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。'
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 计算声子频率。'
-echo '   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out'
-echo ' * 步骤 3：使用 dynmat.x 施加声学和规则 ASR。'
-echo '   运行命令示例：dynmat.x -i dynmat.in > dynmat.out'
+echo ' 极性材料 Gamma 点声子输入'
 echo
 
     qe_write_ph_input "${prefix}.ph.in" "${prefix}.dynG" '' '' '' \
@@ -578,17 +530,7 @@ echo
 
 #---------polar materials Phonon dispersion-------
 function qe_phonon_polar_dispersion (){
-echo " 极性材料声子色散计算流程："
-echo " * 步骤 1：使用 pw.x 对平衡结构进行自洽场计算。"
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 在均匀 q 点网格上进行声子计算。'
-echo "   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out"
-echo ' * 步骤 3：使用 q2r.x 计算原子间力常数 IFC。'
-echo '   运行命令示例：q2r.x -i xxx.q2r.in > xxx.q2r.out'
-echo ' * 步骤 4：使用 matdyn.x 基于 IFC 计算路径 q 点上的声子。'
-echo '   运行命令示例：matdyn.x -i xxx.matdyn.in > xxx.matdyn.out'
-echo ' * 步骤 5：使用 plotband.x 和 gnuplot 绘制声子色散。'
-echo '   运行命令示例：plotband.x < xxx.plotband.in > xxx.plotband.out'
+echo ' 极性材料声子色散输入'
 echo 
 
     qe_generate_phonon_dispersion_inputs "$prefix"
@@ -596,13 +538,7 @@ echo
 
 #---------polar materials raman-------
 function qe_phonon_polar_raman (){
-echo ' 极性材料 Raman 光谱计算流程：'
-echo ' * 步骤 1：使用 lda 泛函和 NC 赝势对平衡结构进行自洽场计算。'
-echo '   运行命令示例：mpirun -np 16 pw.x -i xxx.scf.in > xxx.scf.out'
-echo ' * 步骤 2：使用 ph.x 计算 Raman 光谱。'
-echo '   运行命令示例：mpirun -np 16 ph.x -i xxx.ph.in > xxx.ph.out'
-echo ' * 步骤 3：使用 dynmat.x 施加声学和规则 ASR。'
-echo '   运行命令示例：dynmat.x -i dynmat.in > dynmat.out'
+echo ' 极性材料 Raman 输入（LDA / NC 赝势）'
 echo
 
     qe_write_ph_input "${prefix}.ph.in" "${prefix}.dynG" '' '.true.' '' \
@@ -611,192 +547,17 @@ echo
         'q(1)=1.0,' 'q(2)=0.0,' 'q(3)=0.0,'
 }
 function phin (){
-
-echo " * 本模块用于生成吸附分子、气相分子和固体体系的声子/热力学性质相关输入文件。"
-echo ' * 声子计算与 DFT-D3 不兼容，但支持 DFT-D2。'
-echo ' * Raman 光谱计算通常要求泛函为 lda，赝势为 NC。'
-echo
-
-#functions need to read pw.x input file
-if [ -z "$fname1" ]; then
-	echo ' 本功能需要读取 pw.x 输入文件。'
-	if ! read -r fname1; then return 1; fi
-	while [ -z "$fname1" ]; do
-        echo
-        echo ' 请输入 pw.x 输入文件。'
-        if ! read -r fname1; then return 1; fi
-    done
-    qe_set_input_path "$fname1" || return 1
-fi
-
-natm=`grep 'nat' "$fname1" | awk '{print $3}'`
-ntyp=`grep 'ntyp' ${fname1} | awk '{print $3}'`
-begatmpos=`grep -n 'ATOMIC_POSITIONS' "$fname1" | awk -F : '{print $1 + 1}'`
-endatmpos=$((${begatmpos} + ${natm} -1))
-
-#Get the number of atoms of each types and the corresponding elements.
-for ((i=1;i<=$ntyp;i++))
-do
-	atmtype[$i]=`sed -n "${begatmpos},${endatmpos}p" ${fname1} | awk '{print $1}'|sort|uniq |awk -v var="$i" 'NR==var{print $1}'`
-done
-
-
-qe_phonon_menu
-phin_choice=("1" "2" "3" "4" "5")
-if ! read -r phin_arg; then return 1; fi
-while ! echo "${phin_choice[@]}" | grep -wq "$phin_arg"
-do
-	echo "请输入有效的功能编号..."
-	if ! read -r phin_arg; then return 1; fi
-done
-
-
-
-
-
-
-
-
-
-
-
-
- 
- 
-while [[ "$phin_arg" != "5" ]]; do
-	case $phin_arg in
-		"1")
-			PS3=''
-			slab_array=("吸附分子 Gamma 点振动频率" "吸附分子热力学性质" "返回")
-			select islab in "${slab_array[@]}"; do
-				case "$islab" in 
-						"吸附分子 Gamma 点振动频率")
-							qe_phonon_adsorbed_frequency || return 1
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-						"吸附分子热力学性质")
-							qe_phonon_adsorbed_thermo
-							echo ' Shermo 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-					"返回")
-						qe_phonon_menu
-						break
-						;;
-					"*")
-						;;
-				esac
-			done		
-			;;
-		"2")
-			PS3=''
-			gasmol_array=("气相分子 Gamma 点振动频率" "气相分子热力学性质" "返回")
-			select igasmol in "${gasmol_array[@]}"; do
-				case $igasmol in 
-						"气相分子 Gamma 点振动频率")
-							qe_phonon_gas_frequency
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-						"气相分子热力学性质")
-							qe_phonon_gas_thermo
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-					"返回")
-						qe_phonon_menu
-						break
-						;;
-					"*")
-						;;
-				esac
-			done	
-			;;
-		"3")
-			PS3=''
-			nonpolar_array=("Gamma 点声子频率" "声子色散" "红外光谱 IR" "拉曼光谱 Raman" "返回")
-			select inonpolar in "${nonpolar_array[@]}"; do
-				case "$inonpolar" in 
-						"Gamma 点声子频率")
-							qe_phonon_nonpolar_frequency
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-						"声子色散")
-							qe_phonon_nonpolar_dispersion
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-							;;
-						"红外光谱 IR")
-							qe_phonon_ir
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-							;;
-						"拉曼光谱 Raman")
-							qe_phonon_nonpolar_raman
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-					"返回")
-						qe_phonon_menu
-						break
-						;;
-					"*")
-						;;
-				esac
-			done
-			;;
-		"4")
-			PS3=''
-			polar_array=("Gamma 点声子频率" "声子色散" "红外光谱 IR" "拉曼光谱 Raman" "返回")
-			select ipolar in "${polar_array[@]}"; do
-				case "$ipolar" in 
-						"Gamma 点声子频率")
-							qe_phonon_polar_frequency
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-						"声子色散")
-							qe_phonon_polar_dispersion
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-							;;
-						"红外光谱 IR")
-							qe_phonon_ir
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-							;;
-						"拉曼光谱 Raman")
-							qe_phonon_polar_raman
-							echo ' 输入文件已在当前文件夹生成。'
-							return 0
-						;;
-					"返回")
-						qe_phonon_menu
-						break
-						;;
-					"*")
-						;;
-				esac
-			done
-			;;
-		"*")
-			;;
-	esac
-	unset phin_arg
-	if ! read -r phin_arg; then return 1; fi
-	while ! echo "${phin_choice[@]}" | grep -wq "$phin_arg" 
-	do
-	  echo "请输入有效的功能编号..."
-	  if ! read -r phin_arg; then return 1; fi
-	done
-done
- 
-if [[ "$phin_arg" == "5" ]]; then
-	qe_request_main_menu
-	return 0
-fi
+    local phonon_args=(--from-main-menu) status=0
+    if [ -n "${fname1:-}" ]; then
+        phonon_args+=(--source "$fname1")
+    fi
+    qbox_python -m qbox.io.phonon_menu "${phonon_args[@]}" || status=$?
+    # Only explicit navigation returns to the main menu; generation exits.
+    if [ "$status" = 10 ]; then
+        if [ -z "${QE_DIRECT_ACTION:-}" ]; then
+            qe_request_main_menu
+        fi
+        return 0
+    fi
+    return "$status"
 }
- 
-#--------------------------------- hp.x module----------------------------------------

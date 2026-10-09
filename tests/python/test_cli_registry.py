@@ -84,13 +84,30 @@ class CliRegistryTests(unittest.TestCase):
 
     def test_registry_lists_every_legacy_task_once(self):
         registry = importlib.import_module("qbox.registry")
-        self.assertEqual([task.id for task in registry.TASKS], list(range(38)))
-        self.assertEqual(len({task.slug for task in registry.TASKS}), 38)
-        self.assertEqual(len({task.handler for task in registry.TASKS}), 38)
+        self.assertEqual([task.id for task in registry.TASKS], list(range(41)))
+        self.assertEqual(len({task.slug for task in registry.TASKS}), 41)
+        self.assertEqual(len({task.handler for task in registry.TASKS}), 41)
         for selector in ("0", "pw-input"):
             self.assertEqual(registry.get_task(selector).handler, "pwin")
-        self.assertEqual(registry.get_task("27").handler, "qbox_nscf_menu")
-        self.assertEqual(registry.get_task("37").handler, "qe_action_vasp_to_cif")
+        self.assertEqual(registry.get_task("28").handler, "qbox_nscf_menu")
+        self.assertEqual(registry.get_task("38").handler, "qe_action_vasp_to_cif")
+        for selector in ('39', 'plot-phonons'):
+            task = registry.get_task(selector)
+            self.assertEqual(task.handler, 'plot_qe_phonon')
+            self.assertEqual(task.category, '绘图功能')
+            self.assertEqual(task.title, '绘制 QE 声子谱图')
+        for selector in ('40', 'phonons'):
+            task = registry.get_task(selector)
+            self.assertEqual(task.handler, 'run_qe_phonon_calculation')
+            self.assertEqual(task.category, '执行计算')
+            self.assertEqual(task.title, '声子计算')
+
+    def test_phonon_calculation_menu_entry_is_in_execution_group(self):
+        registry = importlib.import_module("qbox.registry")
+        menu = registry.render_menu()
+        self.assertEqual(menu.count("40) 声子计算"), 1)
+        self.assertLess(menu.index("执行计算"), menu.index("40) 声子计算"))
+        self.assertLess(menu.index("40) 声子计算"), menu.index("绘图功能"))
 
     def test_private_registry_menu_matches_legacy_display(self):
         result = self.run_module("qbox.registry", "--menu")
@@ -104,24 +121,24 @@ class CliRegistryTests(unittest.TestCase):
         registry = importlib.import_module("qbox.registry")
         tasks = (
             *registry.TASKS,
-            registry.TaskSpec(38, "new-input", "新增输入任务", "输入文件生成", "new_input"),
-            registry.TaskSpec(39, "new-category", "新分类任务", "新增分类", "new_category"),
+            registry.TaskSpec(41, "new-input", "新增输入任务", "输入文件生成", "new_input"),
+            registry.TaskSpec(42, "new-category", "新分类任务", "新增分类", "new_category"),
         )
         menu = registry.render_menu(tasks)
-        self.assertEqual(menu.count("38) 新增输入任务"), 1)
-        self.assertEqual(menu.count("39) 新分类任务"), 1)
-        self.assertLess(menu.index("38) 新增输入任务"), menu.index("执行计算"))
+        self.assertEqual(menu.count("41) 新增输入任务"), 1)
+        self.assertEqual(menu.count("42) 新分类任务"), 1)
+        self.assertLess(menu.index("41) 新增输入任务"), menu.index("执行计算"))
         self.assertIn("新增分类", menu)
         self.assertEqual(menu.count("0) 生成 pw.x 输入文件"), 1)
 
     def test_private_registry_ids_and_handler_are_safe(self):
         result = self.run_module("qbox.registry", "--ids")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.split(), [str(i) for i in range(38)])
-        result = self.run_module("qbox.registry", "--handler", "13")
+        self.assertEqual(result.stdout.split(), [str(i) for i in range(41)])
+        result = self.run_module("qbox.registry", "--handler", "14")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "qe_action_pdos\n")
-        for invalid in ("-1", "38", "00", "pw-input", "pwin; touch bad"):
+        for invalid in ("-1", "41", "00", "pw-input", "pwin; touch bad"):
             result = self.run_module("qbox.registry", "--handler", invalid)
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
@@ -130,14 +147,18 @@ class CliRegistryTests(unittest.TestCase):
         result = self.run_module("qbox", "--list")
         self.assertEqual(result.returncode, 0, result.stderr)
         lines = result.stdout.splitlines()
-        self.assertEqual(len(lines), 39)
+        self.assertEqual(len(lines), 42)
         self.assertIn("pw-input", lines[1])
-        self.assertIn("vasp-to-cif", lines[-1])
+        self.assertIn("vasp-to-cif", lines[-3])
+        self.assertIn("plot-phonons", lines[-2])
+        self.assertIn("phonons", lines[-1])
+        self.assertIn("执行计算", lines[-1])
+        self.assertIn("声子计算", lines[-1])
         self.assertIn("输入文件生成", result.stdout)
 
     def test_invalid_or_missing_explicit_task_never_runs_legacy(self):
         cli = importlib.import_module("qbox.cli")
-        for args in (["--task"], ["--task", "38"], ["--task", "not-a-task"]):
+        for args in (["--task"], ["--task", "41"], ["--task", "not-a-task"]):
             with patch("qbox.cli.os.execvpe") as execute, contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(cli.main(args), 2)
                 execute.assert_not_called()
@@ -162,13 +183,18 @@ class CliRegistryTests(unittest.TestCase):
 
     def test_explicit_task_preserves_input_arguments_and_sets_validated_id(self):
         cli = importlib.import_module("qbox.cli")
-        for selector in ("0", "pw-input"):
+        for selector, task_id, source in (("0", "0", "input with spaces.cif"),
+                ("pw-input", "0", "input with spaces.cif"),
+                ("39", "39", "phonon with spaces.freq.gp"),
+                ("plot-phonons", "39", "phonon with spaces.freq.gp"),
+                ("40", "40", "silicon with spaces.scf.in"),
+                ("phonons", "40", "silicon with spaces.scf.in")):
             with patch.dict(os.environ, {}, clear=True), patch("qbox.cli.os.execvpe") as execute:
-                self.assertEqual(cli.main(["--task", selector, "input with spaces.cif"]), 0)
+                self.assertEqual(cli.main(["--task", selector, source]), 0)
                 _, arguments, env = execute.call_args.args
-            self.assertEqual(arguments[-1], "input with spaces.cif")
+            self.assertEqual(arguments[-1], source)
             self.assertNotIn(selector, arguments[2:])
-            self.assertEqual(env["QBOX_TASK_ID"], "0")
+            self.assertEqual(env["QBOX_TASK_ID"], task_id)
             self.assertEqual(env["QBOX_PYTHON"], sys.executable)
 
     def test_shared_root_keeps_configured_interpreter_default(self):

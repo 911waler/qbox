@@ -118,8 +118,9 @@ function qe_release_structure_context_with_status (){
 }
 
 function qe_prepare_structure_context (){
-    local input_file="${1-}" converted_file context_dir structure_tmp legacy_tmp
-    local legacy_tmp_was_present=0 multiwfn_status parsed parser_status key value
+    local input_file="${1-}" converted_file context_dir structure_tmp
+    local multiwfn_command multiwfn_log local_input converted_basename
+    local local_output='structure_QE.tmp' multiwfn_status parsed parser_status key value
     local i line_index a_var x_var y_var z_var k_var type_var count_var
     local release_status
 
@@ -141,6 +142,7 @@ function qe_prepare_structure_context (){
     }
     qe_validate_calc_prefix "$prefix" || return 1
     require_multiwfn || return 1
+    multiwfn_command="$(qbox_find_multiwfn)" || return 1
 
     context_dir="$(mktemp -d "$PWD/.qbox-structure.XXXXXX")" || {
         echo ' 错误：无法创建结构解析临时目录。' >&2
@@ -151,44 +153,57 @@ function qe_prepare_structure_context (){
         return 1
     }
     structure_tmp="$context_dir/${prefix}_QE.tmp"
-    legacy_tmp="$PWD/${prefix}_QE.tmp"
-    if [ -e "$legacy_tmp" ] || [ -L "$legacy_tmp" ]; then
-        legacy_tmp_was_present=1
-    fi
+    multiwfn_log="$context_dir/multiwfn.log"
+    converted_basename="${converted_file##*/}"
+    case "$converted_basename" in
+        *.*) local_input="structure.${converted_basename##*.}" ;;
+        *) local_input='structure' ;;
+    esac
     QE_STRUCT_INPUT="$converted_file"
     QE_STRUCT_SOURCE="$input_file"
     QE_STRUCT_DIR="$context_dir"
     QE_STRUCT_TMP="$structure_tmp"
+    cp -- "$converted_file" "$context_dir/$local_input" || {
+        qe_release_structure_context
+        return 1
+    }
 
     echo ' 正在调用 Multiwfn 解析晶胞和原子坐标信息....'
     echo
-    qbox_multiwfn "$converted_file" << EOF_MWIN &> /dev/null
+    # Multiwfn uses fixed-length pathname buffers. Short local names avoid
+    # truncation even when the project and its nested staging path are long.
+    (
+        cd -- "$context_dir" || exit 1
+        "$multiwfn_command" "$local_input" << EOF_MWIN
 100
 2
 26
-$structure_tmp
+$local_output
 0
 q
 EOF_MWIN
+    ) >"$multiwfn_log" 2>&1
     multiwfn_status=$?
     if [ "$multiwfn_status" -ne 0 ]; then
-        if [ "$legacy_tmp_was_present" -eq 0 ]; then
-            rm -f -- "$legacy_tmp"
-        fi
+        echo " 错误：Multiwfn 结构解析失败（退出码 $multiwfn_status）。" >&2
+        tail -n 20 -- "$multiwfn_log" >&2
         qe_release_structure_context
         return "$multiwfn_status"
     fi
 
-    # A few callers provide a legacy-compatible Multiwfn shim that writes the
-    # predictable name in the caller directory. Accept that shim only when it
-    # did not overwrite an existing caller-owned file, then move its result
-    # into the private context before parsing.
-    if [ ! -s "$structure_tmp" ] && [ "$legacy_tmp_was_present" -eq 0 ] && [ -s "$legacy_tmp" ]; then
-        mv -- "$legacy_tmp" "$structure_tmp" || {
-            [ "$legacy_tmp_was_present" -eq 1 ] || rm -f -- "$legacy_tmp"
+    # Retain the public context filename. Legacy shims may already write that
+    # name; they now do so inside the private context, never in the caller cwd.
+    if [ "$context_dir/$local_output" != "$structure_tmp" ] && [ -s "$context_dir/$local_output" ]; then
+        mv -- "$context_dir/$local_output" "$structure_tmp" || {
             qe_release_structure_context
             return 1
         }
+    fi
+    if [ ! -s "$structure_tmp" ]; then
+        echo ' 错误：Multiwfn 未生成有效的 QE 结构文件，请检查以下解析信息。' >&2
+        tail -n 20 -- "$multiwfn_log" >&2
+        qe_release_structure_context
+        return 1
     fi
 
     parsed="$(awk '
@@ -304,9 +319,7 @@ EOF_MWIN
     ' "$structure_tmp")"
     parser_status=$?
     if [ "$parser_status" -ne 0 ]; then
-        if [ "$legacy_tmp_was_present" -eq 0 ]; then
-            rm -f -- "$legacy_tmp"
-        fi
+        tail -n 20 -- "$multiwfn_log" >&2
         qe_release_structure_context
         return 1
     fi

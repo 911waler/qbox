@@ -163,14 +163,116 @@ Discover all task IDs and readable names, or select a task explicitly:
 ```bash
 qbox --list
 qbox --task scf sample.cif
-qbox --task 11 sample.cif
+qbox --task 12 sample.cif
 ```
 
-Task IDs 0–37, interactive menus, legacy argument positions and PW presets
-(such as `qbox sample.cif 00`) are preserved. `--task` removes ambiguity between
+Task IDs 0–10 are unchanged. New task 11 generates Wannier90 inputs; previous
+IDs 11–37 move to 12–38. Named tasks, legacy argument positions and PW presets
+(such as `qbox sample.cif 00`) are preserved. See the [number migration table](docs/releases/wannier-inputs.md). `--task` removes ambiguity between
 a numeric filename and a task ID; the remaining arguments are input paths, not
 legacy selectors. Tasks may still ask for workflow-specific choices. The module
 entry `python -m qbox` is also available after installation.
+
+## Wannier90 inputs
+
+The source-tree launcher also reads an optional `.qbox-local.sh` beside `qbox`
+before starting the menu or a direct task. Keep workstation defaults there with
+exported fallback assignments (for example,
+`export QBOX_PSEUDO_ROOT="${QBOX_PSEUDO_ROOT:-/path/to/pseudopotentials}"`).
+This file is Git-ignored and is not bundled. Direct `python -m qbox` and sourcing
+`qbox` do not load it.
+
+```bash
+qbox --task wannier-input sample.cif
+qbox --task wannier-input sample.scf.in
+qbox --task wannier-input --config settings.json --conflict cancel
+qbox kmesh 4 4 2 --format qe
+```
+
+Select one of six directions, then edit tasks, source/run directory, seed/version,
+grid, bands/projections, energy windows and task parameters. The menu preserves
+common settings when changing direction and replaces task selections. Target
+Wannier90 3.1.0 inputs are validated and previewed before writing to the current
+directory; conflicts offer backup, rename or cancel. Generation does not run QE
+or Wannier90. After direction selection, CIF sources first reuse a matching SCF
+input in the current directory. The QE input wizard opens only when no matching
+SCF is found; no completed SCF calculation is required. New SCF inputs are also
+saved in the current directory, with rename or
+cancel on conflicts. See [usage and migration notes](docs/releases/wannier-inputs.md).
+
+## Phonon calculations
+
+Execution menu **40 / phonons** currently offers phonon dispersion calculations:
+
+```bash
+qbox --task phonons model.cif
+qbox --task phonons model.scf.in
+```
+
+The existing input wizard prepares SCF and dispersion inputs, then qbox runs
+SCF → `ph.x` → `q2r.x` → `matdyn.x` → plotting. A CIF without a companion SCF
+input enters the SCF wizard first. SCF and PH have separate MPI process counts;
+q2r and matdyn run serially. All working inputs, `scf.out`, `ph.out`, `q2r.out`,
+`matdyn.out`, `plot.out`, scratch data, frequency tables and PNG/SVG plots stay
+inside the current project's `PHONON/` directory.
+
+The original SCF input is preserved. Its working copy redirects scratch into
+`PHONON/` while resolving pseudopotentials against the original source directory.
+On a subsequent run, reuse the prepared inputs and completed stages or request a
+full recalculation. Completion records track inputs and required products;
+upstream changes invalidate downstream stages. Calculation or plotting failures
+stop subsequent stages and return a nonzero status. Gamma-only frequencies, IR
+and Raman execution are not yet offered.
+
+After loading QE/MPI, maintainers can run
+`tools/verify-phonon-native.py --pseudo /path/to/Si.UPF` to exercise the public
+qbox entry point from an empty calculation directory, then test resumption and
+input invalidation. Small meshes and cutoffs test orchestration, not converged
+material properties. This verification requires neither Codex nor a network service.
+Add `--from-cif` to start with only a CIF in a long directory path and also
+exercise real Multiwfn conversion and the SCF input wizard; this mode requires
+Multiwfn to be configured.
+
+## Phonon dispersion plots
+
+Menu **39 / plot-phonons** scans all `*.freq.gp` files in the current directory
+and writes a separate `<prefix>_phonon.png` and `<prefix>_phonon.svg` for each:
+
+```bash
+qbox --task plot-phonons
+qbox --task plot-phonons sic.freq.gp
+```
+
+During automatic detection, matching `.path.json` metadata takes precedence.
+Explicit companion files override automatic detection. For external QE data, qbox
+also looks for associated MATDYN inputs and reads path vertices, interpolation
+counts, explicit breaks, and trailing labels such as `! Gamma` or `! X`.
+The input's `flfrq` and expanded point count must match the data. Frequencies
+remain in cm⁻¹, including negative values; disconnected segments are drawn
+separately. A standalone `.freq.gp` is plotted with a numeric x axis, without
+inventing high-symmetry labels.
+
+Newly generated MATDYN inputs include endpoint labels and `qbox:path-v1`
+comments describing segment boundaries and Gamma guard rows. This preserves
+labels, disconnected segments, and guard exclusions even without JSON, without
+changing QE's numeric input. Existing inputs are not rewritten automatically.
+Labels map to `.freq.gp` positions by sample index; a companion `.freq` provides
+q-coordinate and frequency consistency checks. Repeated Gamma rows can encode
+different directional limits and must not be deduplicated by q coordinate.
+
+The interactive menu accepts another path file or manual labels and breaks.
+Manual settings replace automatic path settings and use one-based numeric
+data rows, excluding comments and blank lines. A break identifies the first
+row of the next segment:
+
+```bash
+python -m qbox.postprocess.phonon_plot -i sic.freq.gp --ticks '1:Gamma,21:X,22:M,42:Gamma' --breaks 22
+```
+
+The Python module also accepts `--directory` for batch plotting, `--matdyn`
+or `--path` for explicit companion files, and the existing `.freq` plus
+`.path.json` interface. Invalid files do not prevent other batch members
+from being plotted; any failures are summarized and produce a nonzero status.
 
 ## Module layout and development
 

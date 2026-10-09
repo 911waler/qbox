@@ -68,7 +68,7 @@ class ExplicitPathTests(unittest.TestCase):
 
     def test_legacy_scf_selector_still_prompts_for_input(self):
         shutil.copyfile(PW_FIXTURE, self.directory / "source.scf.in")
-        result = self.run_cli("29", input="source.scf.in\n")
+        result = self.run_cli("30", input="source.scf.in\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("calculation     = 'nscf'", (self.directory / "source.nscf.in").read_text())
 
@@ -90,13 +90,13 @@ class ExplicitPathTests(unittest.TestCase):
         self.assertIn("_atom_site_fract_x", output)
 
     def test_explicit_plot_inputs_are_not_replaced_by_numeric_selectors(self):
-        for filename, second in (("19", ""), ("provided.cif", "19")):
+        for filename, second in (("20", ""), ("provided.cif", "20")):
             with self.subTest(filename=filename, second=second):
                 (self.directory / filename).write_text("0 -1\n1 1\n")
                 (self.directory / "bands.dat.gnu").write_text("0 100\n1 200\n")
                 result = self.run_adapter(
                     'qe_embedded_plot_band() { printf "%s\\n" "$@" > selected.args; }; '
-                    'QBOX_TASK_ID=19; qe_prepare_invocation "$@" || exit; plot_qe_band',
+                    'QBOX_TASK_ID=20; qe_prepare_invocation "$@" || exit; plot_qe_band',
                     filename, second, input="1\n\n\n\n4\n",
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -104,7 +104,7 @@ class ExplicitPathTests(unittest.TestCase):
                 self.assertEqual(selected[:2], ["-i", filename])
 
     def test_legacy_plot_selectors_still_use_default_band_data(self):
-        for filename, second in (("19", ""), ("provided.cif", "19")):
+        for filename, second in (("20", ""), ("provided.cif", "20")):
             with self.subTest(filename=filename, second=second):
                 (self.directory / filename).write_text("0 -1\n1 1\n")
                 (self.directory / "bands.dat.gnu").write_text("0 100\n1 200\n")
@@ -117,6 +117,67 @@ class ExplicitPathTests(unittest.TestCase):
                 selected = (self.directory / "selected.args").read_text().splitlines()
                 self.assertEqual(selected[:2], ["-i", "bands.dat.gnu"])
 
+    def test_phonon_plot_adapter_preserves_data_path_batch_mode_and_exit_status(self):
+        for name in ('phonon data.freq.gp', 'native.freq', 'structure.cif'):
+            (self.directory / name).write_text('fixture')
+        for filename, selected_input in (('phonon data.freq.gp', 'phonon data.freq.gp'),
+                ('native.freq', 'native.freq'), ('', None), ('structure.cif', None),
+                ('missing.freq.gp', 'missing.freq.gp')):
+            for status in (0, 7):
+                with self.subTest(filename=filename, status=status):
+                    # The external Python boundary is the only stand-in in this routing test.
+                    result = self.run_adapter(
+                        'qbox_python() { printf "%s\\n" "$@" > selected.args; return ' + str(status) + '; }; '
+                        'fname1="$1"; plot_qe_phonon', filename)
+                    self.assertEqual(result.returncode, status, result.stdout + result.stderr)
+                    selected = (self.directory / 'selected.args').read_text().splitlines()
+                    self.assertEqual(selected, ['-m', 'qbox.postprocess.phonon_plot', '--interactive']
+                                     + (['-i', selected_input] if selected_input else []))
+
+    def test_phonon_plot_numeric_shortcuts_preserve_source_in_either_position(self):
+        source = 'phonon data.freq.gp'
+        (self.directory / source).write_text('fixture')
+        for arguments in (('39', source), (source, '39')):
+            with self.subTest(arguments=arguments):
+                result = self.run_adapter(
+                    'plot_qe_phonon() { printf "%s\\n" "$fname1" > selected.args; }; '
+                    'qe_main "$@"', *arguments)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual((self.directory / 'selected.args').read_text().splitlines(), [source])
+
+    def test_phonon_calculation_handler_is_loaded_by_source_entry(self):
+        result = self.run_adapter('declare -F run_qe_phonon_calculation')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_phonon_calculation_selectors_preserve_source_in_either_position(self):
+        source = 'silicon with spaces.scf.in'
+        (self.directory / source).write_text('fixture')
+        for arguments in (('40', source), (source, '40')):
+            with self.subTest(arguments=arguments):
+                result = self.run_adapter(
+                    'run_qe_phonon_calculation() { printf "%s\\n" "$fname1" "$prefix" > selected.args; }; '
+                    'qe_main "$@"', *arguments)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual((self.directory / 'selected.args').read_text().splitlines(),
+                                 [source, 'silicon with spaces'])
+
+    def test_explicit_phonon_calculation_keeps_numeric_filename(self):
+        (self.directory / '39').write_text('fixture')
+        result = self.run_adapter(
+            'run_qe_phonon_calculation() { printf "%s\\n" "$fname1" > selected.args; }; '
+            'QBOX_TASK_ID=40 qe_main "$@"', '39')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.directory / 'selected.args').read_text().splitlines(), ['39'])
+
+    def test_interactive_phonon_calculation_preserves_initial_source(self):
+        source = 'silicon with spaces.scf.in'
+        (self.directory / source).write_text('fixture')
+        result = self.run_adapter(
+            'run_qe_phonon_calculation() { printf "%s\\n" "$fname1" > selected.args; }; '
+            'qe_main "$@"', source, input='40\n')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.directory / 'selected.args').read_text().splitlines(), [source])
+
     def test_explicit_dopant_pdos_keeps_file_named_28(self):
         shutil.copyfile(PW_FIXTURE, self.directory / "28")
         # The legacy fallback can find this alternative, making a wrong branch
@@ -125,7 +186,7 @@ class ExplicitPathTests(unittest.TestCase):
         (self.directory / "water.pdos_atm#1").write_text("0 1\n")
         result = self.run_adapter(
             'qbox_python() { printf "%s\\n" "$@" > selected.args; }; '
-            'QBOX_TASK_ID=28; fname1=28; analyze_qe_dopant_pdos',
+            'QBOX_TASK_ID=29; fname1=28; analyze_qe_dopant_pdos',
             input="\n\n\n\n\n\n",
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -134,11 +195,11 @@ class ExplicitPathTests(unittest.TestCase):
 
     def test_explicit_secondary_numeric_path_does_not_disable_vasp_conversion(self):
         (self.directory / "water.vasp").write_text(VASP_FIXTURE)
-        for second in ("36", "37"):
+        for second in ("36", "37", "38"):
             with self.subTest(second=second):
                 result = self.run_adapter(
                     'run_qe_scf_calculation() { printf "%s\\n" "$fname1" "$fname2" > selected.args; }; '
-                    'QBOX_TASK_ID=11 qe_main "$@"', "water.vasp", second,
+                    'QBOX_TASK_ID=12 qe_main "$@"', "water.vasp", second,
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 selected = (self.directory / "selected.args").read_text().splitlines()

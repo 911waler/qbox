@@ -2,24 +2,7 @@
 # Internal compatibility module; source via legacy/load.sh.
 
 function hpin (){
-#print how to calculate hubbard U parameters
-echo ' 提示：'
-echo ' * 非磁性体系：'
-echo '  步骤 1：在 pw.x 输入文件中开启 Hubbard U，并为对应元素设置一个非零 U 值，例如 1.D-8。'
-echo '  步骤 2：使用 hp.x 计算 U 值。'
-echo 
-echo ' * 反铁磁/磁性绝缘体：'
-echo '   步骤 1：在 pw.x 输入文件中开启 Hubbard U，并为对应元素设置非零 U 值，例如 1.D-8，同时设置磁矩。'
-echo '   步骤 2：复制上一步输入文件，做以下修改后再次运行：'
-echo '   * 将 occupations 改为 fixed'
-echo '   * 设置 tot_magnetization 和 nbnd，这些值可从上一次 pw.x 输出文件中获取'
-echo "   * 在 &ELECTRON 段加入 startingpot='file', startingwfc='file'"
-echo '   步骤 3：使用 hp.x 计算 U 值。'
-echo 
-echo " * 如果要计算两种元素的 U，先运行 hp.element1.in，再运行 hp.element2.in，最后运行 hp.tot.in。"
-echo 
-echo ' * 计算 DFT+U+V 时，hp.x 输入文件格式与 DFT+U 相同。'
-echo '   运行命令示例：mpirun -np 16 hp.x -i hp.in > hp.out'
+echo ' Hubbard U 输入（需要已完成的 DFT+U SCF）'
 echo 
  
 PS3=''
@@ -252,11 +235,6 @@ local dos_default_emin dos_default_emax dos_fermi_energy
 read dos_default_emin dos_default_emax <<< `qe_default_dos_energy_window`
 dos_fermi_energy=`qe_read_fermi_energy_from_outputs`
  
-echo ' 提示：'
-echo " * 非金属/有带隙掺杂体系建议使用 tetrahedra 方法得到更清晰的 DOS，相关数据应由 pw.x 使用 occupations='tetrahedra' 生成。"
-echo " * tetrahedra 方法需要更密的 K 点。注意 QE 中 'k1 k2 k3 0 0 0' 的 Monkhorst-Pack 网格总是经过 Gamma 点。"
-echo " * 金属/费米面穿过能带的掺杂体系将使用 smearing 展宽方法。"
-echo ' * 运行命令示例：mpirun -np 6 dos.x -i dos.in > dos.out'
 if echo "$dos_fermi_energy" | awk '$1 ~ /^[-+]?[0-9]*\.?[0-9]+$/ {exit 0} {exit 1}'; then
 	echo " * 已读取 Fermi level：${dos_fermi_energy} eV，默认 DOS 能量范围：${dos_default_emin} 到 ${dos_default_emax} eV。"
 else
@@ -711,11 +689,6 @@ local pdos_default_emin pdos_default_emax pdos_fermi_energy
 read pdos_default_emin pdos_default_emax <<< `qe_default_dos_energy_window`
 pdos_fermi_energy=`qe_read_fermi_energy_from_outputs`
  
-echo ' 提示：'
-echo " * 非金属/有带隙掺杂体系建议使用 tetrahedra 方法得到更清晰的 PDOS，相关数据应由 pw.x 使用 occupations='tetrahedra' 生成。"
-echo " * tetrahedra 方法需要更密的 K 点。注意 QE 中 'k1 k2 k3 0 0 0' 的 Monkhorst-Pack 网格总是经过 Gamma 点。"
-echo " * 金属/费米面穿过能带的掺杂体系将使用 smearing 展宽方法。"
-echo ' * 运行命令示例：mpirun -np 6 projwfc.x -i pdos.in > projwfc.out'
 if echo "$pdos_fermi_energy" | awk '$1 ~ /^[-+]?[0-9]*\.?[0-9]+$/ {exit 0} {exit 1}'; then
 	echo " * 已读取 Fermi level：${pdos_fermi_energy} eV，默认 PDOS 能量范围：${pdos_default_emin} 到 ${pdos_default_emax} eV。"
 else

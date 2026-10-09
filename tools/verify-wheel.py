@@ -5,6 +5,7 @@ Usage: python tools/verify-wheel.py dist/qbox-0.1.0-py3-none-any.whl
 Requires pip plus the analysis dependencies in this Python; never runs QE/MPI.
 """
 
+import json
 import os
 from email.parser import BytesParser
 from pathlib import Path
@@ -40,7 +41,18 @@ def verify(wheel):
         for resource in ("qbox/registry.py", "qbox/legacy/load.sh",
                          "qbox/legacy/entry.sh", "qbox/bin/qbox",
                          "qbox/bin/qbox-dopant-pdos.py",
-                         "qbox/postprocess/effective_mass_vasp.py"):
+                         "qbox/postprocess/effective_mass_vasp.py",
+                         "qbox/io/kmesh.py", "qbox/io/wannier_menu.py",
+                         "qbox/io/wannier_profiles.py", "qbox/io/wannier_inputs.py",
+                         "qbox/io/wannier_workflow.py", "qbox/io/wannier_publish.py",
+                         "qbox/legacy/wannier.sh",
+                         "qbox/io/phonon_inputs.py", "qbox/io/phonon_menu.py",
+                         "qbox/io/phonon_paths.py", "qbox/io/qe_lattice.py",
+                         "qbox/io/phonon_workflow.py",
+                         "qbox/postprocess/phonon_plot.py",
+                         "qbox/postprocess/phonon_plot_data.py",
+                         "qbox/legacy/input_phonon.sh",
+                         "qbox/legacy/phonon_workflows.sh"):
             assert resource in names, f"Missing wheel resource: {resource}"
         licenses = [name for name in names if name.endswith("/LICENSE")]
         assert licenses and b"MIT License" in archive.read(licenses[0])
@@ -72,27 +84,54 @@ def verify(wheel):
         installed_cli = str(target / "bin/qbox")
         assert "--task" in run(installed_cli, "--help")
         assert "cif-to-vasp" in run(installed_cli, "--list")
+        assert any(line.split()[1:2] == ["phonons"]
+                   for line in run(installed_cli, "--list").splitlines())
         assert run(installed_cli, "--version").strip() == f"qbox {version}"
         run(installed_cli, "--task", "unknown-task", expected=2)
         package_cli = str(target / "qbox/bin/qbox")
         assert run(package_cli, "--version").strip() == f"qbox {version}"
         assert "请输入功能编号" in run(installed_cli, input="", expected=1)
 
+        assert "wannier-input" in run(installed_cli, "--list")
+        assert len(run(installed_cli, "kmesh", "1", "2", "1", "--format", "wannier").splitlines()) == 2
+        (work / "source.scf.in").write_text("""&CONTROL calculation='scf', prefix='si' /
+&SYSTEM ibrav=0, nat=1, ntyp=1, nbnd=4, ecutwfc=40 /
+&ELECTRONS /
+CELL_PARAMETERS angstrom
+4 0 0
+0 4 0
+0 0 4
+ATOMIC_SPECIES
+Si 28 Si.upf
+ATOMIC_POSITIONS crystal
+Si 0 0 0
+K_POINTS automatic
+2 2 2 0 0 0
+""")
+        (work / "wannier settings.json").write_text(json.dumps({
+            "source": "source.scf.in", "seed": "si", "mode": "new", "version": "3.1.0",
+            "grid": [2, 1, 1], "nbnd": 4, "num_wann": 1, "projections": ["Si:s"],
+            "tasks": ["model"], "parameters": {}}))
+        run(installed_cli, "--task", "wannier-input", "--config", "wannier settings.json", "--conflict", "cancel")
+        assert "write_hr = true" in (work / "si.win").read_text()
+        assert (work / "si.nscf.in").is_file()
+        assert not (work / "WANNIER").exists()
+
         (work / "sample.cif").write_text(CIF)
         run(installed_cli, "--task", "cif-to-vasp", "sample.cif")
         assert (work / "sample.vasp").stat().st_size > 0
-        run(installed_cli, "37", "sample.vasp")
+        run(installed_cli, "38", "sample.vasp")
         assert "_cell_length_a" in (work / "sample.cif").read_text()
         run(sys.executable, "-m", "qbox.io.convert_basic", "cif2vasp", "sample.cif", "basic.vasp")
         assert "Si" in (work / "basic.vasp").read_text()
         (work / "36").write_text(CIF)
-        run(installed_cli, "--task", "36", "36", input="missing-input\n")
+        run(installed_cli, "--task", "37", "36", input="missing-input\n")
         assert (work / "36.vasp").stat().st_size > 0
         run(sys.executable, str(target / "qbox/bin/qbox-dopant-pdos.py"), "--help")
         run("bash", "-c", 'source "$1" || exit; qe_write_builtin_calc_em_vasp_script "$2"',
             "wheel-test", str(target / "qbox/legacy/load.sh"), str(work / "effective-mass.py"))
         run(sys.executable, str(work / "effective-mass.py"), "--help")
-    print("PASS: wheel license/resources, isolated install, entrypoints, task dispatch, structure conversion and standalone analysis")
+    print("PASS: wheel license/resources, isolated install, entrypoints, task dispatch, Wannier inputs, structure conversion and standalone analysis")
 
 
 if __name__ == "__main__":

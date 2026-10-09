@@ -11,5 +11,10 @@ if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
     # Compatibility for scripts that source qbox to call its Bash functions.
     source "$_qbox_loader"
 else
+    # Workstation defaults belong to this checkout, never to the portable package.
+    # Load before Python so both legacy menus and direct tasks inherit them.
+    if [ -f "$_qbox_root/.qbox-local.sh" ]; then
+        source "$_qbox_root/.qbox-local.sh" || exit $?
+    fi
     exec bash "$_qbox_root/src/qbox/bin/qbox" "$@"
 fi

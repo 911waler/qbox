@@ -41,9 +41,9 @@ function run_qe_scf_calculation (){
 		recommended_threads=`qe_recommend_pw_threads "$calc_prefix" "scf"`
 		atom_count=`qe_estimate_atom_count "$calc_prefix"`
 		if [ -n "$atom_count" ]; then
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_threads}；直接回车使用推荐值。" "$recommended_threads"` || return 1
+			pw_threads=`qe_prompt_positive_int_default " SCF pw.x MPI 进程数 N1 [原子数 ${atom_count}，回车 ${recommended_threads}]：" "$recommended_threads"` || return 1
 		else
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_threads}；直接回车使用推荐值。" "$recommended_threads"` || return 1
+			pw_threads=`qe_prompt_positive_int_default " SCF pw.x MPI 进程数 N1 [回车 ${recommended_threads}]：" "$recommended_threads"` || return 1
 		fi
 
 		scf_command="mpirun -np ${pw_threads} pw.x -in ${scf_input} 2>&1 | tee scf.out"

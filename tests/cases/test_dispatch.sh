@@ -13,35 +13,38 @@ DISPATCH_TABLE='0 pwin
 8 mdin
 9 epsilonin
 10 qe_generate_unfold_inputs
-11 run_qe_scf_calculation
-12 run_qe_band_calculation
-13 qe_action_pdos
-14 run_qe_ldos_calculation
-15 run_qe_polar_calculation
-16 run_qe_epsilon_calculation
-17 run_qe_effective_mass_calculation
-18 run_qe_unfold_calculation
-19 plot_qe_band
-20 redraw_qe_pdos_plot
-21 redraw_qe_ldos_plot
-22 plot_qe_epsilon
-23 extract_qe_band_edges
-24 calc_qe_effective_mass
-25 relax2cif_menu
-26 qbox_md_to_xyz_menu
-27 qbox_nscf_menu
-28 analyze_qe_dopant_pdos
-29 scf2nscf
-30 qbox_constraints_menu
-31 conver
-32 qe_action_ecut_scan
-33 qe_action_kpoint_scan
-34 cluster_velocities
-35 merge_md_outputs
-36 qe_action_cif_to_vasp
-37 qe_action_vasp_to_cif'
+11 qbox_wannier_menu
+12 run_qe_scf_calculation
+13 run_qe_band_calculation
+14 qe_action_pdos
+15 run_qe_ldos_calculation
+16 run_qe_polar_calculation
+17 run_qe_epsilon_calculation
+18 run_qe_effective_mass_calculation
+19 run_qe_unfold_calculation
+20 plot_qe_band
+21 redraw_qe_pdos_plot
+22 redraw_qe_ldos_plot
+23 plot_qe_epsilon
+24 extract_qe_band_edges
+25 calc_qe_effective_mass
+26 relax2cif_menu
+27 qbox_md_to_xyz_menu
+28 qbox_nscf_menu
+29 analyze_qe_dopant_pdos
+30 scf2nscf
+31 qbox_constraints_menu
+32 conver
+33 qe_action_ecut_scan
+34 qe_action_kpoint_scan
+35 cluster_velocities
+36 merge_md_outputs
+37 qe_action_cif_to_vasp
+38 qe_action_vasp_to_cif
+39 plot_qe_phonon
+40 run_qe_phonon_calculation'
 
-DIRECT_ACTION_IDS='0 1 7 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37'
+DIRECT_ACTION_IDS='0 1 7 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40'
 
 table_handler_for_id() {
     awk -v wanted="$1" '$1 == wanted {print $2; exit}' <<<"$DISPATCH_TABLE"
@@ -146,7 +149,7 @@ test_interactive_and_direct_dispatch_reach_same_handler() {
     done
 }
 
-test_action_13_uses_one_mode_adapter_for_both_entry_points() {
+test_action_14_uses_one_mode_adapter_for_both_entry_points() {
     local sandbox input mode expected interactive_log direct_log
     sandbox="$(new_sandbox)" || return 1
     input="$sandbox/sample.cif"
@@ -166,13 +169,13 @@ test_action_13_uses_one_mode_adapter_for_both_entry_points() {
         direct_log="$sandbox/pdos-direct.$mode"
         : >"$interactive_log"
         QE_PDOS_BATCH_MODE="$mode" DISPATCH_LOG="$interactive_log" \
-            rmainfunc <<<13 >/dev/null || return 1
+            rmainfunc <<<14 >/dev/null || return 1
         assert_eq "$expected" "$(cat "$interactive_log")" \
             "interactive PDOS mode $mode changed" || return 1
 
         : >"$direct_log"
         QE_PDOS_BATCH_MODE="$mode" DISPATCH_LOG="$direct_log" \
-            qe_prepare_invocation "$input" 13 || return 1
+            qe_prepare_invocation "$input" 14 || return 1
         qe_detect_direct_action || return 1
         QE_PDOS_BATCH_MODE="$mode" DISPATCH_LOG="$direct_log" \
             qe_dispatch_action "$QE_DIRECT_ACTION" || return 1
@@ -235,53 +238,53 @@ test_direct_precedence_and_legacy_argument_normalization() {
     expected="10|$input||10|||"
     assert_eq "$expected" "$snapshot" 'action 10 argument-1 normalization changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 18 "$input"; invocation_snapshot)"
-    expected="18|$input||18|||"
-    assert_eq "$expected" "$snapshot" 'action 18 argument-1 normalization changed' || return 1
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 19 "$input"; invocation_snapshot)"
+    expected="19|$input||19|||"
+    assert_eq "$expected" "$snapshot" 'action 19 argument-1 normalization changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 20 "$input"; invocation_snapshot)"
-    expected="|$input||20|||"
-    assert_eq "$expected" "$snapshot" 'action 20 argument-1 normalization changed' || return 1
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 21 "$input"; invocation_snapshot)"
+    expected="|$input||21|||"
+    assert_eq "$expected" "$snapshot" 'action 21 argument-1 normalization changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 28 "$input"; invocation_snapshot)"
-    expected="$input|$input||28|||"
-    assert_eq "$expected" "$snapshot" 'action 28 argument-1 normalization changed' || return 1
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 29 "$input"; invocation_snapshot)"
+    expected="$input|$input||29|||"
+    assert_eq "$expected" "$snapshot" 'action 29 argument-1 normalization changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 27 "$input" "$input2"; invocation_snapshot)"
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 28 "$input" "$input2"; invocation_snapshot)"
     expected="$input|$input2|$input2|sample|||"
-    assert_eq "$expected" "$snapshot" 'action 27 argument-1 reshuffle changed' || return 1
+    assert_eq "$expected" "$snapshot" 'action 28 argument-1 reshuffle changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation "$input" 27 "$input2"; invocation_snapshot)"
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation "$input" 28 "$input2"; invocation_snapshot)"
     expected="$input|$input2|$input2|sample|||"
-    assert_eq "$expected" "$snapshot" 'action 27 argument-2 reshuffle changed' || return 1
+    assert_eq "$expected" "$snapshot" 'action 28 argument-2 reshuffle changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 35 "$input" "$input2"; invocation_snapshot)"
-    expected="|$input|$input2|35|||"
-    assert_eq "$expected" "$snapshot" 'action 35 argument-1 reshuffle changed' || return 1
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation 36 "$input" "$input2"; invocation_snapshot)"
+    expected="|$input|$input2|36|||"
+    assert_eq "$expected" "$snapshot" 'action 36 argument-1 reshuffle changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation "$input" 35 "$input2"; invocation_snapshot)"
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation "$input" 36 "$input2"; invocation_snapshot)"
     expected="$input||$input2|sample|||"
-    assert_eq "$expected" "$snapshot" 'action 35 argument-2 reshuffle changed' || return 1
+    assert_eq "$expected" "$snapshot" 'action 36 argument-2 reshuffle changed' || return 1
 
-    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation "$input" "$input2" 35; invocation_snapshot)"
-    expected="$input|$input2|35|sample|||"
-    assert_eq "$expected" "$snapshot" 'action 35 argument-3 normalization changed' || return 1
-
-    unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN
-    qe_prepare_invocation 20 9 || return 1
-    snapshot="$(invocation_snapshot)"
-    expected="20|9||20|||"
-    assert_eq "$expected" "$snapshot" 'ascending precedence normalization changed for 20/9' || return 1
-    qe_detect_direct_action || return 1
-    assert_eq 9 "${QE_DIRECT_ACTION-}" 'ascending recognized-ID precedence changed for 20/9' || return 1
+    snapshot="$(unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN; qe_prepare_invocation "$input" "$input2" 36; invocation_snapshot)"
+    expected="$input|$input2|36|sample|||"
+    assert_eq "$expected" "$snapshot" 'action 36 argument-3 normalization changed' || return 1
 
     unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN
-    qe_prepare_invocation 9 20 || return 1
+    qe_prepare_invocation 21 9 || return 1
     snapshot="$(invocation_snapshot)"
-    expected="20|20||20|||"
-    assert_eq "$expected" "$snapshot" 'ascending precedence normalization changed for 9/20' || return 1
+    expected="21|9||21|||"
+    assert_eq "$expected" "$snapshot" 'ascending precedence normalization changed for 21/9' || return 1
     qe_detect_direct_action || return 1
-    assert_eq 9 "${QE_DIRECT_ACTION-}" 'ascending recognized-ID precedence changed for 9/20' || return 1
+    assert_eq 9 "${QE_DIRECT_ACTION-}" 'ascending recognized-ID precedence changed for 21/9' || return 1
+
+    unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN
+    qe_prepare_invocation 9 21 || return 1
+    snapshot="$(invocation_snapshot)"
+    expected="21|21||21|||"
+    assert_eq "$expected" "$snapshot" 'ascending precedence normalization changed for 9/21' || return 1
+    qe_detect_direct_action || return 1
+    assert_eq 9 "${QE_DIRECT_ACTION-}" 'ascending recognized-ID precedence changed for 9/21' || return 1
 
     unset NONINTERACTIVE_PWIN PRESET_RTASK DIRECT_BANDIN
     qe_prepare_invocation 9 00 || return 1
@@ -315,7 +318,7 @@ test_direct_detection_covers_ids_in_both_supported_positions() {
     local sandbox input id
     sandbox="$(new_sandbox)" || return 1
     input="$sandbox/sample.cif"
-    for id in $(seq 9 37); do
+    for id in $(seq 9 40); do
         qe_prepare_invocation "$id" "$input" "$sandbox/extra" || return 1
         qe_detect_direct_action || return 1
         assert_eq "$id" "${QE_DIRECT_ACTION-}" "argument-1 action $id was not detected" || return 1
@@ -325,9 +328,9 @@ test_direct_detection_covers_ids_in_both_supported_positions() {
         assert_eq "$id" "${QE_DIRECT_ACTION-}" "argument-2 action $id was not detected" || return 1
     done
 
-    qe_prepare_invocation "$input" "$sandbox/extra" 35 || return 1
+    qe_prepare_invocation "$input" "$sandbox/extra" 36 || return 1
     qe_detect_direct_action || return 1
-    assert_eq 35 "${QE_DIRECT_ACTION-}" 'argument-3 action 35 was not detected' || return 1
+    assert_eq 36 "${QE_DIRECT_ACTION-}" 'argument-3 action 36 was not detected' || return 1
 
     qe_prepare_invocation "$input" 8 || return 1
     if qe_detect_direct_action; then
@@ -380,10 +383,46 @@ test_submenus_request_the_loop_instead_of_calling_it_recursively() {
     done
 }
 
+test_wannier_completion_exits_and_explicit_return_reopens_main() {
+    local outcome count status
+    local -a python_args
+    local fname1='structure with spaces.cif'
+    unset QE_DIRECT_ACTION
+    main_menu() { count=$((count + 1)); }
+    rmainfunc() {
+        [ "$count" = 1 ] || return 23
+        qbox_wannier_menu
+    }
+    qbox_python() { python_args=("$@"); return "$outcome"; }
+    for outcome in 0 10 1; do
+        count=0
+        qe_main_loop
+        status=$?
+        assert_eq 4 "${#python_args[@]}" 'Wannier bridge split the source path' || return 1
+        assert_eq --from-main-menu "${python_args[2]}" 'Wannier bridge omitted navigation protocol' || return 1
+        assert_eq "$fname1" "${python_args[3]}" 'Wannier bridge changed the source path' || return 1
+        if [ "$outcome" = 10 ]; then
+            assert_eq 2 "$count" 'explicit return did not reopen main menu' || return 1
+            assert_eq 23 "$status" 'main loop did not dispatch the next choice' || return 1
+        else
+            assert_eq 1 "$count" 'generation or failure reopened main menu' || return 1
+            assert_eq "$outcome" "$status" 'Wannier terminal status changed' || return 1
+        fi
+    done
+    QE_DIRECT_ACTION=11
+    QE_RETURN_TO_MAIN=0
+    outcome=10
+    qbox_wannier_menu
+    status=$?
+    assert_eq 0 "$status" 'direct cancellation leaked internal navigation status' || return 1
+    assert_eq 0 "$QE_RETURN_TO_MAIN" 'direct cancellation requested the main menu'
+}
+
+run_test 'Wannier generation exits and explicit return reopens main' test_wannier_completion_exits_and_explicit_return_reopens_main
 run_test 'action handler table matches the authoritative registry' test_action_table_matches_authoritative_registry
 run_test 'dispatcher invokes a static handler without eval' test_dispatch_invokes_static_handler_without_eval
 run_test 'interactive and direct dispatch reach the same handler' test_interactive_and_direct_dispatch_reach_same_handler
-run_test 'PDOS action mode is shared by both entry points' test_action_13_uses_one_mode_adapter_for_both_entry_points
+run_test 'PDOS action mode is shared by both entry points' test_action_14_uses_one_mode_adapter_for_both_entry_points
 run_test 'direct precedence and argument normalization remain compatible' test_direct_precedence_and_legacy_argument_normalization
 run_test 'direct IDs are detected in both supported positions' test_direct_detection_covers_ids_in_both_supported_positions
 run_test 'non-direct invocations enter the interactive main loop' test_no_direct_action_enters_the_interactive_main_loop

@@ -1230,7 +1230,7 @@ function structure_format_convert (){
 	fi
 
 	infile="$fname1"
-	if [ -z "$infile" ] || { [ -z "${QBOX_TASK_ID:-}" ] && { [ "$infile" == "36" ] || [ "$infile" == "37" ]; }; }; then
+	if [ -z "$infile" ] || { [ -z "${QBOX_TASK_ID:-}" ] && { [ "$infile" == "37" ] || [ "$infile" == "38" ]; }; }; then
 		echo
 		echo " 请输入需要转换的 .${in_ext} 文件。"
 		read infile

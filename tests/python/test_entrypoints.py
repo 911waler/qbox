@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import pty
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -36,6 +37,60 @@ class EntrypointTests(unittest.TestCase):
                                     env=self.env, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("--task", result.stdout)
+
+    def test_source_launcher_loads_local_settings_before_both_task_routes(self):
+        with tempfile.TemporaryDirectory(prefix="qbox local settings ") as directory:
+            root = Path(directory)
+            shutil.copyfile(ROOT / 'qbox', root / 'qbox')
+            (root / 'src/qbox/legacy').mkdir(parents=True)
+            (root / 'src/qbox/legacy/load.sh').write_text(':\n')
+            (root / 'src/qbox/bin').mkdir()
+            (root / 'src/qbox/bin/qbox').write_text(
+                'printf "%s\\n" "$QBOX_PSEUDO_ROOT" "$QBOX_MULTIWFN_HOME" "$PWD" "$@"\n')
+            (root / '.qbox-local.sh').write_text(
+                'export QBOX_PSEUDO_ROOT="${QBOX_PSEUDO_ROOT:-${QE_PSEUDO_ROOT:-/configured/pseudos}}"\n'
+                'export QBOX_MULTIWFN_HOME="${QBOX_MULTIWFN_HOME:-${MULTIWFN_HOME:-/configured/multiwfn}}"\n')
+            env = dict(self.env)
+            for key in ('QBOX_PSEUDO_ROOT', 'QE_PSEUDO_ROOT', 'QBOX_MULTIWFN_HOME', 'MULTIWFN_HOME'):
+                env.pop(key, None)
+            for args in [('relax.cif',), ('--task', 'wannier-input', 'relax.cif')]:
+                with self.subTest(args=args):
+                    result = subprocess.run(['bash', str(root / 'qbox'), *args], cwd='/tmp',
+                                            env=env, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout.splitlines(),
+                                     ['/configured/pseudos', '/configured/multiwfn', '/tmp', *args])
+            env.update(QE_PSEUDO_ROOT='/legacy/pseudos', MULTIWFN_HOME='/legacy/multiwfn')
+            for explicit in (False, True):
+                if explicit:
+                    env.update(QBOX_PSEUDO_ROOT='/explicit/pseudos', QBOX_MULTIWFN_HOME='/explicit/multiwfn')
+                result = subprocess.run(['bash', str(root / 'qbox'), '--version'], cwd='/tmp',
+                                        env=env, text=True, capture_output=True)
+                prefix = '/explicit' if explicit else '/legacy'
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines()[:2], [prefix + '/pseudos', prefix + '/multiwfn'])
+            (root / '.qbox-local.sh').write_text('return 19\n')
+            result = subprocess.run(['bash', str(root / 'qbox')], env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 19)
+            self.assertEqual(result.stdout, '')
+            result = subprocess.run(['bash', '-c', 'source "$1" && printf compatible',
+                                     'source-test', str(root / 'qbox')], env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, 'compatible')
+
+    def test_source_launcher_without_local_settings_keeps_portable_defaults(self):
+        with tempfile.TemporaryDirectory(prefix='qbox portable entry ') as directory:
+            root = Path(directory)
+            shutil.copyfile(ROOT / 'qbox', root / 'qbox')
+            (root / 'src/qbox/legacy').mkdir(parents=True)
+            (root / 'src/qbox/legacy/load.sh').write_text(':\n')
+            (root / 'src/qbox/bin').mkdir()
+            (root / 'src/qbox/bin/qbox').write_text('printf "%s" "${QBOX_PSEUDO_ROOT-unset}"\n')
+            env = dict(self.env)
+            env.pop('QBOX_PSEUDO_ROOT', None)
+            result = subprocess.run(['bash', str(root / 'qbox')], env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, 'unset')
 
     def test_module_help_without_site_packages(self):
         result = subprocess.run([sys.executable, "-S", "-m", "qbox", "--help"],
@@ -179,7 +234,7 @@ class EntrypointTests(unittest.TestCase):
 
     def test_forced_relax_to_nscf_keeps_both_paths(self):
         result = self.run_shell('qbox_nscf_menu() { printf "%s|%s" "$fname1" "$fname2"; }; '
-                                'QBOX_TASK_ID=27 qe_main "relax output.out" "nscf output.in"')
+                                'QBOX_TASK_ID=28 qe_main "relax output.out" "nscf output.in"')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "relax output.out|nscf output.in")
 
@@ -187,7 +242,7 @@ class EntrypointTests(unittest.TestCase):
         result = self.run_shell('qe_is_vasp_structure_file() { return 0; }; '
                                 'qe_auto_convert_vasp_to_cif() { echo UNEXPECTED; return 90; }; '
                                 'qe_action_vasp_to_cif() { printf "%s" "$fname1"; }; '
-                                'QBOX_TASK_ID=37 qe_main cell.vasp')
+                                'QBOX_TASK_ID=38 qe_main cell.vasp')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "cell.vasp")
 

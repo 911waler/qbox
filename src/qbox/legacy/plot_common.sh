@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 # Internal compatibility module; source via legacy/load.sh.
 
+function plot_qe_phonon (){
+	local source_args=()
+	case "${fname1-}" in
+		*.freq.gp|*.freq)
+			source_args=(-i "$fname1")
+			;;
+	esac
+	qbox_python -m qbox.postprocess.phonon_plot --interactive "${source_args[@]}"
+}
+
 function plot_qe_band (){
 	local bands_file output_prefix zero_reference zero_arg band_input_file bands_output_file
 	local plot_scope calc_prefix band_input_path
@@ -38,12 +48,12 @@ function plot_qe_band (){
 	fi
 
 	bands_file="$fname1"
-	if [ -z "${QBOX_TASK_ID:-}" ] && [ "$fname2" == "19" ]; then
+	if [ -z "${QBOX_TASK_ID:-}" ] && [ "$fname2" == "20" ]; then
 		case "$bands_file" in
 			*.cif|*.gjf|*.xyz|*.vasp|POSCAR|CONTCAR) bands_file="" ;;
 		esac
 	fi
-	if [ -z "$bands_file" ] || { [ -z "${QBOX_TASK_ID:-}" ] && [ "$bands_file" == "19" ]; }; then
+	if [ -z "$bands_file" ] || { [ -z "${QBOX_TASK_ID:-}" ] && [ "$bands_file" == "20" ]; }; then
 		bands_file="bands.dat.gnu"
 	fi
 

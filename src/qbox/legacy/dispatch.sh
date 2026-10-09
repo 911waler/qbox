@@ -50,11 +50,18 @@ prefix=''
  
  
 qbox_find_multiwfn() {
+    local command_path
     if [ -n "${QBOX_MULTIWFN_HOME:-}" ] && [ -x "$QBOX_MULTIWFN_HOME/Multiwfn" ]; then
-        printf '%s\n' "$QBOX_MULTIWFN_HOME/Multiwfn"
-        return 0
+        command_path="$QBOX_MULTIWFN_HOME/Multiwfn"
+    else
+        command_path="$(command -v Multiwfn 2>/dev/null)" || return 1
     fi
-    command -v Multiwfn 2>/dev/null
+    # Resolve filesystem commands before a caller enters its private working
+    # directory. Keep shell functions usable by embedders and legacy shims.
+    if [[ "$command_path" != /* ]] && ! declare -F "$command_path" >/dev/null; then
+        command_path="$PWD/$command_path"
+    fi
+    printf '%s\n' "$command_path"
 }
 
 qbox_multiwfn() {
@@ -138,9 +145,9 @@ function qe_invocation_action_id (){
 		printf '%s\n' 1
 		return 0
 	fi
-	for action_id in {9..37}; do
+	for action_id in {9..40}; do
 		if [ "$arg1" = "$action_id" ] || [ "$arg2" = "$action_id" ] ||
-			{ [ "$action_id" = 35 ] && [ "$arg3" = "$action_id" ]; }; then
+			{ [ "$action_id" = 36 ] && [ "$arg3" = "$action_id" ]; }; then
 			printf '%s\n' "$action_id"
 			return 0
 		fi
@@ -212,34 +219,34 @@ function qe_prepare_invocation (){
 
 	if direct_action="$(qe_invocation_action_id "$QE_INVOCATION_ARG1" "$QE_INVOCATION_ARG2" "$QE_INVOCATION_ARG3")"; then
 		case "$direct_action" in
-			9|11|12|13|14|15|16|17|19|29|30|31|32|33|34|36|37)
+			9|11|12|13|14|15|16|17|18|20|30|31|32|33|34|35|37|38|39|40)
 				if [ "$QE_INVOCATION_ARG1" = "$direct_action" ]; then
 					qe_set_input_path "$QE_INVOCATION_ARG2" || return 1
 				fi
 				;;
-			10|18)
+			10|19)
 				;;
-			20|21|22|23|24|25|26)
+			21|22|23|24|25|26|27)
 				if [ "$QE_INVOCATION_ARG1" = "$direct_action" ]; then
 					fname1=''
 				fi
 				;;
-			27)
-				if [ "$QE_INVOCATION_ARG1" = 27 ]; then
+			28)
+				if [ "$QE_INVOCATION_ARG1" = 28 ]; then
 					qe_set_input_path "$QE_INVOCATION_ARG2" || return 1
 				fi
 				fname2="$QE_INVOCATION_ARG3"
 				;;
-			28)
-				if [ "$QE_INVOCATION_ARG1" = 28 ]; then
+			29)
+				if [ "$QE_INVOCATION_ARG1" = 29 ]; then
 					fname1="$QE_INVOCATION_ARG2"
 				fi
 				;;
-			35)
-				if [ "$QE_INVOCATION_ARG1" = 35 ]; then
+			36)
+				if [ "$QE_INVOCATION_ARG1" = 36 ]; then
 					fname1=''
 				fi
-				if [ "$QE_INVOCATION_ARG2" = 35 ]; then
+				if [ "$QE_INVOCATION_ARG2" = 36 ]; then
 					fname2=''
 				fi
 				;;
@@ -340,10 +347,10 @@ function qe_main (){
 	qe_prepare_invocation "$@" || return 1
 	invocation_first="${QE_INVOCATION_ARG1-}"
 	invocation_second="${QE_INVOCATION_ARG2-}"
-	# In explicit mode every positional argument is data, including 36 and 37.
+	# In explicit mode every positional argument is data, including 37 and 38.
 	if qe_is_vasp_structure_file "$invocation_first" && \
-		[ "${QBOX_TASK_ID:-}" != 36 ] && [ "${QBOX_TASK_ID:-}" != 37 ] && \
-		{ [ -n "${QBOX_TASK_ID:-}" ] || { [ "$invocation_second" != 36 ] && [ "$invocation_second" != 37 ]; }; }; then
+		[ "${QBOX_TASK_ID:-}" != 37 ] && [ "${QBOX_TASK_ID:-}" != 38 ] && \
+		{ [ -n "${QBOX_TASK_ID:-}" ] || { [ "$invocation_second" != 37 ] && [ "$invocation_second" != 38 ]; }; }; then
 		qe_auto_convert_vasp_to_cif "$invocation_first" || return 1
 		qe_set_input_path "$QE_AUTO_CONVERTED_CIF" || return 1
 	fi

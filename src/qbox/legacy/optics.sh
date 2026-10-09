@@ -651,7 +651,7 @@ function qe_epsilon_settings_menu (){
 				echo
 				echo " 当前体系类型：`qe_epsilon_system_label "$epsilon_system_type"`"
 				echo " 当前 occupations 设置：`qe_epsilon_occupation_label "$epsilon_occ" "$epsilon_smearing" "$epsilon_degauss"`"
-				echo ' 选择体系类型后，将同步更新 NSCF K 点加密、epsilon.x 展宽、能量范围和 nw 为该体系推荐值。'
+				echo ' 更改体系类型将重置 K 点、展宽和能量网格参数。'
 				echo
 				echo ' 请选择体系类型：'
 				echo "  1) 绝缘体：occupations='fixed'，无展宽；推荐 `qe_epsilon_recommendation_summary Insulator`"
@@ -670,43 +670,26 @@ function qe_epsilon_settings_menu (){
 				;;
 			"2")
 				echo
-				echo " 当前体系类型：`qe_epsilon_system_label "$epsilon_system_type"`"
-				echo " 当前 NSCF K 点加密倍数：${epsilon_kfactor}"
-				echo " 推荐值：`qe_epsilon_recommended_value "$epsilon_system_type" kfactor`"
-				echo ' 该倍数会把基础自动 K 点网格整体放大；光学计算内存占用会随 K 点数快速增加。'
-				epsilon_kfactor=`qe_prompt_positive_int_default " 请输入 NSCF K 点加密倍数。当前体系推荐 `qe_epsilon_recommended_value "$epsilon_system_type" kfactor`；直接回车使用：${epsilon_kfactor}" "$epsilon_kfactor"`
+				epsilon_kfactor=`qe_prompt_positive_int_default " NSCF K 点加密倍数 [当前 ${epsilon_kfactor}，回车保留]：" "$epsilon_kfactor"`
 				;;
 			"3")
 				echo
 				echo " 当前 nbnd 推荐倍数：number of electrons × ${epsilon_nbnd_factor}"
-				echo " 光学计算需要较多空带；默认使用 nbnd = number of electrons × ${epsilon_nbnd_factor}。"
 				echo " 请输入倍数。直接回车使用：${epsilon_nbnd_factor}"
 				read value
 				if echo "$value" | awk 'NF==1 && $1 ~ /^[0-9]+([.][0-9]+)?$/ && $1 > 0 {exit 0} {exit 1}'; then epsilon_nbnd_factor="$value"; fi
 				;;
 			"4")
 				echo
-				echo " 当前体系类型：`qe_epsilon_system_label "$epsilon_system_type"`"
-				echo " 当前 intersmear：${epsilon_intersmear} eV"
-				echo " 推荐值：`qe_epsilon_recommended_value "$epsilon_system_type" intersmear` eV"
-				echo ' intersmear 控制带间跃迁展宽；越大谱线越平滑，但细节会被抹宽。'
-				epsilon_intersmear=`qe_prompt_default " 请输入 intersmear，单位 eV。当前体系推荐 `qe_epsilon_recommended_value "$epsilon_system_type" intersmear`；直接回车使用：${epsilon_intersmear}" "$epsilon_intersmear"`
+				epsilon_intersmear=`qe_prompt_default " 带间展宽 intersmear (eV) [当前 ${epsilon_intersmear}，回车保留]：" "$epsilon_intersmear"`
 				;;
 			"5")
 				echo
-				echo " 当前体系类型：`qe_epsilon_system_label "$epsilon_system_type"`"
-				echo " 当前 intrasmear：${epsilon_intrasmear} eV"
-				echo " 推荐值：`qe_epsilon_recommended_value "$epsilon_system_type" intrasmear` eV"
-				echo ' intrasmear 控制带内/Drude 项展宽；半导体和绝缘体通常为 0.0，金属或费米面穿带体系可设为非零。'
-				epsilon_intrasmear=`qe_prompt_default " 请输入 intrasmear，单位 eV。当前体系推荐 `qe_epsilon_recommended_value "$epsilon_system_type" intrasmear`；直接回车使用：${epsilon_intrasmear}" "$epsilon_intrasmear"`
+				epsilon_intrasmear=`qe_prompt_default " 带内展宽 intrasmear (eV) [当前 ${epsilon_intrasmear}，回车保留]：" "$epsilon_intrasmear"`
 				;;
 			"6")
 				echo
-				echo " 当前体系类型：`qe_epsilon_system_label "$epsilon_system_type"`"
-				echo " 当前能量范围：${epsilon_wmin} 到 ${epsilon_wmax} eV"
-				echo " 推荐范围：`qe_epsilon_recommended_value "$epsilon_system_type" wmin` 到 `qe_epsilon_recommended_value "$epsilon_system_type" wmax` eV"
-				echo ' 若只关注可见光/近紫外，可缩小上限；若关注深紫外或高能跃迁，需要增大上限并配合更多 nbnd。'
-				echo " 请输入能量范围 wmin wmax，单位 eV。当前体系推荐：`qe_epsilon_recommended_value "$epsilon_system_type" wmin` `qe_epsilon_recommended_value "$epsilon_system_type" wmax`；直接回车使用：${epsilon_wmin} ${epsilon_wmax}"
+				echo " 能量范围 wmin wmax (eV) [当前 ${epsilon_wmin} ${epsilon_wmax}，回车保留]："
 				read value wmax_input
 				if [ -n "$value" ] && [ -n "$wmax_input" ]; then
 					epsilon_wmin="$value"
@@ -715,11 +698,7 @@ function qe_epsilon_settings_menu (){
 				;;
 			"7")
 				echo
-				echo " 当前体系类型：`qe_epsilon_system_label "$epsilon_system_type"`"
-				echo " 当前 nw：${epsilon_nw}"
-				echo " 推荐值：`qe_epsilon_recommended_value "$epsilon_system_type" nw`"
-				echo ' nw 是 epsilon.x 输出能量网格点数；数值越大曲线采样越密，输出文件越大。'
-				epsilon_nw=`qe_prompt_positive_int_default " 请输入 nw。当前体系推荐 `qe_epsilon_recommended_value "$epsilon_system_type" nw`；直接回车使用：${epsilon_nw}" "$epsilon_nw"`
+				epsilon_nw=`qe_prompt_positive_int_default " 能量网格点数 nw [当前 ${epsilon_nw}，回车保留]：" "$epsilon_nw"`
 				;;
 			"8")
 				return 1
@@ -806,11 +785,11 @@ function run_qe_epsilon_calculation (){
 		recommended_nscf_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
 		atom_count=`qe_estimate_atom_count "$calc_prefix"`
 		if [ -n "$atom_count" ]; then
-			scf_threads=`qe_prompt_positive_int_default " 请输入 optical SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
-			nscf_threads=`qe_prompt_positive_int_default " 请输入 optical NSCF pw.x 使用的 MPI 进程数 N2。检测到体系原子数 ${atom_count}，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
+			scf_threads=`qe_prompt_positive_int_default " optical SCF pw.x MPI 进程数 N1 [原子数 ${atom_count}，回车 ${recommended_scf_threads}]：" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " optical NSCF pw.x MPI 进程数 N2 [原子数 ${atom_count}，回车 ${recommended_nscf_threads}]：" "$recommended_nscf_threads"` || return 1
 		else
-			scf_threads=`qe_prompt_positive_int_default " 请输入 optical SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
-			nscf_threads=`qe_prompt_positive_int_default " 请输入 optical NSCF pw.x 使用的 MPI 进程数 N2。未能读取体系大小，推荐 ${recommended_nscf_threads}；直接回车使用推荐值。" "$recommended_nscf_threads"` || return 1
+			scf_threads=`qe_prompt_positive_int_default " optical SCF pw.x MPI 进程数 N1 [回车 ${recommended_scf_threads}]：" "$recommended_scf_threads"` || return 1
+			nscf_threads=`qe_prompt_positive_int_default " optical NSCF pw.x MPI 进程数 N2 [回车 ${recommended_nscf_threads}]：" "$recommended_nscf_threads"` || return 1
 		fi
 		epsilon_threads=`qe_prompt_positive_int_default ' 请输入 epsilon.x 使用的 MPI 进程数 N3。直接回车使用 16。' '16'` || return 1
 	fi
@@ -968,18 +947,15 @@ function run_qe_polar_calculation (){
 		recommended_polar_threads=`qe_recommend_pw_threads "$calc_prefix" "nscf"`
 		atom_count=`qe_estimate_atom_count "$calc_prefix"`
 		if [ -n "$atom_count" ]; then
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。检测到体系原子数 ${atom_count}，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
-			polar_threads=`qe_prompt_positive_int_default " 请输入 Berry phase NSCF pw.x 使用的 MPI 进程数 N2。检测到体系原子数 ${atom_count}，推荐 ${recommended_polar_threads}；直接回车使用推荐值。" "$recommended_polar_threads"` || return 1
+			pw_threads=`qe_prompt_positive_int_default " SCF pw.x MPI 进程数 N1 [原子数 ${atom_count}，回车 ${recommended_scf_threads}]：" "$recommended_scf_threads"` || return 1
+			polar_threads=`qe_prompt_positive_int_default " Berry phase NSCF pw.x MPI 进程数 N2 [原子数 ${atom_count}，回车 ${recommended_polar_threads}]：" "$recommended_polar_threads"` || return 1
 		else
-			pw_threads=`qe_prompt_positive_int_default " 请输入 SCF pw.x 使用的 MPI 进程数 N1。未能读取体系大小，推荐 ${recommended_scf_threads}；直接回车使用推荐值。" "$recommended_scf_threads"` || return 1
-			polar_threads=`qe_prompt_positive_int_default " 请输入 Berry phase NSCF pw.x 使用的 MPI 进程数 N2。未能读取体系大小，推荐 ${recommended_polar_threads}；直接回车使用推荐值。" "$recommended_polar_threads"` || return 1
+			pw_threads=`qe_prompt_positive_int_default " SCF pw.x MPI 进程数 N1 [回车 ${recommended_scf_threads}]：" "$recommended_scf_threads"` || return 1
+			polar_threads=`qe_prompt_positive_int_default " Berry phase NSCF pw.x MPI 进程数 N2 [回车 ${recommended_polar_threads}]：" "$recommended_polar_threads"` || return 1
 		fi
 		echo
-		echo ' nppstr 取值建议：普通 3D 晶体 8-12；层状/低维/强极化体系 12-20；正式结果建议测试 12/16/20 收敛。'
 		nppstr=`qe_prompt_positive_int_default ' 请输入 Berry phase 的 nppstr。默认 12。' '12'` || return 1
 		echo
-		echo ' Berry phase 方向 K 点加密倍数建议：快速预览 2；常规计算 3；正式收敛测试可比较 3/4/5。'
-		echo ' 该倍数只加密当前 Berry phase 方向，例如 x 方向会将 kx 放大。'
 		kfactor=`qe_prompt_positive_int_default ' 请输入 Berry phase 方向 K 点加密倍数。默认 3。' '3'` || return 1
 	else
 		nppstr=12

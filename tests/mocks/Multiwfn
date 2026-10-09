@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -u
+input="${1-}"
 output=''
 while IFS= read -r line; do case "$line" in *.tmp) output="$line";; esac; done
 [ -n "$output" ] || exit 2
+if [ -n "${QBOX_MOCK_MULTIWFN_CALL:-}" ]; then
+    printf '%s\n' "$input" "$output" "$PWD" >"$QBOX_MOCK_MULTIWFN_CALL"
+fi
+if [ -n "${QBOX_MOCK_MULTIWFN_PATH_LIMIT:-}" ]; then
+    input="${input:0:$QBOX_MOCK_MULTIWFN_PATH_LIMIT}"
+    output="${output:0:$QBOX_MOCK_MULTIWFN_PATH_LIMIT}"
+    [ -f "$input" ] || { echo 'Multiwfn: input pathname was truncated'; exit 0; }
+fi
 cp -- "$QBOX_MOCK_QE_TMP" "$output"

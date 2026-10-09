@@ -224,16 +224,7 @@ while [[ "$pwin_arg" != "14" ]]; do
 			done
 			;;
 		"8")
-			echo ' ##########################################################'
-			echo '若需要修改自动选取 K 网格的精度，可以修改 qbox 文件的'
-			echo 'result=$(echo "scale=9; 30 / $a_value" | bc) 	中的 30 为其他值'
-			echo '---- 20 低精度 结构优化 '
-			echo '---- 30 中等精度 能带、态密度计算 '
-			echo '---- 40 高精度 光学性质计算、精细能带 '
-			echo '---- 50+ 超高精度 不推荐 '
-			echo ' ##########################################################'
-			echo ' ***手动输入的话，以 2,2,1 这样的格式输入三个方向的 K 点采样密度***'
-			echo " 也可以直接输入'gamma', 这样布里渊区会进行Gamma点的单点计算"
+			echo ' K 点网格（例如 2,2,1；Gamma 单点输入 gamma）：'
 			if ! read -r value; then
 				qe_release_structure_context_with_status 1
 				return $?
@@ -262,8 +253,7 @@ while [[ "$pwin_arg" != "14" ]]; do
 			qe_pwin_menu
 			;;
 		"9")
-			echo ' 请输入需要求解的电子态数 nbnd，例如 50'
-			echo ' 如果不输入，则使用 pw.x 默认值，例如绝缘体通常为价电子数的 50%。'
+			echo ' 能带数 nbnd（例如 50；回车使用 pw.x 默认值）：'
 			if ! read -r nbnd; then
 				qe_release_structure_context_with_status 1
 				return $?
@@ -416,7 +406,6 @@ function qe_pwin_advanced_menu (){
 		echo "  6) 设置 diagonalization，当前：$(pwin_diagonalization_label)"
 		if [ "$rtask" == "energy" ] || [ "$rtask" == "energy+force+stress" ]; then
 			echo "  7) 设置 SCF conv_thr，当前：$pwin_scf_conv_thr"
-			echo '     提示：1.D-6 用于起步，1.D-8 用于正式结果，1.D-10 用于验证；最终以目标物理量在相邻精度档之间是否收敛为准。'
 			echo "  8) 返回"
 		elif [ "$rtask" == "nscf" ] || [ "$rtask" == "bands" ]; then
 			echo "  7) 设置非自洽对角化精度，当前：$(pwin_diagonalization_accuracy_label)"
@@ -496,8 +485,6 @@ function qe_pwin_advanced_menu (){
 				;;
 			5)
 				PS3=''
-				echo "注意：默认不开启 nosym，即保持 QE 默认 nosym=.false.。"
-				echo "只有确定体系存在较大不对称性时才建议开启，例如缺陷结构、分子动力学快照、明显畸变结构等。"
 				nosym_array=("不开启 nosym，保持 QE 默认 nosym=.false." "开启 nosym=.true.")
 				select inosym in "${nosym_array[@]}"; do
 					case $inosym in
@@ -559,7 +546,6 @@ function qe_pwin_advanced_menu (){
 			7)
 				if [ "$rtask" == "energy" ] || [ "$rtask" == "energy+force+stress" ]; then
 					echo
-					echo ' 提示：1.D-6 用于起步，1.D-8 用于正式结果，1.D-10 用于验证；最终以目标物理量在相邻精度档之间是否收敛为准。'
 					echo " 请输入 SCF conv_thr，例如 1.D-8。直接回车保留当前值 ${pwin_scf_conv_thr}。"
 					read -r value || return 1
 					if [ -n "$value" ]; then
@@ -1241,7 +1227,6 @@ function qe_generate_pw_input (){
 }
 
 #--------------------------------- pw.x MD input module----------------------------------------
-
 
 
 

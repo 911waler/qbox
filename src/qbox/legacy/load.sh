@@ -11,7 +11,7 @@ fi
 for _qbox_module in bootstrap dispatch state band_io pw_settings input_pw \
     input_md input_phonon input_postprocess structure plot_common \
     electronic_inputs pdos_data runner band_edges effective_mass environment \
-    electronic_workflows pdos ldos optics convergence nscf unfold menu cluster help; do
+    electronic_workflows phonon_workflows pdos ldos optics convergence nscf unfold wannier menu cluster help; do
     source "$QBOX_PACKAGE_DIR/legacy/$_qbox_module.sh" || return 1
 done
 unset _qbox_module
